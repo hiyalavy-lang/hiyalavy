@@ -144,6 +144,14 @@
             async initSupabase() {
                 if (!this.supabase) return;
 
+                // 0. Check Auth Session
+                const { data: { session } } = await this.supabase.auth.getSession();
+                if (session) {
+                    this.state.isLoggedIn = true;
+                    this.state.parentEmail = session.user.email;
+                    // Check if user has premium (you can add a 'users' table check here)
+                }
+
                 // 1. Fetch Global Settings
                 const { data: settings } = await this.supabase.from('settings').select('*').eq('id', 'global').single();
                 if (settings) {
@@ -492,7 +500,22 @@
                 `;
             }
 
-            performGoogleLogin() { this.state.isLoggedIn = true; this.switchView('soundboard'); }
+            async performGoogleLogin() {
+                if (!this.supabase) {
+                    this.state.isLoggedIn = true;
+                    this.switchView('soundboard');
+                    return;
+                }
+
+                const { error } = await this.supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin
+                    }
+                });
+
+                if (error) alert("Google Login Error: " + error.message);
+            }
 
             showSettings() {
                 const modal = document.createElement('div');
@@ -533,7 +556,12 @@
                 this.state.language = lang; this.render();
             }
 
-            logout() { this.state.isLoggedIn = false; document.getElementById('hub-menu-modal').remove(); this.switchView('landing'); }
+            async logout() {
+                if (this.supabase) await this.supabase.auth.signOut();
+                this.state.isLoggedIn = false;
+                if (document.getElementById('hub-menu-modal')) document.getElementById('hub-menu-modal').remove();
+                this.switchView('landing');
+            }
 
             renderSoundboard() {
                 const container = document.createElement('div');
