@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="dv" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thaana Kids - Learning Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
+</head>
+
+<body data-lang="dhivehi">
+    <div id="bg-decoration"></div>
+    <div id="transition-overlay"></div>
+    <div id="confetti-container"></div>
+    <div id="toast-container"></div>
+
+    <div id="app">
+        <header class="app-header">
+            <div class="logo" id="logo-home" style="cursor:pointer">
+                <span class="icon">🎨</span>
+                <span class="thaana-text">ތާނަ</span>
+                <span class="english-text">Kids</span>
+            </div>
+
+            <nav class="main-nav" id="main-nav"></nav>
+
+            <div class="header-right">
+                <div id="profile-hub-container"></div>
+            </div>
+        </header>
+
+        <main id="view-container"></main>
+
+        <div class="app-helper" id="app-helper" style="display:none">
+            <div class="app-bubble" id="app-bubble"></div>
+            <img src="assets/mascot_board.png" class="app-mascot" id="mascot-main" onclick="app.mascotRandomTip()">
+        </div>
+
+        <div class="mystery-box-container" id="mystery-box-widget" style="display:none">
+            <div class="mystery-box" id="mystery-box">🎁</div>
+        </div>
+
+        <footer class="app-footer"
+            style="padding: 2rem; text-align: center; border-top: 4px solid var(--border-dark); background: white;">
+            <p id="footer-text">© 2026 ތާނަ އެކަޑަމީ - މޯލްޑިވްސް</p>
+        </footer>
+    </div>
+
+    <div id="modal-container"></div>
+
+    <script src="content.js"></script>
+    <script>
+        class App {
+            constructor() {
+                // Sync settings from LocalStorage (managed by admin.html)
+                const savedSettings = JSON.parse(localStorage.getItem('thaana_settings')) || {
+                    siteName: 'Thaana Kids',
+                    premiumPrice: '200 MVR',
+                    bankAccount: '7730000053982',
+                    bankName: 'Mohamed Aleef',
+                    heroTitle: 'Learn & Play! 🎨',
+                    heroSubtitle: 'Start your journey to become a star learner!',
+                    heroBtnText: 'Get Started! 🚀',
+                    heroEmoji: '🎨',
+                    footerText: '© 2026 ތާނަ އެކަޑަމީ - މޯލްޑިވްސް'
+                };
+
+                // Automated Premium Check (Removal if expired)
+                let isPremium = localStorage.getItem('thaana_isPremium') === 'true';
+                const premiumExpiry = localStorage.getItem('thaana_premiumExpiry');
+                if (isPremium && premiumExpiry && Date.now() > parseInt(premiumExpiry)) {
+                    isPremium = false;
+                    localStorage.setItem('thaana_isPremium', 'false');
+                    localStorage.removeItem('thaana_premiumExpiry');
+                    console.log("Premium subscription expired.");
+                }
+
+                // Dynamic Content & Nav Initialization
+                const defaultNav = [
+                    { id: 'soundboard', icon: '🔊', label: 'Letters', premium: false },
+                    { id: 'engdhi', icon: '🔤', label: 'Engdhi', premium: true },
+                    { id: 'fili', icon: '✨', label: 'Fili', premium: true },
+                    { id: 'tracing', icon: '✏️', label: 'Tracing', premium: true },
+                    { id: 'vocabulary', icon: '🖼️', label: 'Words', premium: true },
+                    { id: 'quiz', icon: '⭐', label: 'Quiz', premium: true },
+                    { id: 'hall', icon: '🏆', label: 'Hall', premium: true },
+                    { id: 'badges', icon: '🏅', label: 'Badges', premium: true }
+                ];
+
+                this.state = {
+                    view: 'landing',
+                    language: 'dhivehi',
+                    isPremium: isPremium,
+                    isLoggedIn: false,
+                    parentEmail: 'parent@example.com',
+                    parentPin: localStorage.getItem('thaana_parentPin') || '1234',
+                    hallFilter: 'daily',
+                    kids: [
+                        { name: 'ކުޑަކުއްޖާ', ageGroup: 'preschool', avatar: '👶', points: 0, badges: [1], unlockedAvatars: ['👶', '👧', '👦'] }
+                    ],
+                    activeKidIndex: 0,
+                    dailyGameCount: 0,
+                    maxDailyGames: 3,
+                    timeLeft: 60,
+                    globalSettings: savedSettings,
+                    customNav: JSON.parse(localStorage.getItem('thaana_nav')) || defaultNav,
+                    customContent: JSON.parse(localStorage.getItem('thaana_content')) || content,
+                    customFili: JSON.parse(localStorage.getItem('thaana_fili')) || filiData
+                };
+
+                // Sync to localStorage if first run
+                if (!localStorage.getItem('thaana_content')) {
+                    localStorage.setItem('thaana_content', JSON.stringify(content));
+                    localStorage.setItem('thaana_fili', JSON.stringify(filiData));
+                    localStorage.setItem('thaana_nav', JSON.stringify(defaultNav));
+                }
+
+                this.viewContainer = document.getElementById('view-container');
+                this.mainNav = document.getElementById('main-nav');
+                this.audioPool = {};
+                this.init();
+            }
+
+            init() {
+                document.getElementById('mystery-box').onclick = () => { this.playSound('click'); this.openMysteryBox(); };
+                this.initDecorations();
+                this.render();
+
+                // Mascot random greeting
+                setTimeout(() => { if (this.state.isLoggedIn) this.mascotSay(this.t('mascot_hello')); }, 2000);
+            }
+
+            initDecorations() {
+                const bg = document.getElementById('bg-decoration');
+                const letters = ['ހ', 'ށ', 'ނ', 'A', 'B', 'C', 'أ', 'ބ'];
+                for (let i = 0; i < 15; i++) {
+                    const el = document.createElement('div');
+                    el.className = 'bg-letter';
+                    el.innerText = letters[Math.floor(Math.random() * letters.length)];
+                    el.style.left = Math.random() * 100 + 'vw';
+                    el.style.top = Math.random() * 100 + 'vh';
+                    el.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    bg.appendChild(el);
+                }
+            }
+
+            handleParentAuth() {
+                if (this.state.isLoggedIn) this.showPasscodeModal();
+                else this.switchView('login');
+            }
+
+            showPasscodeModal() {
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay'; modal.id = 'passcode-modal';
+                modal.innerHTML = `
+                    <div class="parent-modal" style="max-width:420px; text-align:center; padding: 40px">
+                        <button class="modal-close" onclick="document.getElementById('passcode-modal').remove()">✖</button>
+                        <h2 style="margin-bottom:30px; font-size:1.8rem">${this.t('Parent Code')} 🔒</h2>
+                        <div class="settings-group">
+                            <input type="password" class="settings-input" id="parent-pin-input" placeholder="****" style="text-align:center; font-size:3rem; letter-spacing: 15px; margin-bottom:10px">
+                            <div class="forgot-link" onclick="app.forgotPin()">${this.t('Forgot PIN?')}</div>
+                        </div>
+                        <button class="start-btn" style="width:100%; margin-top:20px" onclick="app.verifyPasscode()">${this.t('Unlock')} 🔓</button>
+                    </div>
+                `;
+                document.getElementById('modal-container').appendChild(modal);
+            }
+
+            verifyPasscode() {
+                if (document.getElementById('parent-pin-input').value === this.state.parentPin) {
+                    document.getElementById('passcode-modal').remove();
+                    this.showSettings();
+                } else alert("Wrong PIN!");
+            }
+
+            forgotPin() {
+                alert(`${this.t('A reset link has been sent to')} ${this.state.parentEmail}`);
+            }
+
+            switchView(view) {
+                const premiumViews = ['fili', 'tracing', 'vocabulary', 'quiz', 'hall', 'badges', 'mystery-game', 'engdhi'];
+                if (premiumViews.includes(view) && !this.state.isPremium) {
+                    this.showUpgradePopup();
+                    return;
+                }
+                this.triggerBubbleTransition(() => {
+                    this.state.view = view;
+                    if (view !== 'mystery-game') clearInterval(this.state.gameTimer);
+                    this.render();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+
+            triggerBubbleTransition(callback) {
+                const overlay = document.getElementById('transition-overlay');
+                overlay.innerHTML = '';
+                const fragment = document.createDocumentFragment();
+                const colors = ['#FFD93D', '#FF6B6B', '#4D96FF', '#6BCB77', '#FF8400', '#9b59b6', '#1abc9c'];
+                for (let i = 0; i < 25; i++) {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'bubble-particle';
+                    const size = 80 + Math.random() * 120;
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    bubble.style.cssText = `width:${size}px; height:${size}px; left:${Math.random() * 100}vw; top:${Math.random() * 100}vh; background:${color}; border-color:white; opacity:0.8;`;
+                    fragment.appendChild(bubble);
+                }
+                overlay.appendChild(fragment);
+                setTimeout(() => { callback(); setTimeout(() => overlay.innerHTML = '', 1200); }, 600);
+            }
+
+            render() {
+                this.viewContainer.innerHTML = '';
+                this.updateTheme();
+                this.renderNav();
+                this.renderProfileHub();
+                this.updateUIStrings();
+
+                document.getElementById('mystery-box-widget').style.display = (this.state.isLoggedIn && this.state.view !== 'mystery-game') ? 'block' : 'none';
+                document.getElementById('app-helper').style.display = (this.state.isLoggedIn) ? 'flex' : 'none';
+
+                switch (this.state.view) {
+                    case 'landing': this.renderLanding(); break;
+                    case 'login': this.renderLogin(); break;
+                    case 'soundboard': this.renderSoundboard(); break;
+                    case 'fili': this.renderFili(); break;
+                    case 'tracing': this.renderTracing(); break;
+                    case 'vocabulary': this.renderVocabulary(); break;
+                    case 'quiz': this.renderQuiz(); break;
+                    case 'hall': this.renderHallOfFame(); break;
+                    case 'badges': this.renderBadges(); break;
+                    case 'mystery-game': this.renderMysteryGame(); break;
+                    case 'engdhi': this.renderEngdhi(); break;
+                }
+            }
+
+            updateTheme() {
+                document.body.setAttribute('data-lang', this.state.language);
+                document.documentElement.dir = (this.state.language === 'english') ? 'ltr' : 'rtl';
+                document.documentElement.lang = (this.state.language === 'english') ? 'en' : 'dv';
+            }
+
+            updateUIStrings() {
+                document.getElementById('footer-text').innerText = this.state.globalSettings.footerText || this.t('footer');
+
+                // Update Logo
+                const logoContainer = document.getElementById('logo-home');
+                if (logoContainer && this.state.globalSettings.siteName) {
+                    const name = this.state.globalSettings.siteName;
+                    const icon = this.state.globalSettings.heroEmoji || '🎨';
+                    logoContainer.innerHTML = `<span class="icon">${icon}</span> <span class="english-text">${name}</span>`;
+                    
+                    // Secret: Triple click to toggle premium for testing
+                    logoContainer.onclick = (e) => {
+                        if (e.detail === 3) {
+                            this.playSound('celebration');
+                            this.state.isPremium = !this.state.isPremium;
+                            localStorage.setItem('thaana_isPremium', this.state.isPremium);
+                            this.mascotSay(this.state.isPremium ? "Premium Features Unlocked! ✨" : "Premium Features Locked! 🔒");
+                            this.render();
+                        } else {
+                            this.switchView(this.state.isLoggedIn ? 'soundboard' : 'landing');
+                        }
+                    };
+                }
+            }
+
+            renderProfileHub() {
+                const container = document.getElementById('profile-hub-container');
+                const activeKid = this.state.kids[this.state.activeKidIndex];
+                const avatar = this.state.isLoggedIn ? activeKid.avatar : '👤';
+                container.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px">
+                        ${this.state.isPremium ? '<span class="premium-tag">PREMIUM ✨</span>' : ''}
+                        <div class="profile-avatar-hub" onclick="app.showHubMenu()">${avatar}</div>
+                    </div>
+                `;
+            }
+
+            showHubMenu() {
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay'; modal.id = 'hub-menu-modal';
+                modal.innerHTML = `
+                    <div class="parent-modal" style="max-width:400px; padding: 30px">
+                        <button class="modal-close" onclick="document.getElementById('hub-menu-modal').remove()">✖</button>
+                        <h2 style="text-align:center; margin-bottom:25px">${this.t('Profile Hub')}</h2>
+                        ${this.state.isLoggedIn ? `
+                            <div class="profile-list" style="margin-bottom:20px">
+                                ${this.state.kids.map((k, i) => `<div class="profile-item" onclick="app.switchKid(${i})" style="padding:15px; border:3px solid var(--border-dark); border-radius:20px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center; gap:15px; background:${this.state.activeKidIndex === i ? 'var(--warning)' : 'white'}"><span style="font-size:2rem">${k.avatar}</span><div><div style="font-weight:900; font-size:1.2rem">${k.name}</div></div></div>`).join('')}
+                            </div>
+                            <button class="nav-btn" style="width:100%; margin-bottom:10px" onclick="app.handleParentAuth()">⚙️ ${this.t('Settings')}</button>
+                            ${!this.state.isPremium ? `<button class="start-btn" style="width:100%; margin-bottom:10px; background:var(--orange)" onclick="app.showUpgradePopup()">✨ Upgrade to Premium</button>` : ''}
+                            <button class="start-btn" style="width:100%; background:var(--accent)" onclick="app.logout()">🚪 ${this.t('Logout')}</button>
+                        ` : `
+                            <button class="start-btn" style="width:100%" onclick="app.switchView('login')">🔑 ${this.t('Login')}</button>
+                        `}
+                    </div>
+                `;
+                document.getElementById('modal-container').appendChild(modal);
+            }
+
+            showUpgradePopup() {
+                if (document.getElementById('hub-menu-modal')) document.getElementById('hub-menu-modal').remove();
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay'; modal.id = 'upgrade-modal';
+                const isEng = this.state.language === 'english';
+                modal.innerHTML = `
+                    <div class="parent-modal" style="text-align:center; max-width:550px">
+                        <button class="modal-close" onclick="document.getElementById('upgrade-modal').remove()">✖</button>
+                        <h2 style="color:var(--orange); font-size:2.2rem; margin-bottom:10px">Unlock Premium! ✨</h2>
+                        
+                        <div class="price-badge">${this.state.globalSettings.premiumPrice} <span style="font-size:0.9rem; opacity:0.8">/ Year</span></div>
+                        
+                        <p style="font-weight:800; color:var(--text-light); margin-bottom:20px">${isEng ? 'Get access to all amazing features' : 'ހުރިހާ ބައިތަކެއް މިހާރު ހުޅުވާލައްވާ!'}</p>
+                        
+                        <div class="feature-visual-grid">
+                            <div class="feature-tile blue"><span class="icon">🌍</span><span class="label">English & Arabic Modules</span></div>
+                            <div class="feature-tile green"><span class="icon">✏️</span><span class="label">Interactive Tracing</span></div>
+                            <div class="feature-tile orange"><span class="icon">⭐</span><span class="label">Quizzes & Games</span></div>
+                            <div class="feature-tile pink"><span class="icon">🏅</span><span class="label">50+ Collectible Badges</span></div>
+                            <div class="feature-tile purple"><span class="icon">🏆</span><span class="label">Hall of Fame Access</span></div>
+                            <div class="feature-tile blue"><span class="icon">🔤</span><span class="label">Engdhi Hybrid Learning</span></div>
+                        </div>
+
+                        <button class="start-btn" style="width:100%; background:var(--orange); font-size:1.4rem" onclick="app.showPaymentDetails()">މިހާރު އަޕްގްރޭޑް ކުރޭ! 🚀</button>
+                    </div>
+                `;
+                document.getElementById('modal-container').appendChild(modal);
+            }
+
+            showPaymentDetails() {
+                document.getElementById('upgrade-modal').remove();
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay'; modal.id = 'payment-modal';
+                modal.innerHTML = `
+                    <div class="parent-modal" style="border-color:var(--secondary)">
+                        <button class="modal-close" onclick="document.getElementById('payment-modal').remove()">✖</button>
+                        <h2 style="text-align:center; color:var(--secondary)">Bank Transfer Details 🏦</h2>
+                        <div class="payment-card">
+                            <p style="margin-bottom:10px"><b>Account Name:</b> ${this.state.globalSettings.bankName}</p>
+                            <p style="margin-bottom:5px"><b>Account Number:</b></p>
+                            <div class="copy-box" style="display:flex; justify-content:space-between; align-items:center; background:white; padding:10px 15px; border-radius:12px; border:2px solid var(--border-dark); margin:10px 0; font-family:monospace; font-size:1.1rem; font-weight:900;">
+                                <span>${this.state.globalSettings.bankAccount}</span>
+                                <button onclick="navigator.clipboard.writeText('${this.state.globalSettings.bankAccount}'); alert('Copied!')" style="border:none; background:none; cursor:pointer">📋</button>
+                            </div>
+                            <p style="margin-top:10px; font-weight:900; color:var(--orange)">Total: ${this.state.globalSettings.premiumPrice}</p>
+                        </div>
+                        <div class="settings-group">
+                            <label class="settings-label">Upload Transfer Slip</label>
+                            <input type="file" class="settings-input" id="slip-upload" accept="image/*" style="padding:10px">
+                        </div>
+                        <button class="start-btn" style="width:100%; background:var(--secondary)" onclick="app.submitPayment()">Verify Payment</button>
+                    </div>
+                `;
+                document.getElementById('modal-container').appendChild(modal);
+            }
+
+            submitPayment() {
+                if (!document.getElementById('slip-upload').files[0]) { alert("Please upload a slip!"); return; }
+                alert("Slip uploaded! Our team will verify and unlock your premium features shortly. ✨");
+                document.getElementById('payment-modal').remove();
+            }
+
+            switchKid(i) { this.state.activeKidIndex = i; document.getElementById('hub-menu-modal').remove(); this.playSound('click'); this.render(); }
+
+            renderNav() {
+                if (!this.state.isLoggedIn || this.state.view === 'landing') { this.mainNav.innerHTML = ''; return; }
+
+                const navItems = this.state.customNav.map(item => {
+                    const hidden = (item.id === 'engdhi' && this.state.language !== 'engdhi') ||
+                        (item.id === 'fili' && this.state.language !== 'dhivehi') ||
+                        (item.id === 'tracing' && this.state.language === 'engdhi') ||
+                        (item.id === 'vocabulary' && this.state.language === 'arabic') ||
+                        (item.id === 'quiz' && this.state.language === 'arabic');
+                    return { ...item, hidden };
+                });
+
+                this.mainNav.innerHTML = navItems.filter(item => !item.hidden).map(item => `
+                    <button class="nav-btn ${this.state.view === item.id ? 'active' : ''} ${item.premium && !this.state.isPremium ? 'premium' : ''}" 
+                            onclick="app.playSound('click'); app.switchView('${item.id}')">
+                        <span class="icon">${item.icon}</span>
+                        <span class="label">${this.t(item.label)}</span>
+                    </button>
+                `).join('');
+            }
+
+            t(key) {
+                const lang = (this.state.language === 'english') ? 'english' : 'dhivehi';
+                const trans = {
+                    'Letters': { dhivehi: 'އަކުރުތައް', english: 'Letters' },
+                    'Fili': { dhivehi: 'ފިލި', english: 'Vowels' },
+                    'Tracing': { dhivehi: 'ލިޔުން', english: 'Tracing' },
+                    'Words': { dhivehi: 'ބަސްތައް', english: 'Words' },
+                    'Quiz': { dhivehi: 'ކުއިޒް', english: 'Quiz' },
+                    'Hall': { dhivehi: 'ޝަރަފް', english: 'Hall' },
+                    'Badges': { dhivehi: 'ބެޖް', english: 'Badges' },
+                    'Login': { dhivehi: 'ލޮގިން', english: 'Login' },
+                    'Logout': { dhivehi: 'ލޮގައުޓް', english: 'Logout' },
+                    'Settings': { dhivehi: 'ސެޓިންގްސް', english: 'Settings' },
+                    'Profile Hub': { dhivehi: 'ޕްރޮފައިލް ހަބް', english: 'Profile Hub' },
+                    'Parent Code': { dhivehi: 'ބެލެނިވެރިންގެ ކޯޑު', english: 'Parent Passcode' },
+                    'Unlock': { dhivehi: 'ހުޅުވާ', english: 'Unlock' },
+                    'Forgot PIN?': { dhivehi: 'ޕިން ހަނދާން ނެތުނީ؟', english: 'Forgot PIN?' },
+                    'A reset link has been sent to': { dhivehi: 'ރީސެޓް ކުރާ ލިންކު ފޮނުވިއްޖެ:', english: 'A reset link has been sent to' },
+                    'Security (Parent PIN)': { dhivehi: 'ސެކިއުރިޓީ (ޕިން)', english: 'Security (PIN)' },
+                    'Save': { dhivehi: 'ސޭވް', english: 'Save' },
+                    'footer': { dhivehi: '© 2026 ތާނަ އެކަޑަމީ - މޯލްޑިވްސް', english: '© 2026 Thaana Academy - Maldives' },
+                    'mascot_hello': { dhivehi: 'ހަލޯ! އަހަރެންގެ ނަމަކީ ތުތު! 👋', english: 'Hello! I am Thuthu! 👋' },
+                    'mascot_tip1': { dhivehi: 'އަކުރުތައް ދަސްކުރަމާ! 📚', english: 'Let\'s learn some letters! 📚' },
+                    'mascot_tip2': { dhivehi: 'ބަރާބަރަށް ޕްރެކްޓިސް ކުރާތި! ✨', english: 'Keep practicing! ✨' },
+                    'mascot_tip3': { dhivehi: 'ސާބަސް! ވަރަށް މޮޅު! 🌟', english: 'Great job! You are amazing! 🌟' },
+                    'mascot_tip4': { dhivehi: 'އާ ކަމެއް ދަސްކުރަން ތައްޔާރުތަ؟ 🚀', english: 'Ready to learn something new? 🚀' }
+                };
+                return trans[key] ? trans[key][lang] || trans[key]['dhivehi'] : key;
+            }
+
+            renderLanding() {
+                const isEng = this.state.language === 'english';
+                const settings = this.state.globalSettings;
+                this.viewContainer.innerHTML = `
+                    <div class="hero-section">
+                        <div class="hero-image">
+                            <img src="assets/mascot_hug.png" class="app-mascot">
+                        </div>
+                        <div class="hero-content">
+                            <h1 class="hero-title" style="color:var(--orange)">${settings.heroTitle}</h1>
+                            <p class="hero-subtitle">${settings.heroSubtitle}</p>
+                            <button class="start-btn" style="background:var(--purple)" onclick="app.playSound('click'); app.switchView('login')">${settings.heroBtnText}</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderLogin() {
+                const isEng = this.state.language === 'english';
+                this.viewContainer.innerHTML = `
+                    <div class="login-view-wrapper" style="min-height: 800px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        <div class="hall-container" style="max-width:550px; padding: 60px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(05px); -webkit-backdrop-filter: blur(10px); border: 8px solid rgba(255,255,255,0.5); border-radius: 50px; text-align:center; position:relative; z-index: 10; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                            <h2 style="font-size:3rem; margin-bottom:20px; color: #000; font-weight: 900; text-shadow: 0 2px 4px rgba(255,255,255,0.5)">${isEng ? 'Welcome Back! 🏠' : 'މަރުހަބާ! 🏠'}</h2>
+                            <p style="margin-bottom:40px; font-weight:900; color: #1e293b; font-size: 1.2rem;">${isEng ? 'Sign in with Google to continue your learning journey' : 'ދަސްކުރުން ކުރިއަށް ގެންދިއުމަށް ގޫގުލް އިން ލޮގިން ކުރައްވާ'}</p>
+                            <button class="btn-google" style="width:100%; justify-content:center; background: white; border: 4px solid #000; box-shadow: 6px 6px 0 #000; height: 70px; font-size: 1.4rem;" onclick="app.performGoogleLogin()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="30">Sign in with Google</button>
+                        </div>
+                        <div class="login-mascot-container" style="position: absolute; right: -100px; top: 50%; transform: translateY(-50%); width: 840px; pointer-events: none;">
+                            <img src="assets/mascot_a.png" class="app-mascot" style="--mascot-size: 840px; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.15));">
+                        </div>
+                    </div>
+                `;
+            }
+
+            performGoogleLogin() { this.state.isLoggedIn = true; this.switchView('soundboard'); }
+
+            showSettings() {
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay'; modal.id = 'settings-modal';
+                modal.innerHTML = `
+                    <div class="parent-modal" style="border-color: var(--teal)">
+                        <button class="modal-close" onclick="app.playSound('click'); document.getElementById('settings-modal').remove()">✖</button>
+                        <h2 style="font-size:2rem; margin-bottom:30px; display:flex; align-items:center; gap:15px; color:var(--teal)"><span style="font-size:2.5rem">⚙️</span> ${this.t('Settings')}</h2>
+                        <div class="settings-group"><label class="settings-label">${this.t('Security (Parent PIN)')}</label><div style="display:flex; gap:10px"><input type="password" class="settings-input" id="new-pin" placeholder="New 4-digit PIN" style="margin-bottom:0"><button class="start-btn" style="padding:10px 20px; font-size:1rem; background:var(--teal)" onclick="app.updatePin()">${this.t('Save')}</button></div></div>
+                        <div class="settings-group"><label class="settings-label">Language</label><select class="settings-select" onchange="app.updateLanguage(this.value)"><option value="dhivehi" ${this.state.language === 'dhivehi' ? 'selected' : ''}>ދިވެހި</option><option value="english" ${this.state.language === 'english' ? 'selected' : ''}>English 🔒</option><option value="arabic" ${this.state.language === 'arabic' ? 'selected' : ''}>العربية 🔒</option><option value="engdhi" ${this.state.language === 'engdhi' ? 'selected' : ''}>Engdhi 🔒</option></select></div>
+                        <div class="settings-group"><label class="settings-label">Profiles</label><div id="profile-edit-list"></div><button class="nav-btn" style="width:100%; justify-content:center; margin-top:10px" onclick="app.addNewKid()">➕ Add Kid</button></div>
+                    </div>
+                `;
+                document.getElementById('modal-container').appendChild(modal);
+                this.renderProfileEdits();
+            }
+
+            updatePin() {
+                const pin = document.getElementById('new-pin').value;
+                if (pin.length === 4 && !isNaN(pin)) {
+                    this.state.parentPin = pin;
+                    localStorage.setItem('thaana_parentPin', pin);
+                    alert("PIN updated successfully!");
+                } else alert("Please enter a valid 4-digit PIN!");
+            }
+
+            renderProfileEdits() {
+                const list = document.getElementById('profile-edit-list');
+                list.innerHTML = this.state.kids.map((k, i) => `<div class="profile-item" style="padding:25px; border-radius:25px; border:4px solid var(--border-dark); background:white; margin-bottom:20px"><div style="display:flex; gap:15px; margin-bottom:15px"><input type="text" class="settings-input" value="${k.name}" onchange="app.updateKidProp(${i}, 'name', this.value)" style="flex:1; margin-bottom:0"><select class="settings-select" onchange="app.updateKidProp(${i}, 'ageGroup', this.value)" style="width:120px; margin-bottom:0"><option value="toddler" ${k.ageGroup === 'toddler' ? 'selected' : ''}>2-3</option><option value="preschool" ${k.ageGroup === 'preschool' ? 'selected' : ''}>4-5</option><option value="junior" ${k.ageGroup === 'junior' ? 'selected' : ''}>6+</option></select></div><div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">${k.unlockedAvatars.map(a => `<div onclick="app.updateKidProp(${i}, 'avatar', '${a}')" style="font-size:1.8rem; cursor:pointer; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:15px; border:3px solid var(--border-dark); background:${k.avatar === a ? 'var(--warning)' : '#f8f9fa'}">${a}</div>`).join('')}<button onclick="app.removeKid(${i})" style="margin-right:auto; border:none; background:#fee2e2; width:50px; height:50px; border-radius:15px; cursor:pointer; font-size:1.5rem; border:3px solid #ef4444">🗑️</button></div></div>`).join('');
+            }
+
+            addNewKid() { this.state.kids.push({ name: 'ކުއްޖާ', ageGroup: 'preschool', avatar: '👶', points: 0, badges: [], unlockedAvatars: ['👶', '👧', '👦'] }); this.renderProfileEdits(); }
+            removeKid(i) { if (this.state.kids.length > 1) { this.state.kids.splice(i, 1); if (this.state.activeKidIndex >= i) this.state.activeKidIndex = 0; this.renderProfileEdits(); } else alert("At least one profile needed!"); }
+            updateKidProp(i, prop, val) { this.state.kids[i][prop] = val; this.renderProfileEdits(); this.renderProfileHub(); }
+
+            updateLanguage(lang) {
+                if (lang !== 'dhivehi' && !this.state.isPremium) { this.showUpgradePopup(); this.render(); return; }
+                this.state.language = lang; this.render();
+            }
+
+            logout() { this.state.isLoggedIn = false; document.getElementById('hub-menu-modal').remove(); this.switchView('landing'); }
+
+            renderSoundboard() {
+                const container = document.createElement('div');
+                container.style.position = 'relative';
+
+                const mascotDeco = document.createElement('img');
+                mascotDeco.src = 'assets/mascot_board.png';
+                mascotDeco.style.cssText = `position:absolute; top:-80px; right:20px; width:220px; z-index:0; opacity:0.8; filter:drop-shadow(0 10px 15px rgba(0,0,0,0.1))`;
+                container.appendChild(mascotDeco);
+
+                const grid = document.createElement('div'); grid.className = 'alphabet-grid';
+                grid.style.position = 'relative';
+                grid.style.zIndex = '1';
+
+                const items = this.state.customContent[this.state.language] || [];
+                items.forEach(item => {
+                    const card = document.createElement('div'); card.className = 'letter-card'; card.innerHTML = `<div style="font-size:4rem; font-weight:900">${item.letter}</div><div style="font-size:1.2rem; font-weight:800">${item.name}</div>`;
+                    card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); this.addTaskProgress(); };
+                    grid.appendChild(card);
+                });
+                container.appendChild(grid);
+                this.viewContainer.appendChild(container);
+            }
+
+            renderEngdhi() {
+                const grid = document.createElement('div'); grid.className = 'alphabet-grid';
+                this.state.customContent.engdhi.forEach(item => {
+                    const card = document.createElement('div'); card.className = 'letter-card';
+                    card.innerHTML = `<div style="font-size:3rem; font-weight:900; color:var(--orange)">${item.letter}</div><div style="font-weight:800; font-size:1.4rem">${item.english}</div><div style="font-weight:800; color:var(--primary)">${item.dhivehi}</div>`;
+                    card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); this.addTaskProgress(); };
+                    grid.appendChild(card);
+                });
+                this.viewContainer.appendChild(grid);
+            }
+
+            renderFili() {
+                const grid = document.createElement('div'); grid.className = 'alphabet-grid';
+                this.state.customFili.forEach(item => {
+                    const card = document.createElement('div'); card.className = 'letter-card'; card.innerHTML = `<span style="font-size:4rem">ހ${item.mark}</span><div style="font-weight:800">${item.name}</div>`;
+                    card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); };
+                    grid.appendChild(card);
+                });
+                this.viewContainer.appendChild(grid);
+            }
+
+            renderTracing() {
+                const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
+                this.viewContainer.innerHTML = `<div class="tracing-container" style="padding:2rem; text-align:center"><div class="letter-selector" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px">${items.map(item => `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')">${item.letter}</button>`).join('')}</div><div id="canvas-area"></div></div>`;
+                this.initTracingCanvas(items[0].letter);
+            }
+
+            initTracingCanvas(letter) {
+                const canvasArea = document.getElementById('canvas-area');
+                canvasArea.innerHTML = `<div class="canvas-wrapper" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:2rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark)"><div class="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:clamp(8rem, 40vw, 15rem); opacity:0.1">${letter}</div><canvas id="tracing-canvas" width="400" height="400" style="position:relative; z-index:2; width:100%; height:100%;"></canvas></div><div class="controls" style="margin-top:40px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap"><button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:#f0f0f0" onclick="app.playSound('click'); ctx.clearRect(0,0,400,400)">🗑️ ފޮހެލާ</button><button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:var(--secondary)" onclick="app.playSound('click'); app.triggerExplosion(); app.addTaskProgress()">🌟 ${this.t('Done')}</button></div>`;
+                initCanvas('tracing-canvas');
+            }
+
+            renderVocabulary() {
+                const items = this.state.customContent[this.state.language] || [];
+                const grid = document.createElement('div'); grid.className = 'alphabet-grid';
+                items.forEach(item => {
+                    const card = document.createElement('div'); card.className = 'letter-card';
+                    card.innerHTML = `<img src="assets/${item.english.toLowerCase()}.png" style="width:120px; height:120px; object-fit:contain" onerror="this.src='https://placehold.co/120?text=${item.word}'"><div style="margin-top:15px"><span style="font-size:2rem; font-weight:900">${item.letter}</span><h3 style="font-size:1.2rem">${item.word}</h3></div>`;
+                    card.onclick = () => { this.playSound('click'); this.playAudio(item.wordAudio); };
+                    grid.appendChild(card);
+                });
+                this.viewContainer.appendChild(grid);
+            }
+
+            renderQuiz() {
+                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:4rem; text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${this.t('What is this letter?')}</h2><div style="background:white; padding:40px; border-radius:50px; border:6px solid var(--border-dark); box-shadow:15px 15px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
+                this.nextQuizQuestion();
+            }
+
+            nextQuizQuestion() {
+                const items = this.state.customContent[this.state.language] || [];
+                const target = items[Math.floor(Math.random() * items.length)];
+                const options = [target];
+                while (options.length < 4) { const r = items[Math.floor(Math.random() * items.length)]; if (!options.includes(r)) options.push(r); }
+                options.sort(() => Math.random() - 0.5);
+                document.getElementById('quiz-img').src = `assets/${target.english.toLowerCase()}.png`;
+                const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
+                options.forEach(opt => {
+                    const btn = document.createElement('button'); btn.className = 'start-btn'; btn.innerText = opt.letter; btn.style.background = 'var(--pink)';
+                    btn.onclick = () => { this.playSound('click'); if (opt === target) { this.triggerExplosion(); this.addTaskProgress(); setTimeout(() => this.nextQuizQuestion(), 1500); } else btn.style.background = '#94a3b8'; };
+                    grid.appendChild(btn);
+                });
+            }
+
+            renderHallOfFame() {
+                const filters = ['daily', 'weekly', 'monthly'];
+                const mockKids = Array.from({ length: 100 }, (_, i) => ({ name: `ކުއްޖާ ${i + 1}`, points: Math.floor(Math.random() * 5000) + (100 - i) * 10, avatar: ['👶', '👧', '👦', '🦁', '🦊', '🐼', '🦖', '🦄'][Math.floor(Math.random() * 8)] })).sort((a, b) => b.points - a.points);
+                this.viewContainer.innerHTML = `
+                    <div class="hall-container" style="max-width:900px; margin:4rem auto; padding:40px; border-color:var(--orange); position:relative">
+                        <img src="assets/mascot_think.png" class="app-mascot" style="position:absolute; top:-100px; left:-50px; width:180px; transform:rotate(-15deg); filter:drop-shadow(0 10px 20px rgba(0,0,0,0.1))">
+                        <h2 style="text-align:center; font-size:3rem; margin-bottom:40px; color:var(--orange)">🏆 ${this.t('Hall of Fame')}</h2>
+                        <div class="hall-filter-bar">${filters.map(f => `<button class="filter-btn ${this.state.hallFilter === f ? 'active' : ''}" style="${this.state.hallFilter === f ? 'background:var(--orange)' : ''}" onclick="app.setHallFilter('${f}')">${this.tHallFilter(f)}</button>`).join('')}</div>
+                        <div class="fame-list" style="max-height: 600px; overflow-y: auto; padding: 20px; border: 4px solid var(--border-dark); border-radius: 30px; background: white">${mockKids.map((k, i) => `<div class="fame-item" style="display:flex; align-items:center; gap:25px; padding:20px; border-bottom:3px solid #f1f5f9"><div style="font-size:2.2rem; font-weight:900; width:80px; color: ${i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#92400e' : '#cbd5e1'}">#${i + 1}</div><div style="font-size:2.5rem">${k.avatar}</div><div style="flex:1"><div style="font-size:1.5rem; font-weight:900">${k.name}</div></div><div style="font-weight:900; font-size:1.2rem; color:var(--orange)">${k.points} pts</div></div>`).join('')}</div>
+                    </div>`;
+            }
+
+            setHallFilter(f) { this.state.hallFilter = f; this.render(); }
+            tHallFilter(f) { const t = { daily: { dhivehi: 'މިއަދު', english: 'Today' }, weekly: { dhivehi: 'މިހަފްތާ', english: 'This Week' }, monthly: { dhivehi: 'މިމަހު', english: 'This Month' } }; return t[f][this.state.language === 'english' ? 'english' : 'dhivehi']; }
+
+            renderBadges() {
+                const activeKid = this.state.kids[this.state.activeKidIndex];
+                this.viewContainer.innerHTML = `<div class="hall-container" style="max-width:1000px; margin:4rem auto; padding:40px; background:white; border-color:var(--primary)"><h2 style="text-align:center; margin-bottom:40px; color:var(--primary)">🏅 ${this.t('Badges')} (${activeKid.badges.length}/50)</h2><div class="badges-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:20px">${badges.map(b => `<div class="badge-box ${activeKid.badges.includes(b.id) ? 'earned' : ''}" style="aspect-ratio:1; border:4px dashed #ddd; border-radius:30px; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:${activeKid.badges.includes(b.id) ? '1' : '0.3'}; background:${activeKid.badges.includes(b.id) ? 'white' : 'none'}; border-style:${activeKid.badges.includes(b.id) ? 'solid' : 'dashed'}; border-color:var(--primary)"><div style="font-size:3rem">${b.icon}</div><div style="font-size:0.8rem; font-weight:900; text-align:center">${b.name}</div></div>`).join('')}</div></div>`;
+            }
+
+            addTaskProgress() {
+                this.state.kids[this.state.activeKidIndex].points += 10;
+                this.state.dailyTasksCompleted++;
+                if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) document.getElementById('mystery-box').innerHTML = '🎁✨';
+
+                // Show celebration mascot
+                const mascotPop = document.createElement('img');
+                mascotPop.src = 'assets/mascot_a.png';
+                mascotPop.style.cssText = `position:fixed; bottom:-200px; left:50%; transform:translateX(-50%); width:300px; z-index:4000; transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)`;
+                document.body.appendChild(mascotPop);
+                setTimeout(() => mascotPop.style.bottom = '50px', 100);
+                setTimeout(() => mascotPop.style.bottom = '-400px', 2000);
+                setTimeout(() => mascotPop.remove(), 2600);
+            }
+            openMysteryBox() { if (this.state.dailyGameCount >= this.state.maxDailyGames) { alert("Game limit reached!"); return; } if (this.state.dailyTasksCompleted < this.state.dailyTaskGoal) { alert("More tasks needed!"); return; } this.state.dailyGameCount++; this.switchView('mystery-game'); }
+
+            renderMysteryGame() {
+                this.state.timeLeft = 60;
+                this.viewContainer.innerHTML = `<div class="hall-container" style="text-align:center; border-color:var(--orange)"><h2>🦖 Dino Jump!</h2><p id="game-timer">Time Left: 01:00</p><div id="game-canvas" style="width:100%; height:300px; background:#f0f0f0; border-radius:20px; position:relative; overflow:hidden; border:6px solid var(--border-dark)"><div id="dino" style="position:absolute; bottom:0; left:50px; font-size:3rem">🦖</div><div id="cactus" style="position:absolute; bottom:0; right:-50px; font-size:2.5rem">🌵</div><div id="score" style="position:absolute; top:10px; left:10px; font-size:1.5rem; font-weight:800">Score: 0</div></div><p style="margin-top:10px">Tap to Jump!</p></div>`;
+                this.startDinoGame();
+                this.state.gameTimer = setInterval(() => { this.state.timeLeft--; document.getElementById('game-timer').innerText = `Time Left: 00:${this.state.timeLeft < 10 ? '0' : ''}${this.state.timeLeft}`; if (this.state.timeLeft <= 0) { clearInterval(this.state.gameTimer); alert("Time's up!"); this.switchView('soundboard'); } }, 1000);
+            }
+
+            startDinoGame() {
+                const dino = document.getElementById('dino'); const cactus = document.getElementById('cactus'); const scoreElement = document.getElementById('score');
+                let score = 0; let isJumping = false;
+                document.getElementById('game-canvas').onclick = () => { if (isJumping) return; isJumping = true; let pos = 0; const up = setInterval(() => { if (pos >= 150) { clearInterval(up); const down = setInterval(() => { if (pos <= 0) { clearInterval(down); isJumping = false; } pos -= 5; dino.style.transform = `translate3d(0, -${pos}px, 0)`; }, 10); } pos += 5; dino.style.transform = `translate3d(0, -${pos}px, 0)`; }, 10); };
+                const update = () => {
+                    if (this.state.view !== 'mystery-game') return;
+                    let cPos = parseInt(window.getComputedStyle(cactus).getPropertyValue('right'));
+                    let dBottom = isJumping ? parseInt(dino.style.transform.match(/-(\d+)px/)?.[1] || 0) : 0;
+                    if (cPos > 350 && cPos < 400 && dBottom < 40) { cactus.style.right = '-50px'; score = 0; scoreElement.innerText = "Score: 0"; }
+                    else if (cPos > 500) { cactus.style.right = '-50px'; score++; scoreElement.innerText = "Score: " + score; }
+                    else { cactus.style.right = (cPos + 6) + 'px'; }
+                    requestAnimationFrame(update);
+                };
+                requestAnimationFrame(update);
+            }
+
+            mascotSay(text, duration = 4000) {
+                const bubble = document.getElementById('app-bubble');
+                bubble.innerText = text;
+                bubble.classList.add('show');
+                clearTimeout(this.state.mascotTimer);
+                this.state.mascotTimer = setTimeout(() => bubble.classList.remove('show'), duration);
+            }
+
+            mascotRandomTip() {
+                const tips = [
+                    this.t('mascot_tip1'),
+                    this.t('mascot_tip2'),
+                    this.t('mascot_tip3'),
+                    this.t('mascot_tip4')
+                ];
+                this.mascotSay(tips[Math.floor(Math.random() * tips.length)]);
+                this.playSound('click');
+            }
+
+            playSound(type) { const key = `assets/audio/${type}.mp3`; if (!this.audioPool[key]) this.audioPool[key] = new Audio(key); this.audioPool[key].currentTime = 0; this.audioPool[key].play().catch(() => { }); }
+            playAudio(f) { if (!f) return; const key = `assets/audio/${f}`; if (!this.audioPool[key]) this.audioPool[key] = new Audio(key); this.audioPool[key].currentTime = 0; this.audioPool[key].play().catch(() => { }); }
+            createPop(x, y) { const pop = document.createElement('div'); pop.className = 'pop-star'; pop.innerHTML = '⭐'; pop.style.left = (x - 20) + 'px'; pop.style.top = (y - 20) + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 800); }
+            triggerExplosion() {
+                const container = document.getElementById('confetti-container'); const centerX = window.innerWidth / 2; const centerY = window.innerHeight / 2;
+                const colors = ['#FFD93D', '#FF6B6B', '#4D96FF', '#6BCB77', '#FF8400', '#e0c3fc', '#9b59b6', '#1abc9c'];
+                const fragment = document.createDocumentFragment();
+                for (let i = 0; i < 60; i++) {
+                    const c = document.createElement('div'); c.className = 'confetti'; const color = colors[Math.floor(Math.random() * colors.length)];
+                    const angle = Math.random() * Math.PI * 2; const distance = 150 + Math.random() * 450;
+                    const tx = Math.cos(angle) * distance; const ty = Math.sin(angle) * distance;
+                    c.style.cssText = `left: ${centerX}px; top: ${centerY}px; background: ${color}; --tx: ${tx}px; --ty: ${ty}px;`; fragment.appendChild(c);
+                }
+                container.appendChild(fragment); setTimeout(() => container.innerHTML = '', 2500);
+            }
+        }
+        const app = new App();
+        let ctx;
+        function initCanvas(id) { const canvas = document.getElementById(id); ctx = canvas.getContext('2d'); let drawing = false; ctx.lineWidth = 15; ctx.lineCap = 'round'; ctx.strokeStyle = '#4D96FF'; canvas.onmousedown = () => { drawing = true; ctx.beginPath(); }; canvas.onmouseup = () => { drawing = false; }; canvas.onmousemove = (e) => { if (!drawing) return; const rect = canvas.getBoundingClientRect(); ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke(); }; }
+    </script>
+</body>
+
+</html>

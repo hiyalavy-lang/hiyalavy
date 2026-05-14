@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thaana Kids - Internal Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { background: #0f172a; color: white; direction: ltr; }
+        .admin-dashboard { padding: 40px; max-width: 1200px; margin: 0 auto; }
+        .admin-card { background: #1e293b; border: 2px solid #334155; border-radius: 24px; padding: 30px; margin-bottom: 30px; box-shadow: 10px 10px 0 #000; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; border-bottom: 2px solid #334155; padding-bottom: 20px; }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .admin-table th { text-align: left; padding: 15px; background: #334155; color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; }
+        .admin-table td { padding: 15px; border-bottom: 1px solid #334155; }
+        .status-pill { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; }
+        .status-pending { background: #78350f; color: #fbbf24; }
+        .status-verified { background: #064e3b; color: #34d399; }
+        .admin-input { background: #0f172a; border: 2px solid #334155; color: white; padding: 12px; border-radius: 12px; width: 100%; margin-top: 8px; font-size: 1rem; }
+        .admin-btn { background: #4D96FF; border: none; color: white; padding: 10px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: transform 0.2s; }
+        .admin-btn:hover { transform: scale(1.05); }
+        .login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; }
+    </style>
+</head>
+<body>
+    <div id="admin-app">
+        <div id="login-container" class="login-screen">
+            <div class="admin-card" style="width: 400px; text-align: center; position: relative;">
+                <img src="assets/mascot_a.png" class="app-mascot" style="width: 120px; margin-bottom: 10px;">
+                <h1 style="margin-bottom: 20px;">Secure Login 🔐</h1>
+                <input type="password" id="admin-pin" class="admin-input" placeholder="Enter Admin PIN" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+                <button class="admin-btn" style="width: 100%; margin-top: 20px;" onclick="verifyAdmin()">ACCESS TERMINAL</button>
+            </div>
+        </div>
+
+        <div id="dashboard-container" class="admin-dashboard" style="display: none;">
+            <div class="admin-header">
+                <h1>COMMAND CENTER ⚡</h1>
+                <div style="display: flex; gap: 15px;">
+                    <button class="admin-btn" style="background: #ef4444;" onclick="logout()">LOCK TERMINAL</button>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <h2>PENDING PAYMENTS 🏦</h2>
+                <table class="admin-table">
+                    <thead><tr><th>ID</th><th>USER</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th><th>ACTION</th></tr></thead>
+                    <tbody id="payment-table"></tbody>
+                </table>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: 30px;">
+                <div class="admin-card">
+                    <h2>GLOBAL SETTINGS ⚙️</h2>
+                    <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                        <div>
+                            <label>Site Name</label>
+                            <input type="text" id="set-name-site" class="admin-input">
+                            <label style="margin-top: 15px; display: block;">Premium Price</label>
+                            <input type="text" id="set-price" class="admin-input">
+                            <label style="margin-top: 15px; display: block;">Bank Account</label>
+                            <input type="text" id="set-account" class="admin-input">
+                            <label style="margin-top: 15px; display: block;">Account Name</label>
+                            <input type="text" id="set-name" class="admin-input">
+                        </div>
+                        <div>
+                            <label>Hero Title</label>
+                            <input type="text" id="set-hero-title" class="admin-input">
+                            <label style="margin-top: 15px; display: block;">Hero Subtitle</label>
+                            <input type="text" id="set-hero-subtitle" class="admin-input">
+                            <label style="margin-top: 15px; display: block;">Hero Button Text</label>
+                            <input type="text" id="set-hero-btn" class="admin-input">
+                            <label style="margin-top: 15px; display: block;">Hero Emoji</label>
+                            <input type="text" id="set-hero-emoji" class="admin-input">
+                        </div>
+                    </div>
+                    <label style="margin-top: 20px; display: block;">Footer Text</label>
+                    <input type="text" id="set-footer" class="admin-input">
+                    <button class="admin-btn" style="width: 100%; margin-top: 25px;" onclick="saveSettings()">APPLY CHANGES</button>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <h2>ANALYTICS 📊</h2>
+                <div id="stats" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;"></div>
+            </div>
+
+            <div class="admin-card">
+                <h2>TAB MANAGEMENT 🧭</h2>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="admin-table">
+                        <thead><tr><th>ID</th><th>LABEL</th><th>ICON</th><th>PREMIUM</th></tr></thead>
+                        <tbody id="nav-table"></tbody>
+                    </table>
+                </div>
+                <button class="admin-btn" style="width: 100%; margin-top: 20px;" onclick="saveNav()">SAVE NAVIGATION</button>
+            </div>
+
+            <div class="admin-card">
+                <h2>RESOURCE MANAGER 📚</h2>
+                <select id="resource-category" class="admin-input" onchange="loadResources()">
+                    <option value="dhivehi">Dhivehi Letters</option>
+                    <option value="english">English Letters</option>
+                    <option value="arabic">Arabic Letters</option>
+                    <option value="engdhi">Engdhi Hybrid</option>
+                    <option value="fili">Fili (Vowels)</option>
+                </select>
+                <div style="max-height: 500px; overflow-y: auto; margin-top: 20px;">
+                    <table class="admin-table">
+                        <thead id="resource-head"></thead>
+                        <tbody id="resource-table"></tbody>
+                    </table>
+                </div>
+                <button class="admin-btn" style="width: 100%; margin-top: 20px;" onclick="saveResources()">SAVE RESOURCES</button>
+            </div>
+
+            <div class="admin-card" style="margin-top: 30px; border-color: #ef4444;">
+                <h2 style="color: #ef4444;">DANGER ZONE ⚠️</h2>
+                <p style="margin: 15px 0; color: #94a3b8;">Revert all content, navigation, and settings to original defaults. This action cannot be undone.</p>
+                <button class="admin-btn" style="background: #ef4444;" onclick="resetSystem()">RESET SYSTEM TO DEFAULTS</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="content.js"></script>
+    <script>
+        const DEFAULT_SETTINGS = {
+            siteName: 'Thaana Kids',
+            premiumPrice: '200 MVR',
+            bankAccount: '7730000053982',
+            bankName: 'Mohamed Aleef',
+            heroTitle: 'Learn & Play! 🎨',
+            heroSubtitle: 'Start your journey to become a star learner!',
+            heroBtnText: 'Get Started! 🚀',
+            heroEmoji: '🎨',
+            footerText: '© 2026 ތާނަ އެކަޑަމީ - މޯލްޑިވްސް'
+        };
+
+        let settings = JSON.parse(localStorage.getItem('thaana_settings')) || DEFAULT_SETTINGS;
+        let slips = JSON.parse(localStorage.getItem('thaana_slips')) || [
+            { id: 101, user: 'Ali Ahmed', date: '2026-05-12', amount: '200 MVR', status: 'pending' },
+            { id: 102, user: 'Mariyam Shifa', date: '2026-05-11', amount: '200 MVR', status: 'verified' }
+        ];
+
+        function verifyAdmin() {
+            if (document.getElementById('admin-pin').value === 'admin123') {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('dashboard-container').style.display = 'block';
+                loadDashboard();
+            } else {
+                alert('ACCESS DENIED');
+            }
+        }
+
+        function loadDashboard() {
+            document.getElementById('set-name-site').value = settings.siteName || 'Thaana Kids';
+            document.getElementById('set-price').value = settings.premiumPrice;
+            document.getElementById('set-account').value = settings.bankAccount;
+            document.getElementById('set-name').value = settings.bankName;
+            
+            document.getElementById('set-hero-title').value = settings.heroTitle || '';
+            document.getElementById('set-hero-subtitle').value = settings.heroSubtitle || '';
+            document.getElementById('set-hero-btn').value = settings.heroBtnText || '';
+            document.getElementById('set-hero-emoji').value = settings.heroEmoji || '🎨';
+            document.getElementById('set-footer').value = settings.footerText || '';
+
+            renderPayments();
+            renderStats();
+            renderNavTable();
+            loadResources();
+        }
+
+        function renderNavTable() {
+            const nav = JSON.parse(localStorage.getItem('thaana_nav')) || [
+                { id: 'soundboard', icon: '🔊', label: 'Letters', premium: false },
+                { id: 'engdhi', icon: '🔤', label: 'Engdhi', premium: true },
+                { id: 'fili', icon: '✨', label: 'Fili', premium: true },
+                { id: 'tracing', icon: '✏️', label: 'Tracing', premium: true },
+                { id: 'vocabulary', icon: '🖼️', label: 'Words', premium: true },
+                { id: 'quiz', icon: '⭐', label: 'Quiz', premium: true },
+                { id: 'hall', icon: '🏆', label: 'Hall', premium: true },
+                { id: 'badges', icon: '🏅', label: 'Badges', premium: true }
+            ];
+            const table = document.getElementById('nav-table');
+            table.innerHTML = nav.map((item, i) => `
+                <tr>
+                    <td>${item.id}</td>
+                    <td><input type="text" class="admin-input" style="margin:0" value="${item.label}" onchange="updateNavItem(${i}, 'label', this.value)"></td>
+                    <td><input type="text" class="admin-input" style="margin:0" value="${item.icon}" onchange="updateNavItem(${i}, 'icon', this.value)"></td>
+                    <td><input type="checkbox" ${item.premium ? 'checked' : ''} onchange="updateNavItem(${i}, 'premium', this.checked)"></td>
+                </tr>
+            `).join('');
+            localStorage.setItem('thaana_nav', JSON.stringify(nav));
+        }
+
+        function updateNavItem(i, prop, val) {
+            const nav = JSON.parse(localStorage.getItem('thaana_nav'));
+            nav[i][prop] = val;
+            localStorage.setItem('thaana_nav', JSON.stringify(nav));
+        }
+
+        function saveNav() {
+            alert('Navigation labels and icons saved!');
+        }
+
+        function loadResources() {
+            const cat = document.getElementById('resource-category').value;
+            const table = document.getElementById('resource-table');
+            const head = document.getElementById('resource-head');
+            
+            if (cat === 'fili') {
+                const data = JSON.parse(localStorage.getItem('thaana_fili')) || filiData;
+                head.innerHTML = '<tr><th>MARK</th><th>NAME</th><th>AUDIO</th></tr>';
+                table.innerHTML = data.map((item, i) => `
+                    <tr>
+                        <td><input type="text" class="admin-input" style="margin:0" value="${item.mark}" onchange="updateResource('fili', ${i}, 'mark', this.value)"></td>
+                        <td><input type="text" class="admin-input" style="margin:0" value="${item.name}" onchange="updateResource('fili', ${i}, 'name', this.value)"></td>
+                        <td style="display:flex; gap:10px; align-items:center">
+                            <input type="text" class="admin-input" id="audio-fili-${i}" style="margin:0; flex:1" value="${item.audio}" onchange="updateResource('fili', ${i}, 'audio', this.value)">
+                            <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('fili', ${i}, 'audio')">📤</button>
+                            <input type="file" id="file-fili-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, 'fili', ${i}, 'audio')">
+                        </td>
+                    </tr>
+                `).join('');
+                if (!localStorage.getItem('thaana_fili')) localStorage.setItem('thaana_fili', JSON.stringify(data));
+            } else {
+                const data = JSON.parse(localStorage.getItem('thaana_content')) || content;
+                const items = data[cat];
+                head.innerHTML = '<tr><th>LTR</th><th>NAME</th><th>WORD</th><th>ENG</th><th>AUDIO</th></tr>';
+                table.innerHTML = items.map((item, i) => `
+                    <tr>
+                        <td><input type="text" class="admin-input" style="margin:0; width:50px" value="${item.letter}" onchange="updateResource('${cat}', ${i}, 'letter', this.value)"></td>
+                        <td><input type="text" class="admin-input" style="margin:0" value="${item.name}" onchange="updateResource('${cat}', ${i}, 'name', this.value)"></td>
+                        <td><input type="text" class="admin-input" style="margin:0" value="${item.word || ''}" onchange="updateResource('${cat}', ${i}, 'word', this.value)"></td>
+                        <td><input type="text" class="admin-input" style="margin:0" value="${item.english || ''}" onchange="updateResource('${cat}', ${i}, 'english', this.value)"></td>
+                        <td style="display:flex; gap:10px; align-items:center">
+                            <input type="text" class="admin-input" id="audio-${cat}-${i}" style="margin:0; flex:1" value="${item.audio}" onchange="updateResource('${cat}', ${i}, 'audio', this.value)">
+                            <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('${cat}', ${i}, 'audio')">📤</button>
+                            <input type="file" id="file-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'audio')">
+                        </td>
+                    </tr>
+                `).join('');
+                if (!localStorage.getItem('thaana_content')) localStorage.setItem('thaana_content', JSON.stringify(data));
+            }
+        }
+
+        function triggerUpload(cat, i, field) {
+            document.getElementById(`file-${cat}-${i}`).click();
+        }
+
+        async function handleFileUpload(input, cat, i, field) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const filename = file.name.replace(/\s+/g, '_').toLowerCase();
+            const btn = input.previousElementSibling;
+            btn.innerText = '⏳';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    headers: { 'x-filename': filename },
+                    body: file
+                });
+
+                if (response.ok) {
+                    btn.innerText = '✅';
+                    // Update the text input and localStorage
+                    const textInput = document.getElementById(`audio-${cat}-${i}`);
+                    if (textInput) textInput.value = filename;
+                    updateResource(cat, i, field, filename);
+                    setTimeout(() => btn.innerText = '📤', 2000);
+                } else {
+                    throw new Error('Upload failed');
+                }
+            } catch (err) {
+                console.error(err);
+                btn.innerText = '❌';
+                alert('Upload failed. Make sure the server is running with upload support.');
+                setTimeout(() => btn.innerText = '📤', 2000);
+            }
+        }
+
+        function updateResource(cat, i, prop, val) {
+            if (cat === 'fili') {
+                const data = JSON.parse(localStorage.getItem('thaana_fili'));
+                data[i][prop] = val;
+                localStorage.setItem('thaana_fili', JSON.stringify(data));
+            } else {
+                const data = JSON.parse(localStorage.getItem('thaana_content'));
+                data[cat][i][prop] = val;
+                localStorage.setItem('thaana_content', JSON.stringify(data));
+            }
+        }
+
+        function saveResources() {
+            alert('All resource changes saved to LocalStorage!');
+        }
+
+        function resetSystem() {
+            if (confirm('Are you sure? This will wipe ALL custom changes.')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function renderPayments() {
+            const table = document.getElementById('payment-table');
+            table.innerHTML = slips.map(s => `
+                <tr>
+                    <td>#${s.id}</td>
+                    <td>${s.user}</td>
+                    <td>${s.date}</td>
+                    <td>${s.amount}</td>
+                    <td><span class="status-pill ${s.status === 'pending' ? 'status-pending' : 'status-verified'}">${s.status.toUpperCase()}</span></td>
+                    <td>${s.status === 'pending' ? `<button class="admin-btn" style="padding: 5px 10px; font-size: 0.7rem;" onclick="approvePayment(${s.id})">VERIFY</button>` : '---'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderStats() {
+            const verified = slips.filter(s => s.status === 'verified').length;
+            const expiry = localStorage.getItem('thaana_premiumExpiry');
+            const expiryText = expiry ? new Date(parseInt(expiry)).toLocaleDateString() : 'N/A';
+
+            document.getElementById('stats').innerHTML = `
+                <div style="flex: 1; min-width: 250px;">
+                    <div style="font-size: 3rem; font-weight: 900; color: #4D96FF;">${verified} <span style="font-size: 1.2rem; color: #94a3b8;">ACTIVE PREMIUMS</span></div>
+                </div>
+                <div style="flex: 1; min-width: 250px;">
+                    <div style="font-size: 3rem; font-weight: 900; color: #fbbf24;">${slips.length - verified} <span style="font-size: 1.2rem; color: #94a3b8;">PENDING SLIPS</span></div>
+                </div>
+                <div style="flex: 1; min-width: 250px; padding: 20px; background: #334155; border-radius: 12px;">
+                    <div style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase;">Next Expiry Batch</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; margin-top: 5px;">${expiryText}</div>
+                </div>
+            `;
+        }
+
+        function approvePayment(id) {
+            const slip = slips.find(s => s.id === id);
+            if (slip) {
+                slip.status = 'verified';
+                localStorage.setItem('thaana_slips', JSON.stringify(slips));
+                
+                // Set premium expiry to 1 year from now
+                const oneYearFromNow = Date.now() + (365 * 24 * 60 * 60 * 1000);
+                localStorage.setItem('thaana_isPremium', 'true');
+                localStorage.setItem('thaana_premiumExpiry', oneYearFromNow.toString());
+                
+                renderPayments();
+                renderStats();
+                alert('Payment Verified! Premium features unlocked for 1 year.');
+            }
+        }
+
+        function saveSettings() {
+            settings = {
+                siteName: document.getElementById('set-name-site').value,
+                premiumPrice: document.getElementById('set-price').value,
+                bankAccount: document.getElementById('set-account').value,
+                bankName: document.getElementById('set-name').value,
+                heroTitle: document.getElementById('set-hero-title').value,
+                heroSubtitle: document.getElementById('set-hero-subtitle').value,
+                heroBtnText: document.getElementById('set-hero-btn').value,
+                heroEmoji: document.getElementById('set-hero-emoji').value,
+                footerText: document.getElementById('set-footer').value
+            };
+            localStorage.setItem('thaana_settings', JSON.stringify(settings));
+            alert('SETTINGS SYNCED TO PUBLIC SITE');
+        }
+
+        function logout() { location.reload(); }
+    </script>
+</body>
+</html>

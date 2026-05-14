@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "name": "thaana-kids",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1" }
+  ]
+}
