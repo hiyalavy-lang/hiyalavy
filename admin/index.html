@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thaana Kids - Internal Management</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="../styles.css">
     <style>
         body { background: #0f172a; color: white; direction: ltr; }
         .admin-dashboard { padding: 40px; max-width: 1200px; margin: 0 auto; }
@@ -32,7 +32,7 @@
         const supabaseClient = (sbUrl !== 'YOUR_SUPABASE_URL') ? supabase.createClient(sbUrl, sbKey) : null;
         <div id="login-container" class="login-screen">
             <div class="admin-card" style="width: 400px; text-align: center; position: relative;">
-                <img src="assets/mascot_a.png" class="app-mascot" style="width: 120px; margin-bottom: 10px;">
+                <img src="../assets/mascot_a.png" class="app-mascot" style="width: 120px; margin-bottom: 10px;">
                 <h1 style="margin-bottom: 20px;">Secure Login 🔐</h1>
                 <input type="password" id="admin-pin" class="admin-input" placeholder="Enter Admin PIN" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
                 <button class="admin-btn" style="width: 100%; margin-top: 20px;" onclick="verifyAdmin()">ACCESS TERMINAL</button>
@@ -128,7 +128,7 @@
         </div>
     </div>
 
-    <script src="content.js"></script>
+    <script src="../content.js"></script>
     <script>
         const DEFAULT_SETTINGS = {
             siteName: 'Thaana Kids',
