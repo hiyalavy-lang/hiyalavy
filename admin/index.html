@@ -22,13 +22,14 @@
         .login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase-config.js"></script>
 </head>
 <body>
     <div id="admin-app">
     <script>
         // Supabase Initialization
-        const sbUrl = 'https://lmhrlrucyfqqrfdfuups.supabase.co';
-        const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtaHJscnVjeWZxcXJmZGZ1dXBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTU2MDUsImV4cCI6MjA5NDIzMTYwNX0.2AOLDNU4eWNsh9S8r0GFyd0CvVzGZBd2goJpglmIILU';
+        const sbUrl = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_URL : 'YOUR_SUPABASE_URL';
+        const sbKey = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_KEY : 'YOUR_SUPABASE_ANON_KEY';
         const supabaseClient = (sbUrl !== 'YOUR_SUPABASE_URL') ? supabase.createClient(sbUrl, sbKey) : null;
         <div id="login-container" class="login-screen">
             <div class="admin-card" style="width: 400px; text-align: center; position: relative;">
@@ -149,7 +150,8 @@
         ];
 
         function verifyAdmin() {
-            if (document.getElementById('admin-pin').value === 'admin123') {
+            const masterPin = (typeof CONFIG !== 'undefined') ? CONFIG.ADMIN_PIN : 'admin123';
+            if (document.getElementById('admin-pin').value === masterPin) {
                 document.getElementById('login-container').style.display = 'none';
                 document.getElementById('dashboard-container').style.display = 'block';
                 loadDashboard();
