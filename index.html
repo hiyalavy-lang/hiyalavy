@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body data-lang="dhivehi">
@@ -55,6 +56,11 @@
     <script>
         class App {
             constructor() {
+                // Cloud Sync (Supabase)
+                this.sbUrl = 'https://lmhrlrucyfqqrfdfuups.supabase.co';
+                this.sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtaHJscnVjeWZxcXJmZGZ1dXBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTU2MDUsImV4cCI6MjA5NDIzMTYwNX0.2AOLDNU4eWNsh9S8r0GFyd0CvVzGZBd2goJpglmIILU';
+                this.supabase = (this.sbUrl !== 'YOUR_SUPABASE_URL') ? supabase.createClient(this.sbUrl, this.sbKey) : null;
+
                 // Sync settings from LocalStorage (managed by admin.html)
                 const savedSettings = JSON.parse(localStorage.getItem('thaana_settings')) || {
                     siteName: 'Thaana Kids',
@@ -128,9 +134,45 @@
                 document.getElementById('mystery-box').onclick = () => { this.playSound('click'); this.openMysteryBox(); };
                 this.initDecorations();
                 this.render();
+                this.initSupabase();
 
                 // Mascot random greeting
                 setTimeout(() => { if (this.state.isLoggedIn) this.mascotSay(this.t('mascot_hello')); }, 2000);
+            }
+
+            async initSupabase() {
+                if (!this.supabase) return;
+
+                // 1. Fetch Global Settings
+                const { data: settings } = await this.supabase.from('settings').select('*').eq('id', 'global').single();
+                if (settings) {
+                    this.state.globalSettings = {
+                        siteName: settings.site_name,
+                        premiumPrice: settings.premium_price,
+                        bankAccount: settings.bank_account,
+                        bankName: settings.bank_name,
+                        heroTitle: settings.hero_title,
+                        heroSubtitle: settings.hero_subtitle,
+                        heroBtnText: settings.hero_btn_text,
+                        heroEmoji: settings.hero_emoji,
+                        footerText: settings.footer_text
+                    };
+                    this.updateUIStrings();
+                    this.render();
+                }
+
+                // 2. Realtime Listener for Settings
+                this.supabase.channel('settings-db-changes')
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' }, payload => {
+                        const s = payload.new;
+                        this.state.globalSettings = {
+                            siteName: s.site_name, premiumPrice: s.premium_price, bankAccount: s.bank_account,
+                            bankName: s.bank_name, heroTitle: s.hero_title, heroSubtitle: s.hero_subtitle,
+                            heroBtnText: s.hero_btn_text, heroEmoji: s.hero_emoji, footerText: s.footer_text
+                        };
+                        this.updateUIStrings();
+                        this.render();
+                    }).subscribe();
             }
 
             initDecorations() {
