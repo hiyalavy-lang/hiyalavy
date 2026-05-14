@@ -157,11 +157,16 @@
 
                 // 0. Check Auth Session
                 const { data: { session } } = await this.supabase.auth.getSession();
-                if (session) {
-                    this.state.isLoggedIn = true;
-                    this.state.parentEmail = session.user.email;
-                    // Check if user has premium (you can add a 'users' table check here)
-                }
+                this.handleSessionUpdate(session);
+
+                this.supabase.auth.onAuthStateChange((event, newSession) => {
+                    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                        this.handleSessionUpdate(newSession);
+                    } else if (event === 'SIGNED_OUT') {
+                        this.state.isLoggedIn = false;
+                        this.switchView('landing');
+                    }
+                });
 
                 // 1. Fetch Global Settings
                 const { data: settings } = await this.supabase.from('settings').select('*').eq('id', 'global').single();
@@ -193,6 +198,18 @@
                         this.updateUIStrings();
                         this.render();
                     }).subscribe();
+            }
+
+            handleSessionUpdate(session) {
+                if (session) {
+                    this.state.isLoggedIn = true;
+                    this.state.parentEmail = session.user.email;
+                    if (this.state.view === 'landing' || this.state.view === 'login') {
+                        this.switchView('soundboard');
+                    } else {
+                        this.render();
+                    }
+                }
             }
 
             initDecorations() {
