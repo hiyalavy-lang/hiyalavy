@@ -30,7 +30,14 @@
         // Supabase Initialization
         const sbUrl = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_URL : 'YOUR_SUPABASE_URL';
         const sbKey = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_KEY : 'YOUR_SUPABASE_ANON_KEY';
-        const supabaseClient = (sbUrl !== 'YOUR_SUPABASE_URL') ? supabase.createClient(sbUrl, sbKey) : null;
+        window.supabaseClient = null;
+        try {
+            if (sbUrl !== 'YOUR_SUPABASE_URL' && typeof supabase !== 'undefined') {
+                window.supabaseClient = supabase.createClient(sbUrl, sbKey);
+            }
+        } catch (e) {
+            console.error("Supabase Init Error:", e);
+        }
     </script>
         <div id="login-container" class="login-screen">
             <div class="admin-card" style="width: 400px; text-align: center; position: relative;">
@@ -377,8 +384,8 @@
             };
             localStorage.setItem('thaana_settings', JSON.stringify(settings));
             
-            if (supabaseClient) {
-                const { error } = await supabaseClient.from('settings').upsert({
+            if (window.supabaseClient) {
+                const { error } = await window.supabaseClient.from('settings').upsert({
                     id: 'global',
                     site_name: settings.siteName,
                     premium_price: settings.premiumPrice,
