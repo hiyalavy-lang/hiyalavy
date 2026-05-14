@@ -31,6 +31,7 @@
         const sbUrl = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_URL : 'YOUR_SUPABASE_URL';
         const sbKey = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_KEY : 'YOUR_SUPABASE_ANON_KEY';
         const supabaseClient = (sbUrl !== 'YOUR_SUPABASE_URL') ? supabase.createClient(sbUrl, sbKey) : null;
+    </script>
         <div id="login-container" class="login-screen">
             <div class="admin-card" style="width: 400px; text-align: center; position: relative;">
                 <img src="../assets/mascot_a.png" class="app-mascot" style="width: 120px; margin-bottom: 10px;">
