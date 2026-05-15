@@ -14,6 +14,23 @@
         /* Prevent zooming on mobile */
         html, body { touch-action: manipulation; overscroll-behavior: none; }
         .hall-container, .fame-list { touch-action: pan-y; }
+
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .profile-hub-pill { display: flex; align-items: center; gap: 12px; background: white; border: 3px solid var(--border-dark); border-radius: 50px; padding: 6px 16px 6px 8px; cursor: pointer; transition: all 0.2s; position: relative; box-shadow: 0 4px 0 var(--border-dark); }
+        .profile-hub-pill:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--border-dark); }
+        .hub-avatar { width: 42px; height: 42px; background: var(--warning); border-radius: 50%; border: 3px solid var(--border-dark); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+        .hub-info { display: flex; flex-direction: column; line-height: 1.1; }
+        .hub-name { font-weight: 900; font-size: 0.95rem; color: #1e293b; }
+        .hub-points { font-weight: 800; font-size: 0.75rem; color: #64748b; }
+        .hub-chevron { font-size: 0.7rem; color: #94a3b8; margin-left: 4px; }
+        .premium-badge { position: absolute; top: -10px; left: -10px; font-size: 1.2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+        .hub-action-btn { width: 100%; padding: 12px; border-radius: 16px; border: 3px solid var(--border-dark); background: #f8fafc; color: #1e293b; font-weight: 800; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; }
+        .hub-action-btn:hover { background: #f1f5f9; transform: translateY(-2px); }
+        .hub-action-btn.premium { background: var(--orange); color: white; border-color: #d97706; }
+        .hub-action-btn.logout { color: #ef4444; border-color: #fca5a5; }
+        .lang-opt { padding: 15px; border-radius: 20px; border: 3px solid #e2e8f0; background: white; font-weight: 900; font-size: 1rem; cursor: pointer; transition: all 0.2s; color: #475569; position: relative; text-align: center; }
+        .lang-opt.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); box-shadow: 0 4px 0 var(--primary); transform: translateY(-2px); }
+        .lang-opt:hover:not(.active) { border-color: var(--primary-light); background: #f8fafc; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -96,11 +113,14 @@
                 // Automated Premium Check (Removal if expired)
                 let isPremium = localStorage.getItem('thaana_isPremium') === 'true';
                 const premiumExpiry = localStorage.getItem('thaana_premiumExpiry');
-                if (isPremium && premiumExpiry && Date.now() > parseInt(premiumExpiry)) {
-                    isPremium = false;
-                    localStorage.setItem('thaana_isPremium', 'false');
-                    localStorage.removeItem('thaana_premiumExpiry');
-                    console.log("Premium subscription expired.");
+                if (isPremium && premiumExpiry) {
+                    const expiryDate = new Date(parseInt(premiumExpiry));
+                    if (Date.now() > expiryDate.getTime()) {
+                        isPremium = false;
+                        localStorage.setItem('thaana_isPremium', 'false');
+                        localStorage.removeItem('thaana_premiumExpiry');
+                        console.log("Premium subscription expired.");
+                    }
                 }
 
                 // Dynamic Content & Nav Initialization
@@ -455,36 +475,64 @@
 
             renderProfileHub() {
                 const container = document.getElementById('profile-hub-container');
+                if (!this.state.isLoggedIn) {
+                    container.innerHTML = `<button class="nav-btn" onclick="app.switchView('login')">🔑 ${this.t('Login')}</button>`;
+                    return;
+                }
                 const activeKid = this.state.kids[this.state.activeKidIndex];
-                const avatar = this.state.isLoggedIn ? activeKid.avatar : '👤';
                 container.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:10px">
-                        ${this.state.isPremium ? '<span class="premium-tag">PREMIUM ✨</span>' : ''}
-                        <div class="profile-avatar-hub" onclick="app.showHubMenu()">${avatar}</div>
+                    <div class="profile-hub-pill" onclick="app.showHubDropdown()">
+                        ${this.state.isPremium ? '<span class="premium-badge">✨</span>' : ''}
+                        <span class="hub-avatar">${activeKid.avatar}</span>
+                        <div class="hub-info">
+                            <span class="hub-name">${activeKid.name}</span>
+                            <span class="hub-points">⭐ ${activeKid.points}</span>
+                        </div>
+                        <span class="hub-chevron">▼</span>
                     </div>
                 `;
             }
 
-            showHubMenu() {
-                const modal = document.createElement('div');
-                modal.className = 'modal-overlay'; modal.id = 'hub-menu-modal';
-                modal.innerHTML = `
-                    <div class="parent-modal" style="max-width:400px; padding: 30px">
-                        <button class="modal-close" onclick="document.getElementById('hub-menu-modal').remove()">✖</button>
-                        <h2 style="text-align:center; margin-bottom:25px">${this.t('Profile Hub')}</h2>
-                        ${this.state.isLoggedIn ? `
-                            <div class="profile-list" style="margin-bottom:20px">
-                                ${this.state.kids.map((k, i) => `<div class="profile-item" onclick="app.switchKid(${i})" style="padding:15px; border:3px solid var(--border-dark); border-radius:20px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center; gap:15px; background:${this.state.activeKidIndex === i ? 'var(--warning)' : 'white'}"><span style="font-size:2rem">${k.avatar}</span><div><div style="font-weight:900; font-size:1.2rem">${k.name}</div></div></div>`).join('')}
+            showHubDropdown() {
+                const existing = document.getElementById('hub-dropdown');
+                if (existing) { existing.remove(); return; }
+
+                const dropdown = document.createElement('div');
+                dropdown.id = 'hub-dropdown';
+                dropdown.className = 'hub-dropdown-menu';
+                dropdown.style.cssText = `position:fixed; top:80px; right:20px; width:320px; background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 15px 45px rgba(0,0,0,0.2); z-index:9000; padding:20px; animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)`;
+
+                dropdown.innerHTML = `
+                    <div style="margin-bottom:15px; font-weight:900; color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:1.5px">${this.t('Switch Profile')}</div>
+                    <div class="profile-stack" style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px">
+                        ${this.state.kids.map((k, i) => `
+                            <div class="profile-row ${i === this.state.activeKidIndex ? 'active' : ''}" onclick="app.switchKid(${i})" style="display:flex; align-items:center; gap:12px; padding:12px; border-radius:18px; border:3px solid ${i === this.state.activeKidIndex ? 'var(--primary)' : '#f1f5f9'}; background:${i === this.state.activeKidIndex ? '#eff6ff' : 'white'}; cursor:pointer; transition:all 0.2s">
+                                <span style="font-size:1.8rem">${k.avatar}</span>
+                                <div style="flex:1">
+                                    <div style="font-weight:900; font-size:1rem; color:${i === this.state.activeKidIndex ? 'var(--primary)' : '#1e293b'}">${k.name}</div>
+                                    <div style="font-size:0.75rem; font-weight:700; color:#94a3b8">⭐ ${k.points} Points</div>
+                                </div>
+                                ${i === this.state.activeKidIndex ? '<span style="color:var(--primary); font-size:1.2rem">✓</span>' : ''}
                             </div>
-                            <button class="nav-btn" style="width:100%; margin-bottom:10px" onclick="app.handleParentAuth()">⚙️ ${this.t('Settings')}</button>
-                            ${!this.state.isPremium ? `<button class="start-btn" style="width:100%; margin-bottom:10px; background:var(--orange)" onclick="app.showUpgradePopup()">✨ Upgrade to Premium</button>` : ''}
-                            <button class="start-btn" style="width:100%; background:var(--accent)" onclick="app.logout()">🚪 ${this.t('Logout')}</button>
-                        ` : `
-                            <button class="start-btn" style="width:100%" onclick="app.switchView('login')">🔑 ${this.t('Login')}</button>
-                        `}
+                        `).join('')}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:10px">
+                        <button class="hub-action-btn" onclick="app.handleParentAuth()">⚙️ ${this.t('Settings')}</button>
+                        ${!this.state.isPremium ? `<button class="hub-action-btn premium" onclick="app.showUpgradePopup()">✨ Upgrade to Premium</button>` : ''}
+                        <button class="hub-action-btn logout" onclick="app.logout()">🚪 ${this.t('Logout')}</button>
                     </div>
                 `;
-                document.getElementById('modal-container').appendChild(modal);
+                document.body.appendChild(dropdown);
+
+                setTimeout(() => {
+                    const closer = (e) => {
+                        if (!dropdown.contains(e.target) && !e.target.closest('.profile-hub-pill')) {
+                            dropdown.remove();
+                            document.removeEventListener('click', closer);
+                        }
+                    };
+                    document.addEventListener('click', closer);
+                }, 100);
             }
 
             showUpgradePopup() {
@@ -586,13 +634,17 @@
                 if (!this.state.isLoggedIn || this.state.view === 'landing') { this.mainNav.innerHTML = ''; return; }
 
                 const navItems = this.state.customNav.map(item => {
+                    let label = item.label;
+                    if (this.state.language === 'numbers') {
+                        if (item.id === 'soundboard') label = 'Numbers';
+                        if (item.id === 'vocabulary') label = 'Count';
+                    }
                     const hidden = (item.id === 'engdhi' && this.state.language !== 'engdhi') ||
                         (item.id === 'fili' && this.state.language !== 'dhivehi') ||
                         (item.id === 'tracing' && this.state.language === 'engdhi') ||
-                        (item.id === 'vocabulary' && this.state.language === 'arabic') ||
-                        (item.id === 'quiz' && this.state.language === 'arabic') ||
-                        (item.id === 'numbers' && this.state.language === 'arabic');
-                    return { ...item, hidden };
+                        (item.id === 'vocabulary' && (this.state.language === 'arabic' || (this.state.language === 'numbers' && !this.state.isPremium))) ||
+                        (item.id === 'quiz' && this.state.language === 'arabic');
+                    return { ...item, label, hidden };
                 });
 
                 this.mainNav.innerHTML = navItems.filter(item => !item.hidden).map(item => `
@@ -600,6 +652,7 @@
                             onclick="app.playSound('click'); app.switchView('${item.id}')">
                         <span class="icon">${item.icon}</span>
                         <span class="label">${this.t(item.label)}</span>
+                        ${item.premium && !this.state.isPremium ? '<span class="lock">🔒</span>' : ''}
                     </button>
                 `).join('');
             }
@@ -695,13 +748,15 @@
                 dropdown.innerHTML = `
                         <h2 style="font-size:1.8rem; margin-bottom:20px; display:flex; align-items:center; gap:12px; color:var(--teal)"><span style="font-size:2rem">⚙️</span> ${this.t('Settings')}</h2>
                         <div class="settings-group"><label class="settings-label">${this.t('Security (Parent PIN)')}</label><div style="display:flex; gap:10px"><input type="password" class="settings-input" id="new-pin" placeholder="New 4-digit PIN" style="margin-bottom:0"><button class="start-btn" style="padding:10px 20px; font-size:1rem; background:var(--teal)" onclick="app.updatePin()">${this.t('Save')}</button></div></div>
-                        <div class="settings-group"><label class="settings-label">App Language</label><select class="settings-select" onchange="app.updateLanguage(this.value)">
-                            <option value="dhivehi" ${this.state.language === 'dhivehi' ? 'selected' : ''}>ދިވެހި (Dhivehi)</option>
-                            <option value="english" ${this.state.language === 'english' ? 'selected' : ''}>English 🔒</option>
-                            <option value="arabic" ${this.state.language === 'arabic' ? 'selected' : ''}>العربية (Arabic) 🔒</option>
-                            <option value="engdhi" ${this.state.language === 'engdhi' ? 'selected' : ''}>English-Dhivehi Mix 🔒</option>
-                            <option value="numbers" ${this.state.language === 'numbers' ? 'selected' : ''}>Numbers (1-20) 🔒</option>
-                        </select></div>
+                        <div class="settings-group"><label class="settings-label">App Language</label>
+                            <div class="lang-select-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+                                <button class="lang-opt ${this.state.language === 'dhivehi' ? 'active' : ''}" onclick="app.updateLanguage('dhivehi')">ދިވެހި</button>
+                                <button class="lang-opt ${this.state.language === 'english' ? 'active' : ''}" onclick="app.updateLanguage('english')">English ${!this.state.isPremium ? '🔒' : ''}</button>
+                                <button class="lang-opt ${this.state.language === 'arabic' ? 'active' : ''}" onclick="app.updateLanguage('arabic')">العربية ${!this.state.isPremium ? '🔒' : ''}</button>
+                                <button class="lang-opt ${this.state.language === 'engdhi' ? 'active' : ''}" onclick="app.updateLanguage('engdhi')">Engdhi ${!this.state.isPremium ? '🔒' : ''}</button>
+                                <button class="lang-opt ${this.state.language === 'numbers' ? 'active' : ''}" onclick="app.updateLanguage('numbers')" style="grid-column: span 2">Numbers ${!this.state.isPremium ? '🔒' : ''}</button>
+                            </div>
+                        </div>
                         <div class="settings-group"><label class="settings-label">Profiles</label><div id="profile-edit-list"></div><button class="nav-btn" style="width:100%; justify-content:center; margin-top:10px" onclick="app.addNewKid()">➕ Add Kid</button></div>
                 `;
                 document.body.appendChild(dropdown);
@@ -734,7 +789,6 @@
                     <div class="profile-item" style="padding:25px; border-radius:25px; border:4px solid var(--border-dark); background:white; margin-bottom:20px">
                         <div style="display:flex; gap:15px; margin-bottom:15px">
                             <input type="text" class="settings-input" value="${k.name}" placeholder="Name" onchange="app.updateKidProp(${i}, 'name', this.value)" style="flex:1; margin-bottom:0">
-                            <input type="password" class="settings-input" value="${k.pin || ''}" placeholder="PIN" onchange="app.updateKidProp(${i}, 'pin', this.value)" style="width:100px; margin-bottom:0; text-align:center">
                             <select class="settings-select" onchange="app.updateKidProp(${i}, 'ageGroup', this.value)" style="width:120px; margin-bottom:0">
                                 <option value="toddler" ${k.ageGroup === 'toddler' ? 'selected' : ''}>2-3</option>
                                 <option value="preschool" ${k.ageGroup === 'preschool' ? 'selected' : ''}>4-5</option>
@@ -863,6 +917,18 @@
                 this.viewContainer.appendChild(grid);
             }
 
+            renderCountTab() {
+                const items = this.state.customContent.numbers || [];
+                const grid = document.createElement('div'); grid.className = 'alphabet-grid';
+                items.forEach(item => {
+                    const card = document.createElement('div'); card.className = 'letter-card';
+                    card.innerHTML = `<div style="font-size:4rem; font-weight:900; color:var(--primary)">${item.letter}</div><div style="font-size:1.4rem; font-weight:800; color:var(--secondary)">${item.count_word || 'Count'}</div>`;
+                    card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); };
+                    grid.appendChild(card);
+                });
+                this.viewContainer.appendChild(grid);
+            }
+
             initTracingCanvas(letter) {
                 this.currentTracingLetter = letter;
                 this.drawnPixels = new Set();
@@ -926,7 +992,9 @@
 
                     rCtx.clearRect(0, 0, 400, 400);
                     rCtx.fillStyle = '#000';
-                    rCtx.font = `bold ${Math.round(fontSize)}px Fredoka, Arial, sans-serif`;
+                    const isDual = letter.length > 1;
+                    const displaySize = isDual ? Math.round(fontSize * 0.7) : Math.round(fontSize);
+                    rCtx.font = `bold ${displaySize}px Fredoka, Arial, sans-serif`;
                     rCtx.textAlign = 'center';
                     rCtx.textBaseline = 'middle';
                     rCtx.fillText(letter, 200, 200);
@@ -1102,6 +1170,7 @@
 
 
             renderVocabulary() {
+                if (this.state.language === 'numbers') { this.renderCountTab(); return; }
                 const items = this.state.customContent[this.state.language] || [];
                 const grid = document.createElement('div'); grid.className = 'alphabet-grid';
                 items.forEach(item => {
