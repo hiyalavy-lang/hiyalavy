@@ -256,7 +256,17 @@
             }
 
             forgotPin() {
-                alert(`${this.t('A reset link has been sent to')} ${this.state.parentEmail}`);
+                const isEng = this.state.language === 'english';
+                const msg = isEng 
+                    ? "For security, resetting your PIN requires you to log out and sign back in with your Google account. Do you want to proceed?" 
+                    : "ސެކިއުރިޓީއަށްޓަކައި، ޕިން ރީސެޓް ކުރުމަށް ލޮގައުޓްކޮށް އަލުން ގޫގުލް އިން ލޮގިން ކުރަން ޖެހޭނެއެވެ. ކުރިއަށް ގެންދަން ބޭނުންތަ؟";
+                
+                if (confirm(msg)) {
+                    localStorage.removeItem('thaana_parentPin');
+                    this.state.parentPin = '1234';
+                    if (document.getElementById('passcode-modal')) document.getElementById('passcode-modal').remove();
+                    this.logout();
+                }
             }
 
             switchView(view) {
