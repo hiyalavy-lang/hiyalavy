@@ -949,8 +949,8 @@
                 const isNumbers = this.state.language === 'numbers';
                 const items = this.state.customContent[this.state.language] || [];
                 items.forEach(item => {
-                    const isDual = item.letter.length > 1 && this.state.language === 'english';
-                    const displayLetter = isDual ? item.letter : item.letter;
+                    const isDual = item.letter.length > 1 && (this.state.language === 'english' || this.state.language === 'engdhi');
+                    const displayLetter = (isDual && item.letter.length === 1) ? item.letter.toUpperCase() + item.letter.toLowerCase() : item.letter;
                     const card = document.createElement('div'); card.className = 'letter-card'; 
                     
                     if (isNumbers) {
@@ -967,7 +967,7 @@
                             this.addTaskProgress(); 
                         };
                     } else {
-                        card.innerHTML = `<div style="font-size:${isDual ? '3.2rem' : '4rem'}; font-weight:900; letter-spacing:${isDual ? '8px' : 'normal'}">${displayLetter}</div><div style="font-size:1.2rem; font-weight:800">${item.name || item.dhivehi || ''}</div>`;
+                        card.innerHTML = `<div style="font-size:${isDual ? '2.8rem' : '4rem'}; font-weight:900; letter-spacing:${isDual ? '2px' : 'normal'}">${displayLetter}</div><div style="font-size:1.2rem; font-weight:800">${item.name || item.dhivehi || ''}</div>`;
                         card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); this.addTaskProgress(); };
                     }
                     grid.appendChild(card);
@@ -1040,9 +1040,9 @@
                     <div class="tracing-container" style="padding:2rem; text-align:center">
                         <div class="letter-selector" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px">
                             ${items.map(item => {
-                                const isDual = item.letter.length > 1 && this.state.language === 'english';
-                                const display = isDual ? item.letter : item.letter;
-                                return `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')" style="min-width:60px">${display}</button>`;
+                                const isDual = item.letter.length > 1;
+                                const display = (item.letter.length === 1 && (this.state.language === 'english' || item.category === 'english')) ? item.letter.toUpperCase() + item.letter.toLowerCase() : item.letter;
+                                return `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')" style="min-width:60px; font-size:${isDual ? '1.2rem' : '1.5rem'}">${display}</button>`;
                             }).join('')}
                         </div>
                         <div id="canvas-area"></div>
@@ -1104,10 +1104,14 @@
                 localStorage.setItem('last_tracing_letter', letter);
                 localStorage.setItem('last_tracing_lang', this.state.language);
 
+                const isDual = letter.length > 1;
+                const ghostFontSize = isDual ? 'clamp(7rem, 35vw, 11rem)' : 'clamp(10rem, 45vw, 16rem)';
+                const ghostSpacing = isDual ? '-0.05em' : 'normal';
+
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
                     <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden">
-                        <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:clamp(10rem, 45vw, 16rem); opacity:0.13; pointer-events:none; z-index:1; font-family:'Fredoka',sans-serif; line-height:1">${letter}</div>
+                        <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:${ghostFontSize}; letter-spacing:${ghostSpacing}; opacity:0.13; pointer-events:none; z-index:1; font-family:'Fredoka',sans-serif; line-height:1; white-space:nowrap">${letter}</div>
                         <canvas id="tracing-canvas" width="400" height="400" style="position:absolute; top:0; left:0; z-index:2; width:100%; height:100%; cursor:crosshair; touch-action:none"></canvas>
                     </div>
                     <div style="margin:12px auto; max-width:400px">
