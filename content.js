@@ -104,6 +104,28 @@ const content = {
         { letter: "R", english: "Rabbit", dhivehi: "މުސަޅު", audio: "en_r.mp3" },
         { letter: "S", english: "Sun", dhivehi: "އިރު", audio: "en_s.mp3" },
         { letter: "T", english: "Tiger", dhivehi: "މިނިކާވަގު", audio: "en_t.mp3" }
+    ],
+    numbers: [
+        { letter: "1", english: "One", dhivehi: "އެކެއް", name: "1", audio: "num_1.mp3" },
+        { letter: "2", english: "Two", dhivehi: "ދޭއް", name: "2", audio: "num_2.mp3" },
+        { letter: "3", english: "Three", dhivehi: "ތިނެއް", name: "3", audio: "num_3.mp3" },
+        { letter: "4", english: "Four", dhivehi: "ހަތަރެއް", name: "4", audio: "num_4.mp3" },
+        { letter: "5", english: "Five", dhivehi: "ފަހެއް", name: "5", audio: "num_5.mp3" },
+        { letter: "6", english: "Six", dhivehi: "ހަޔެއް", name: "6", audio: "num_6.mp3" },
+        { letter: "7", english: "Seven", dhivehi: "ހަތެއް", name: "7", audio: "num_7.mp3" },
+        { letter: "8", english: "Eight", dhivehi: "އަށެއް", name: "8", audio: "num_8.mp3" },
+        { letter: "9", english: "Nine", dhivehi: "ނުވައެއް", name: "9", audio: "num_9.mp3" },
+        { letter: "10", english: "Ten", dhivehi: "ދިހައެއް", name: "10", audio: "num_10.mp3" },
+        { letter: "11", english: "Eleven", dhivehi: "އެގާރަ", name: "11", audio: "num_11.mp3" },
+        { letter: "12", english: "Twelve", dhivehi: "ބާރަ", name: "12", audio: "num_12.mp3" },
+        { letter: "13", english: "Thirteen", dhivehi: "ތޭރަ", name: "13", audio: "num_13.mp3" },
+        { letter: "14", english: "Fourteen", dhivehi: "ސާދަ", name: "14", audio: "num_14.mp3" },
+        { letter: "15", english: "Fifteen", dhivehi: "ފަނަރަ", name: "15", audio: "num_15.mp3" },
+        { letter: "16", english: "Sixteen", dhivehi: "ސޯޅަ", name: "16", audio: "num_16.mp3" },
+        { letter: "17", english: "Seventeen", dhivehi: "ސަތާރަ", name: "17", audio: "num_17.mp3" },
+        { letter: "18", english: "Eighteen", dhivehi: "އަށާރަ", name: "18", audio: "num_18.mp3" },
+        { letter: "19", english: "Nineteen", dhivehi: "ނަވާރަ", name: "19", audio: "num_19.mp3" },
+        { letter: "20", english: "Twenty", dhivehi: "ވިހި", name: "20", audio: "num_20.mp3" }
     ]
 };
 

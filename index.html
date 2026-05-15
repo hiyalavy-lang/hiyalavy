@@ -3,12 +3,17 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Thaana Kids - Learning Hub</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
+    <style>
+        /* Prevent zooming on mobile */
+        html, body { touch-action: manipulation; overscroll-behavior: none; }
+        .hall-container, .fame-list { touch-action: pan-y; }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
 </head>
@@ -104,6 +109,7 @@
                     { id: 'fili', icon: '✨', label: 'Fili', premium: true },
                     { id: 'tracing', icon: '✏️', label: 'Tracing', premium: true },
                     { id: 'vocabulary', icon: '🖼️', label: 'Words', premium: true },
+                    { id: 'numbers', icon: '🔢', label: 'Numbers', premium: true },
                     { id: 'quiz', icon: '⭐', label: 'Quiz', premium: true },
                     { id: 'hall', icon: '🏆', label: 'Hall', premium: true },
                     { id: 'badges', icon: '🏅', label: 'Badges', premium: true }
@@ -129,6 +135,11 @@
                     customContent: JSON.parse(localStorage.getItem('thaana_content')) || content,
                     customFili: JSON.parse(localStorage.getItem('thaana_fili')) || filiData
                 };
+
+                // Add numbers to content if missing
+                if (!this.state.customContent.numbers) {
+                    this.state.customContent.numbers = content.numbers;
+                }
 
                 // Sync to localStorage if first run
                 if (!localStorage.getItem('thaana_content')) {
@@ -204,8 +215,10 @@
 
                 const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
                 if (cData && cData.length > 0) {
-                    this.state.customContent = { dhivehi: [], english: [], arabic: [], engdhi: [] };
-                    cData.forEach(c => this.state.customContent[c.category].push(c));
+                    this.state.customContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
+                    cData.forEach(c => {
+                        if (this.state.customContent[c.category]) this.state.customContent[c.category].push(c);
+                    });
                 }
 
                 this.updateUIStrings();
@@ -229,8 +242,10 @@
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_content' }, async () => {
                         const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
                         if (cData) {
-                            this.state.customContent = { dhivehi: [], english: [], arabic: [], engdhi: [] };
-                            cData.forEach(c => this.state.customContent[c.category].push(c));
+                            this.state.customContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
+                            cData.forEach(c => {
+                                if (this.state.customContent[c.category]) this.state.customContent[c.category].push(c);
+                            });
                             this.render();
                         }
                     }).subscribe();
@@ -397,6 +412,7 @@
                     case 'fili': this.renderFili(); break;
                     case 'tracing': this.renderTracing(); break;
                     case 'vocabulary': this.renderVocabulary(); break;
+                    case 'numbers': this.renderNumbers(); break;
                     case 'quiz': this.renderQuiz(); break;
                     case 'hall': this.renderHallOfFame(); break;
                     case 'badges': this.renderBadges(); break;
@@ -686,7 +702,28 @@
                 list.innerHTML = this.state.kids.map((k, i) => `<div class="profile-item" style="padding:25px; border-radius:25px; border:4px solid var(--border-dark); background:white; margin-bottom:20px"><div style="display:flex; gap:15px; margin-bottom:15px"><input type="text" class="settings-input" value="${k.name}" onchange="app.updateKidProp(${i}, 'name', this.value)" style="flex:1; margin-bottom:0"><select class="settings-select" onchange="app.updateKidProp(${i}, 'ageGroup', this.value)" style="width:120px; margin-bottom:0"><option value="toddler" ${k.ageGroup === 'toddler' ? 'selected' : ''}>2-3</option><option value="preschool" ${k.ageGroup === 'preschool' ? 'selected' : ''}>4-5</option><option value="junior" ${k.ageGroup === 'junior' ? 'selected' : ''}>6+</option></select></div><div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">${k.unlockedAvatars.map(a => `<div onclick="app.updateKidProp(${i}, 'avatar', '${a}')" style="font-size:1.8rem; cursor:pointer; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:15px; border:3px solid var(--border-dark); background:${k.avatar === a ? 'var(--warning)' : '#f8f9fa'}">${a}</div>`).join('')}<button onclick="app.removeKid(${i})" style="margin-right:auto; border:none; background:#fee2e2; width:50px; height:50px; border-radius:15px; cursor:pointer; font-size:1.5rem; border:3px solid #ef4444">🗑️</button></div></div>`).join('');
             }
 
-            addNewKid() { this.state.kids.push({ name: 'ކުއްޖާ', ageGroup: 'preschool', avatar: '👶', points: 0, badges: [], unlockedAvatars: ['👶', '👧', '👦'] }); this.renderProfileEdits(); }
+            async addNewKid() { 
+                const session = await this.supabase.auth.getSession();
+                const userId = session.data.session ? session.data.session.user.id : null;
+                const newKid = { 
+                    user_id: userId, 
+                    name: 'ކުއްޖާ', 
+                    age_group: 'preschool', 
+                    avatar: '👶', 
+                    points: 0, 
+                    badges: [], 
+                    unlocked_avatars: ['👶', '👧', '👦', '🐶', '🐱', '🦁', '🐯', '🐼', '🐨', '🦖', '🦄', '🤖', '👾', '🚀', '⭐'] 
+                };
+                const { data } = await this.supabase.from('kids').insert(newKid).select().single();
+                if (data) {
+                    this.state.kids.push({ 
+                        dbId: data.id, name: data.name, ageGroup: data.age_group, avatar: data.avatar, 
+                        points: data.points, badges: [], 
+                        unlockedAvatars: data.unlocked_avatars 
+                    });
+                    this.renderProfileEdits();
+                }
+            }
             removeKid(i) { if (this.state.kids.length > 1) { this.state.kids.splice(i, 1); if (this.state.activeKidIndex >= i) this.state.activeKidIndex = 0; this.renderProfileEdits(); } else alert("At least one profile needed!"); }
             updateKidProp(i, prop, val) {
                 this.state.kids[i][prop] = val;
@@ -767,6 +804,18 @@
                 this.initTracingCanvas(items[0].letter);
             }
 
+            renderNumbers() {
+                const items = this.state.customContent.numbers || [];
+                const grid = document.createElement('div'); grid.className = 'alphabet-grid';
+                items.forEach(item => {
+                    const card = document.createElement('div'); card.className = 'letter-card';
+                    card.innerHTML = `<div style="font-size:4rem; font-weight:900; color:var(--primary)">${item.letter}</div><div style="font-size:1.4rem; font-weight:800; color:var(--secondary)">${item.dhivehi}</div><div style="font-size:1rem; color:#64748b">${item.english}</div>`;
+                    card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); this.addTaskProgress(); };
+                    grid.appendChild(card);
+                });
+                this.viewContainer.appendChild(grid);
+            }
+
             initTracingCanvas(letter) {
                 this.currentTracingLetter = letter;
                 this.drawnPixels = new Set();
@@ -777,6 +826,7 @@
                     <div class="canvas-wrapper" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden">
                         <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:clamp(8rem, 40vw, 15rem); opacity:0.13; pointer-events:none; z-index:1; font-family:'Fredoka',sans-serif; line-height:1">${letter}</div>
                         <canvas id="tracing-canvas" width="400" height="400" style="position:absolute; top:0; left:0; z-index:2; width:100%; height:100%; cursor:crosshair; touch-action:none"></canvas>
+                        <div id="start-dot" style="position:absolute; width:20px; height:20px; background:#22c55e; border-radius:50%; border:3px solid white; box-shadow:0 0 10px rgba(0,0,0,0.3); z-index:3; display:none; pointer-events:none"></div>
                     </div>
                     <div style="margin:12px auto; max-width:400px">
                         <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700; color:#64748b; margin-bottom:5px">
@@ -838,10 +888,24 @@
 
                     const imgData = rCtx.getImageData(0, 0, 400, 400).data;
                     const set = new Set();
+                    let firstPx = -1;
                     for (let i = 0; i < imgData.length; i += 4) {
-                        if (imgData[i + 3] > 40) set.add(i >> 2);
+                        if (imgData[i + 3] > 40) {
+                            set.add(i >> 2);
+                            if (firstPx === -1) firstPx = i >> 2;
+                        }
                     }
                     this.referencePixels = set;
+
+                    // Position start dot
+                    const dot = document.getElementById('start-dot');
+                    if (dot && firstPx !== -1) {
+                        const x = firstPx % 400;
+                        const y = Math.floor(firstPx / 400);
+                        dot.style.left = (x - 10) + 'px';
+                        dot.style.top = (y - 10) + 'px';
+                        dot.style.display = 'block';
+                    }
                 };
 
                 // Wait for fonts + layout to be ready
@@ -1138,7 +1202,9 @@
             }
 
             addTaskProgress() {
-                this.state.kids[this.state.activeKidIndex].points += 10;
+                const kid = this.state.kids[this.state.activeKidIndex];
+                kid.points += 10;
+                this.checkBadges(kid);
                 this.syncKidProgress();
                 this.state.dailyTasksCompleted++;
                 if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) document.getElementById('mystery-box').innerHTML = '🎁✨';
@@ -1152,6 +1218,38 @@
                 setTimeout(() => mascotPop.style.bottom = '-400px', 2000);
                 setTimeout(() => mascotPop.remove(), 2600);
             }
+
+            checkBadges(kid) {
+                const earned = kid.badges || [];
+                const newBadges = [];
+                
+                const award = (id) => { if (!earned.includes(id)) { earned.push(id); newBadges.push(id); } };
+
+                // Point Milestones
+                if (kid.points >= 10) award(1); // First Step
+                if (kid.points >= 100) award(16); // Super Student
+                if (kid.points >= 250) award(18); // Knowledge King
+                if (kid.points >= 500) award(23); // Diamond Badge
+                if (kid.points >= 1000) award(27); // Star Student
+                if (kid.points >= 1500) award(34); // Winner Spirit
+                if (kid.points >= 2000) award(38); // Sun Shiner
+                if (kid.points >= 3000) award(44); // Idea Spark
+                if (kid.points >= 5000) award(48); // Infinite Wisdom
+
+                // Other milestones
+                if (this.state.kids.length >= 2) award(45); // Team Player
+                if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) award(15); // Mystery Solver
+                
+                if (newBadges.length > 0) {
+                    kid.badges = earned;
+                    setTimeout(() => {
+                        const b = badges.find(x => x.id === newBadges[0]);
+                        this.mascotSay(`🎉 WOW! You earned the ${b.name} badge! ${b.icon}`, 5000);
+                        this.playSound('fanfare');
+                    }, 2000);
+                }
+            }
+
             openMysteryBox() { if (this.state.dailyGameCount >= this.state.maxDailyGames) { alert("Game limit reached!"); return; } if (this.state.dailyTasksCompleted < this.state.dailyTaskGoal) { alert("More tasks needed!"); return; } this.state.dailyGameCount++; this.switchView('mystery-game'); }
 
             renderMysteryGame() {
