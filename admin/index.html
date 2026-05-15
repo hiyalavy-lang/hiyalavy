@@ -234,7 +234,7 @@
         async function fetchPayments() {
             if (window.supabaseClient) {
                 const { data } = await window.supabaseClient.from('payments').select('*').order('created_at', { ascending: false });
-                if (data) window.slips = data;
+                if (data && data.length > 0) slips = data;
             }
             renderPayments();
             renderStats();
@@ -440,9 +440,10 @@
             const table = document.getElementById('payment-table');
             table.innerHTML = slips.map(s => {
                 const slipLink = s.slip_url ? `${window.supabaseClient.storage.from('slips').getPublicUrl(s.slip_url).data.publicUrl}` : '#';
+                const idDisplay = typeof s.id === 'string' ? s.id.substring(0, 8) : s.id;
                 return `
                 <tr>
-                    <td style="font-size:0.8rem">#${s.id.substring(0, 8)}</td>
+                    <td style="font-size:0.8rem">#${idDisplay}</td>
                     <td>${s.user_email || s.user}</td>
                     <td>${new Date(s.created_at || s.date).toLocaleDateString()}</td>
                     <td>${s.amount}</td>
