@@ -398,18 +398,8 @@
                     const name = this.state.globalSettings.siteName;
                     const icon = this.state.globalSettings.heroEmoji || '🎨';
                     logoContainer.innerHTML = `<span class="icon">${icon}</span> <span class="english-text">${name}</span>`;
-                    
-                    // Secret: Triple click to toggle premium for testing
-                    logoContainer.onclick = (e) => {
-                        if (e.detail === 3) {
-                            this.playSound('celebration');
-                            this.state.isPremium = !this.state.isPremium;
-                            localStorage.setItem('thaana_isPremium', this.state.isPremium);
-                            this.mascotSay(this.state.isPremium ? "Premium Features Unlocked! ✨" : "Premium Features Locked! 🔒");
-                            this.render();
-                        } else {
-                            this.switchView(this.state.isLoggedIn ? 'soundboard' : 'landing');
-                        }
+                    logoContainer.onclick = () => {
+                        this.switchView(this.state.isLoggedIn ? 'soundboard' : 'landing');
                     };
                 }
             }
