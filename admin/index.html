@@ -330,7 +330,7 @@
             } else {
                 const data = window.adminContent || content;
                 const items = data[cat] || [];
-                head.innerHTML = '<tr><th>LTR</th><th>NAME</th><th>WORD</th><th>ENG</th><th>LTR AUDIO</th><th>WRD AUDIO</th></tr>';
+                head.innerHTML = '<tr><th>LTR</th><th>NAME</th><th>WORD</th><th>ENG</th><th>LTR AUDIO</th><th>WRD AUDIO</th><th>IMAGE</th></tr>';
                 table.innerHTML = items.map((item, i) => `
                     <tr>
                         <td><input type="text" class="admin-input" style="margin:0; width:50px" value="${item.letter}" onchange="updateResource('${cat}', ${i}, 'letter', this.value)"></td>
@@ -346,6 +346,12 @@
                             <input type="text" class="admin-input" id="word_audio-${cat}-${i}" style="margin:0; width:80px" value="${item.word_audio || ''}" onchange="updateResource('${cat}', ${i}, 'word_audio', this.value)">
                             <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('${cat}', ${i}, 'word_audio')">📤</button>
                             <input type="file" id="file-word_audio-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'word_audio')">
+                        </td>
+                        <td style="display:flex; gap:5px; align-items:center">
+                            ${item.image ? `<img src="${window.supabaseClient ? window.supabaseClient.storage.from('images').getPublicUrl(item.image).data.publicUrl : ''}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;border:2px solid #334155" onerror="this.style.display='none'">` : '<span style="color:#64748b;font-size:0.75rem">No img</span>'}
+                            <input type="text" class="admin-input" id="image-${cat}-${i}" style="margin:0; width:80px" value="${item.image || ''}" onchange="updateResource('${cat}', ${i}, 'image', this.value)">
+                            <button class="admin-btn" style="padding:8px; font-size:0.8rem; background:#6BCB77" onclick="triggerUpload('${cat}', ${i}, 'image')">🖼️</button>
+                            <input type="file" id="file-image-${cat}-${i}" style="display:none" accept="image/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'image')">
                         </td>
                     </tr>
                 `).join('');
@@ -366,22 +372,35 @@
 
             try {
                 if (!window.supabaseClient) throw new Error("Supabase not connected");
-                
-                const { error } = await window.supabaseClient.storage.from('audio').upload(filename, file, { upsert: true });
+
+                // Images go to the 'images' bucket; audio goes to 'audio' bucket
+                const bucket = field === 'image' ? 'images' : 'audio';
+                const { error } = await window.supabaseClient.storage.from(bucket).upload(filename, file, { upsert: true });
                 if (error) throw error;
-                
-                const inputFieldId = field === 'audio' ? `audio-${cat}-${i}` : `word_audio-${cat}-${i}`;
+
+                const inputFieldId = `${field}-${cat}-${i}`;
                 const textInput = document.getElementById(inputFieldId);
                 if (textInput) textInput.value = filename;
                 updateResource(cat, i, field, filename);
-                
-                btn.innerText = '✅';
-                setTimeout(() => btn.innerText = '📤', 2000);
+
+                // Preview image thumbnail inline
+                if (field === 'image') {
+                    const pubUrl = window.supabaseClient.storage.from('images').getPublicUrl(filename).data.publicUrl;
+                    const td = btn.closest('td');
+                    let thumb = td.querySelector('img');
+                    if (!thumb) { thumb = document.createElement('img'); thumb.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:8px;border:2px solid #334155'; td.prepend(thumb); }
+                    thumb.src = pubUrl;
+                }
+
+                btn.innerText = field === 'image' ? '🖼️' : '📤';
+                const successEl = document.createElement('span');
+                successEl.textContent = ' ✅'; successEl.style.color = '#6BCB77';
+                btn.after(successEl);
+                setTimeout(() => successEl.remove(), 2000);
             } catch (err) {
                 console.error(err);
-                btn.innerText = '❌';
+                btn.innerText = field === 'image' ? '🖼️' : '📤';
                 alert('Upload failed: ' + err.message);
-                setTimeout(() => btn.innerText = '📤', 2000);
             }
         }
 
