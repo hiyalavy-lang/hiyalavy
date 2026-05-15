@@ -518,15 +518,23 @@
             }
 
             updateUIStrings() {
-                document.getElementById('footer-text').innerText = this.state.globalSettings.footerText || this.t('footer');
+                const s = this.state.globalSettings;
+                document.getElementById('footer-text').innerText = s.footerText || this.t('footer');
 
                 // Update Logo
                 const logoContainer = document.getElementById('logo-home');
-                if (logoContainer && this.state.globalSettings.siteName) {
-                    const name = this.state.globalSettings.siteName;
-                    document.title = name; // Sync Tab Name
-                    const icon = this.state.globalSettings.heroEmoji || '🎨';
-                    logoContainer.innerHTML = `<span class="icon">${icon}</span> <span class="english-text">${name}</span>`;
+                if (logoContainer && s.siteName) {
+                    document.title = s.siteName;
+                    const icon = s.heroEmoji || '🎨';
+                    const parts = s.siteName.split(' ');
+                    const firstPart = parts[0] || '';
+                    const rest = parts.slice(1).join(' ') || '';
+                    
+                    logoContainer.innerHTML = `
+                        <span class="icon">${icon}</span>
+                        <span class="thaana-text">${firstPart}</span>
+                        <span class="english-text">${rest}</span>
+                    `;
                     logoContainer.onclick = () => {
                         this.switchView(this.state.isLoggedIn ? 'soundboard' : 'landing');
                     };
@@ -1049,6 +1057,7 @@
                         if (item.audio_english) setTimeout(() => this.playAudio(item.audio_english), 1000);
                         this.createPop(e.pageX, e.pageY); 
                         this.addTaskProgress(); 
+                        this.trackBadgeMetric('numbersClicked', item.letter);
                     };
                     grid.appendChild(card);
                 });
@@ -1070,6 +1079,7 @@
                         this.playAudio(item.audio_dhivehi || item.audio); 
                         if (item.audio_english) setTimeout(() => this.playAudio(item.audio_english), 1200);
                         this.createPop(e.pageX, e.pageY); 
+                        this.trackBadgeMetric('numbersClicked', item.letter);
                     };
                     grid.appendChild(card);
                 });
@@ -1094,7 +1104,7 @@
                             <span>Coverage</span><span id="accuracy-pct">0%</span>
                         </div>
                         <div style="height:14px; background:#e2e8f0; border-radius:20px; overflow:hidden; border:2px solid var(--border-dark)">
-                            <div id="accuracy-fill" style="height:100%; width:0%; background:linear-gradient(90deg,#FF6B6B 0%,#FFD93D 50%,#6BCB77 100%); border-radius:20px; transition:width 0.2s ease"></div>
+                            <div id="accuracy-fill" style="height:100%; width:0%; background:#22c55e; border-radius:20px; transition:width 0.2s ease"></div>
                         </div>
                     </div>
                     <div style="margin:16px auto; max-width:400px; background:white; border:3px solid var(--border-dark); border-radius:20px; padding:14px 18px; box-shadow:4px 4px 0 var(--border-dark)">
@@ -1130,16 +1140,13 @@
                 const rCtx = ref.getContext('2d');
 
                 const draw = () => {
-                    // Read the actual rendered font size of the ghost letter element
-                    // and the canvas wrapper's rendered size, so the reference matches
-                    // exactly what the user sees on screen (critical for mobile scaling).
                     const ghostEl = document.querySelector('#canvas-area [style*="opacity:0.13"]');
                     const wrapperEl = document.querySelector('#canvas-area .canvas-wrapper');
 
-                    let fontSize = 230; // fallback
+                    let fontSize = 230; 
                     if (ghostEl && wrapperEl) {
                         const wrapperRect = wrapperEl.getBoundingClientRect();
-                        const scale = 400 / wrapperRect.width; // canvas internal → CSS pixels
+                        const scale = 400 / wrapperRect.width; 
                         const cssFont = parseFloat(getComputedStyle(ghostEl).fontSize);
                         fontSize = cssFont * scale;
                     }
@@ -1147,9 +1154,8 @@
                     rCtx.clearRect(0, 0, 400, 400);
                     rCtx.fillStyle = '#000';
                     const isDual = letter.length > 1;
-                    const displaySize = isDual ? Math.round(fontSize * 0.75) : Math.round(fontSize * 1.1); // Scaled up ghost letter
+                    const displaySize = isDual ? Math.round(fontSize * 0.75) : Math.round(fontSize * 1.1); 
                     
-                    // Check for custom ghost image
                     const items = this.state.customContent[this.state.language] || [];
                     const item = items.find(i => i.letter === letter);
                     
@@ -1160,7 +1166,6 @@
                         img.onload = () => {
                             rCtx.drawImage(img, 50, 50, 300, 300);
                             process();
-                            // Also update UI ghost
                             const ghostEl = document.getElementById('ghost-letter');
                             if (ghostEl) ghostEl.innerHTML = `<img src="${img.src}" style="width:70%; height:70%; object-fit:contain; opacity:0.3">`;
                         };
@@ -1186,7 +1191,6 @@
                     }
                     this.referencePixels = set;
 
-                    // Position start dot
                     const dot = document.getElementById('start-dot');
                     if (dot && firstPx !== -1) {
                         const x = firstPx % 400;
@@ -1197,7 +1201,6 @@
                     }
                 };
 
-                // Wait for fonts + layout to be ready
                 const runAfterLayout = () => {
                     if (document.fonts && document.fonts.ready) {
                         document.fonts.ready.then(() => setTimeout(draw, 50));
@@ -1205,7 +1208,6 @@
                         setTimeout(draw, 600);
                     }
                 };
-                // Use rAF to ensure the DOM has painted and we can read getBoundingClientRect
                 requestAnimationFrame(() => requestAnimationFrame(runAfterLayout));
             }
 
@@ -1214,7 +1216,6 @@
                 this.tracingColor = color;
                 const canvas = document.getElementById('tracing-canvas');
                 if (canvas) canvas.getContext('2d').strokeStyle = color;
-                // Update selected ring on swatches
                 document.querySelectorAll('#canvas-area [id^="col-"]').forEach(el => {
                     el.style.border = '3px solid transparent';
                 });
@@ -1240,7 +1241,7 @@
                 ctx.strokeStyle = this.tracingColor;
                 let drawing = false, lx = 0, ly = 0;
                 let lastUpdate = 0;
-                let rect = canvas.getBoundingClientRect(); // Initial rect
+                let rect = canvas.getBoundingClientRect(); 
                 let scaleX = 400 / rect.width, scaleY = 400 / rect.height;
 
                 const pos = (e) => {
@@ -1250,26 +1251,25 @@
 
                 const start = (e) => {
                     e.preventDefault(); 
-                    rect = canvas.getBoundingClientRect(); // Cache on start
+                    rect = canvas.getBoundingClientRect(); 
                     scaleX = 400 / rect.width; scaleY = 400 / rect.height;
                     drawing = true;
                     const p = pos(e); lx = p.x; ly = p.y;
                     ctx.beginPath(); ctx.moveTo(lx, ly);
+                    this.trackBadgeMetric('colorsUsed', this.tracingColor);
                 };
 
                 const move = (e) => {
                     if (!drawing) return; e.preventDefault();
                     const p = pos(e);
                     ctx.lineTo(p.x, p.y); ctx.stroke();
-                    // Track pixels covered by the brush stroke - Optimized loop
-                    const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 8)); // Coarser sampling
+                    const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 8)); 
                     const br = Math.ceil((this.tracingBrushSize || 28) / 2);
                     const brSq = br * br;
                     
                     for (let s = 0; s <= steps; s++) {
                         const bx = Math.round(lx + (p.x - lx) * s / steps);
                         const by = Math.round(ly + (p.y - ly) * s / steps);
-                        // Sampling for coverage tracking
                         for (let dx = -br; dx <= br; dx += 2) { 
                             for (let dy = -br; dy <= br; dy += 2) {
                                 if (dx*dx + dy*dy <= brSq) {
@@ -1289,7 +1289,6 @@
                     }
                     lx = p.x; ly = p.y;
                     
-                    // Throttle accuracy bar updates to 100ms
                     const now = Date.now();
                     if (now - lastUpdate > 100) {
                         this.updateAccuracyBar();
@@ -1344,7 +1343,6 @@
                     if (fb) fb.innerHTML = `<span style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! ${pct}% traced correctly!</span>`;
                     this.triggerExplosion();
                     this.addTaskProgress();
-                    // Auto-advance logic
                     const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
                     const next = items[items.findIndex(i => i.letter === this.currentTracingLetter) + 1] || items[0];
                     setTimeout(() => { if (this.state.view === 'tracing') this.initTracingCanvas(next.letter); }, 2000);
@@ -1367,63 +1365,83 @@
                         ? window.supabaseClient.storage.from('images').getPublicUrl(item.image).data.publicUrl
                         : `https://placehold.co/120/e2e8f0/64748b?text=${encodeURIComponent(item.word || item.letter)}`;
                     card.innerHTML = `<img src="${imgUrl}" style="width:120px; height:120px; object-fit:contain; border-radius:16px" onerror="this.src='https://placehold.co/120/e2e8f0/64748b?text=${encodeURIComponent(item.word || item.letter)}'"><div style="margin-top:15px"><span style="font-size:2rem; font-weight:900">${item.letter}</span><h3 style="font-size:1.2rem">${item.word}</h3></div>`;
-                    card.onclick = () => { this.playSound('click'); this.playAudio(item.word_audio); };
+                    card.onclick = () => { this.playSound('click'); this.playAudio(item.word_audio); this.trackBadgeMetric('wordCardsClicked', 1); };
                     grid.appendChild(card);
                 });
                 this.viewContainer.appendChild(grid);
             }
 
             renderQuiz() {
-                const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
-                const questionText = items.length && items[0].quiz_question ? '' : this.t('What is this letter?');
-                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:4rem; text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${questionText}</h2><div style="background:white; padding:40px; border-radius:50px; border:6px solid var(--border-dark); box-shadow:15px 15px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
                 this.nextQuizQuestion();
             }
 
             nextQuizQuestion() {
-                const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
+                const items = (this.state.customContent[this.state.language] || []).filter(i => i.image || i.letter);
                 if (!items.length) {
-                    document.getElementById('quiz-options').innerHTML = `<p style="grid-column:1/-1; color:#94a3b8; font-size:1rem">Waiting for quiz content...</p>`;
+                    this.viewContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#94a3b8">Waiting for quiz content...</p>`;
                     return;
                 }
                 const target = items[Math.floor(Math.random() * items.length)];
                 const pool = this.state.customContent[this.state.language] || [];
                 
-                let options = [target];
-                if (target.quiz_options) {
-                    // Use custom options from DB if they exist (comma-separated)
-                    const customOpts = target.quiz_options.split(',').map(s => s.trim()).filter(s => s);
-                    if (customOpts.length > 0) {
-                        // Map strings to objects that look like content items for the loop below
-                        options = customOpts.map(opt => ({ letter: opt }));
-                    }
+                let opts = [target];
+                while (opts.length < 4 && opts.length < pool.length) { 
+                    const r = pool[Math.floor(Math.random() * pool.length)]; 
+                    if (!opts.find(o => o.letter === r.letter)) opts.push(r); 
                 }
+                opts.sort(() => Math.random() - 0.5);
 
-                if (options.length < 2) {
-                    // Generate random options if none or only 1 provided
-                    while (options.length < 4 && options.length < pool.length) { 
-                        const r = pool[Math.floor(Math.random() * pool.length)]; 
-                        if (!options.find(o => o.letter === r.letter)) options.push(r); 
-                    }
+                this.viewContainer.innerHTML = `
+                    <div class="hall-container" style="max-width:550px; margin:1rem auto; padding:25px; border-color:var(--pink)">
+                        <h2 style="text-align:center; font-size:1.8rem; margin-bottom:15px; color:var(--pink)">✨ ${this.t('Quiz')}</h2>
+                        <div style="background:#fff5f7; border-radius:30px; padding:25px; text-align:center; border:4px dashed var(--pink); margin-bottom:15px">
+                            ${target.image ? `<img src="${window.supabaseClient ? window.supabaseClient.storage.from('images').getPublicUrl(target.image).data.publicUrl : target.image}" style="width:120px; height:120px; object-fit:cover; border-radius:20px; margin-bottom:10px; border:3px solid var(--pink)">` : ''}
+                            <div style="font-size:1.6rem; font-weight:900; color:#1e293b; margin-bottom:10px">${target.quiz_question || (this.state.language === 'english' ? 'What letter is this?' : 'މިއީ ކޮން އަކުރެއް؟')}</div>
+                            ${!target.image ? `<div style="font-size:5rem; font-weight:900; color:var(--pink); line-height:1">${target.letter}</div>` : ''}
+                        </div>
+                        <div class="quiz-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+                            ${opts.map(opt => `
+                                <button class="start-btn" style="padding:12px; font-size:1.1rem; background:white; border:3px solid var(--border-dark); box-shadow:4px 4px 0 var(--border-dark)" 
+                                    onclick="app.handleQuizAnswer(this, '${opt.letter}', '${target.letter}')">
+                                    ${opt.letter}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            handleQuizAnswer(btn, selected, correct) {
+                this.playSound('click');
+                if (selected === correct) {
+                    this.triggerExplosion();
+                    this.addTaskProgress();
+                    setTimeout(() => this.nextQuizQuestion(), 1500);
+                } else {
+                    btn.style.background = '#fee2e2';
+                    btn.style.borderColor = '#ef4444';
+                    btn.style.transform = 'translateX(5px)';
+                    setTimeout(() => btn.style.transform = 'translateX(0)', 100);
+                    this.playSound('wrong');
                 }
-                options.sort(() => Math.random() - 0.5);
-                const imgUrl = window.supabaseClient
-                    ? window.supabaseClient.storage.from('images').getPublicUrl(target.image).data.publicUrl
-                    : `https://placehold.co/200?text=${encodeURIComponent(target.word || target.letter)}`;
-                const quizImg = document.getElementById('quiz-img');
-                quizImg.src = imgUrl;
-                quizImg.onerror = () => quizImg.src = `https://placehold.co/200/e2e8f0/64748b?text=${encodeURIComponent(target.word || target.letter)}`;
-                // Update question text per item - Strictly use DB question or fallback to translated default
-                const titleEl = document.getElementById('quiz-title');
-                if (titleEl) {
-                    titleEl.textContent = target.quiz_question || this.t('What is this letter?');
+            }
+
+            trackBadgeMetric(metric, value) {
+                const kid = this.state.kids[this.state.activeKidIndex];
+                if (!kid.stats) kid.stats = {};
+                if (metric === 'wordCardsClicked') {
+                    kid.stats.wordCardsClicked = (kid.stats.wordCardsClicked || 0) + 1;
+                } else if (metric === 'numbersClicked') {
+                    if (!kid.stats.numbersClicked) kid.stats.numbersClicked = {};
+                    kid.stats.numbersClicked[value] = true;
+                } else if (metric === 'wordSoundsListened') {
+                    if (!kid.stats.wordSoundsListened) kid.stats.wordSoundsListened = {};
+                    kid.stats.wordSoundsListened[value] = true;
+                } else if (metric === 'colorsUsed') {
+                    if (!kid.stats.colorsUsed) kid.stats.colorsUsed = {};
+                    kid.stats.colorsUsed[value] = true;
                 }
-                const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
-                options.forEach(opt => {
-                    const btn = document.createElement('button'); btn.className = 'start-btn'; btn.innerText = opt.letter; btn.style.background = 'var(--pink)';
-                    btn.onclick = () => { this.playSound('click'); if (opt.letter === target.letter) { this.triggerExplosion(); this.addTaskProgress(); setTimeout(() => this.nextQuizQuestion(), 1500); } else btn.style.background = '#94a3b8'; };
-                    grid.appendChild(btn);
-                });
+                this.checkBadges(kid);
+                this.syncKidProgress();
             }
 
             async renderHallOfFame() {
@@ -1486,10 +1504,10 @@
                                     <div style="font-size:3rem; margin-bottom:8px">${b.icon}</div>
                                     <div style="font-size:0.75rem; font-weight:900; color:var(--border-dark)">${b.name}</div>
                                     ${!isEarned ? `
-                                        <div style="width:100%; height:6px; background:#f1f5f9; border-radius:10px; margin-top:10px; overflow:hidden">
-                                            <div style="width:${progress}%; height:100%; background:var(--primary)"></div>
+                                        <div style="width:100%; height:8px; background:#f1f5f9; border-radius:10px; margin-top:10px; overflow:hidden; border:1px solid #e2e8f0">
+                                            <div style="width:${progress}%; height:100%; background:#22c55e; border-radius:10px"></div>
                                         </div>
-                                    ` : '<div style="font-size:0.6rem; color:var(--secondary); font-weight:900; margin-top:5px">COMPLETED!</div>'}
+                                    ` : '<div style="font-size:0.6rem; color:#16a34a; font-weight:900; margin-top:5px">✓ EARNED</div>'}
                                 </div>`;
                             }).join('')}
                         </div>
@@ -1497,19 +1515,31 @@
             }
 
             getBadgeProgress(id, kid) {
-                // Simple logic mapping for badge progress
-                const p = (cur, tar) => Math.min(100, Math.round((cur / tar) * 100));
+                const p = (cur, tar) => Math.min(100, Math.round(((cur || 0) / tar) * 100));
+                const stats = kid.stats || {};
+                
                 switch(id) {
-                    case 27: case 34: case 38: case 44: case 46: case 48: 
-                        const tar = id === 27 ? 1000 : id === 34 ? 1500 : id === 38 ? 2000 : id === 44 ? 3000 : id === 46 ? 4000 : 5000;
-                        return p(kid.points || 0, tar);
-                    case 24: return p(this.state.dailyTasksCompleted || 0, 5);
-                    case 28: return p(kid.totalTraces || 0, 20);
-                    case 25: return p(kid.totalQuizzes || 0, 25);
+                    case 1: return kid.points > 0 ? 100 : 0;
+                    case 2: return p(stats.totalTraces, 5);
+                    case 3: return p(stats.totalQuizzes, 10);
+                    case 4: return p(Object.keys(stats.wordSoundsListened || {}).length, 10);
+                    case 5: return p(stats.dhivehiTasks, 20);
+                    case 6: return p(stats.englishTasks, 10);
+                    case 7: return p(stats.arabicTasks, 10);
+                    case 12: return p(Object.keys(stats.colorsUsed || {}).length, 5);
+                    case 14: return p(stats.wordCardsClicked, 15);
+                    case 24: return p(this.state.dailyTasksCompleted, 5);
+                    case 27: return p(kid.points, 1000);
+                    case 28: return p(stats.totalTraces, 20);
+                    case 34: return p(kid.points, 1500);
+                    case 38: return p(kid.points, 2000);
+                    case 44: return p(kid.points, 3000);
                     case 45: return p(this.state.kids.length, 2);
-                    case 51: return p(kid.numClicked || 0, 10);
-                    case 58: return p(kid.numPoints || 0, 100);
-                    case 62: return p(kid.numPoints || 0, 100);
+                    case 46: return p(kid.points, 4000);
+                    case 48: return p(kid.points, 5000);
+                    case 51: return p(Object.keys(stats.numbersClicked || {}).length, 10);
+                    case 58: return p(stats.numPoints, 100);
+                    case 62: return p(stats.numPoints, 100);
                     default: return 0;
                 }
             }
@@ -1541,11 +1571,16 @@
             addTaskProgress() {
                 const kid = this.state.kids[this.state.activeKidIndex];
                 kid.points += 10;
+                if (!kid.stats) kid.stats = {};
                 
                 // Track metrics for badge progress
-                if (this.state.view === 'tracing') kid.totalTraces = (kid.totalTraces || 0) + 1;
-                if (this.state.view === 'quiz') kid.totalQuizzes = (kid.totalQuizzes || 0) + 1;
-                if (this.state.language === 'numbers') kid.numPoints = (kid.numPoints || 0) + 10;
+                if (this.state.view === 'tracing') kid.stats.totalTraces = (kid.stats.totalTraces || 0) + 1;
+                if (this.state.view === 'quiz') kid.stats.totalQuizzes = (kid.stats.totalQuizzes || 0) + 1;
+                
+                if (this.state.language === 'numbers') kid.stats.numPoints = (kid.stats.numPoints || 0) + 10;
+                if (this.state.language === 'dhivehi') kid.stats.dhivehiTasks = (kid.stats.dhivehiTasks || 0) + 1;
+                if (this.state.language === 'english') kid.stats.englishTasks = (kid.stats.englishTasks || 0) + 1;
+                if (this.state.language === 'arabic') kid.stats.arabicTasks = (kid.stats.arabicTasks || 0) + 1;
 
                 this.checkBadges(kid);
                 this.syncKidProgress();
