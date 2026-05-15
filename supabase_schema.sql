@@ -99,6 +99,8 @@ CREATE POLICY "Admin Write Access Settings" ON public.settings FOR ALL USING ((a
 ALTER TABLE public.kids ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own kids" ON public.kids;
 CREATE POLICY "Users can manage their own kids" ON public.kids FOR ALL USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Public Read Access Kids" ON public.kids;
+CREATE POLICY "Public Read Access Kids" ON public.kids FOR SELECT USING (true);
 
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can see their own payments" ON public.payments;

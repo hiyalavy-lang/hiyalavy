@@ -150,7 +150,13 @@
                 this.initSupabase();
 
                 // Mascot random greeting
-                setTimeout(() => { if (this.state.isLoggedIn) this.mascotSay(this.t('mascot_hello')); }, 2000);
+                setTimeout(() => { 
+                    if (this.state.isLoggedIn) {
+                        const kid = this.state.kids[this.state.activeKidIndex];
+                        const name = kid ? kid.name : '';
+                        this.mascotSay(`${this.t('mascot_hello')} ${name}! 👋`); 
+                    } 
+                }, 2000);
             }
 
             async initSupabase() {
@@ -216,6 +222,17 @@
                         };
                         this.updateUIStrings();
                         this.render();
+                    }).subscribe();
+
+                // 3. Realtime Listener for Content (Quiz/Letters)
+                this.supabase.channel('content-db-changes')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_content' }, async () => {
+                        const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
+                        if (cData) {
+                            this.state.customContent = { dhivehi: [], english: [], arabic: [], engdhi: [] };
+                            cData.forEach(c => this.state.customContent[c.category].push(c));
+                            this.render();
+                        }
                     }).subscribe();
             }
 
@@ -580,7 +597,7 @@
                     'Security (Parent PIN)': { dhivehi: 'ސެކިއުރިޓީ (ޕިން)', english: 'Security (PIN)' },
                     'Save': { dhivehi: 'ސޭވް', english: 'Save' },
                     'footer': { dhivehi: '© 2026 ތާނަ އެކަޑަމީ - މޯލްޑިވްސް', english: '© 2026 Thaana Academy - Maldives' },
-                    'mascot_hello': { dhivehi: 'ހަލޯ! އަހަރެންގެ ނަމަކީ ތުތު! 👋', english: 'Hello! I am Thuthu! 👋' },
+                    'mascot_hello': { dhivehi: 'ހަލޯ', english: 'Hello' },
                     'mascot_tip1': { dhivehi: 'އަކުރުތައް ދަސްކުރަމާ! 📚', english: 'Let\'s learn some letters! 📚' },
                     'mascot_tip2': { dhivehi: 'ބަރާބަރަށް ޕްރެކްޓިސް ކުރާތި! ✨', english: 'Keep practicing! ✨' },
                     'mascot_tip3': { dhivehi: 'ސާބަސް! ވަރަށް މޮޅު! 🌟', english: 'Great job! You are amazing! 🌟' },
