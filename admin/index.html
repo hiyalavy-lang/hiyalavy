@@ -428,16 +428,22 @@
 
         function renderPayments() {
             const table = document.getElementById('payment-table');
-            table.innerHTML = slips.map(s => `
+            table.innerHTML = slips.map(s => {
+                const slipLink = s.slip_url ? `${window.supabaseClient.storage.from('slips').getPublicUrl(s.slip_url).data.publicUrl}` : '#';
+                return `
                 <tr>
-                    <td>#${s.id}</td>
-                    <td>${s.user}</td>
-                    <td>${s.date}</td>
+                    <td style="font-size:0.8rem">#${s.id.substring(0, 8)}</td>
+                    <td>${s.user_email || s.user}</td>
+                    <td>${new Date(s.created_at || s.date).toLocaleDateString()}</td>
                     <td>${s.amount}</td>
+                    <td>
+                        ${s.slip_url ? `<a href="${slipLink}" target="_blank" style="color:var(--teal); font-weight:800; text-decoration:none">🔍 View Slip</a>` : 'No Slip'}
+                    </td>
                     <td><span class="status-pill ${s.status === 'pending' ? 'status-pending' : 'status-verified'}">${s.status.toUpperCase()}</span></td>
-                    <td>${s.status === 'pending' ? `<button class="admin-btn" style="padding: 5px 10px; font-size: 0.7rem;" onclick="approvePayment(${s.id})">VERIFY</button>` : '---'}</td>
+                    <td>${s.status === 'pending' ? `<button class="admin-btn" style="padding: 5px 10px; font-size: 0.7rem;" onclick="approvePayment('${s.id}')">VERIFY</button>` : '---'}</td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function renderStats() {
@@ -459,20 +465,30 @@
             `;
         }
 
-        function approvePayment(id) {
+        async function approvePayment(id) {
+            if (!window.supabaseClient) return alert("Supabase not connected");
             const slip = slips.find(s => s.id === id);
+            
             if (slip) {
-                slip.status = 'verified';
-                localStorage.setItem('thaana_slips', JSON.stringify(slips));
-                
-                // Set premium expiry to 1 year from now
-                const oneYearFromNow = Date.now() + (365 * 24 * 60 * 60 * 1000);
-                localStorage.setItem('thaana_isPremium', 'true');
-                localStorage.setItem('thaana_premiumExpiry', oneYearFromNow.toString());
-                
-                renderPayments();
-                renderStats();
-                alert('Payment Verified! Premium features unlocked for 1 year.');
+                const btn = event.target;
+                const oldText = btn.innerText;
+                btn.innerText = "VERIFYING...";
+
+                try {
+                    // Update status in Supabase database
+                    const { error } = await window.supabaseClient.from('payments').update({ status: 'verified' }).eq('id', id);
+                    if (error) throw error;
+
+                    slip.status = 'verified';
+                    
+                    // Force refresh data
+                    await fetchPayments();
+                    alert('Payment Verified! Premium features unlocked for this user.');
+                } catch (err) {
+                    console.error(err);
+                    alert('Verification failed: ' + err.message);
+                    btn.innerText = oldText;
+                }
             }
         }
 
