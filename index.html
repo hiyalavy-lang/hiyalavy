@@ -115,7 +115,7 @@
                     isPremium: isPremium,
                     isLoggedIn: false,
                     parentEmail: 'parent@example.com',
-                    parentPin: localStorage.getItem('thaana_parentPin') || '1234',
+                    parentPin: localStorage.getItem('thaana_parentPin') || '2345',
                     hallFilter: 'daily',
                     kids: [
                         { name: 'ކުޑަކުއްޖާ', ageGroup: 'preschool', avatar: '👶', points: 0, badges: [1], unlockedAvatars: ['👶', '👧', '👦'] }
@@ -219,7 +219,7 @@
                 if (session) {
                     this.state.isLoggedIn = true;
                     this.state.parentEmail = session.user.email;
-                    
+
                     // Fetch kids profiles
                     const { data: kidsData } = await this.supabase.from('kids').select('*').eq('user_id', session.user.id);
                     if (kidsData && kidsData.length > 0) {
@@ -316,10 +316,10 @@
 
             forgotPin() {
                 const isEng = this.state.language === 'english';
-                const msg = isEng 
-                    ? "For security, resetting your PIN requires you to log out and sign back in with your Google account. Do you want to proceed?" 
+                const msg = isEng
+                    ? "For security, resetting your PIN requires you to log out and sign back in with your Google account. Do you want to proceed?"
                     : "ސެކިއުރިޓީއަށްޓަކައި، ޕިން ރީސެޓް ކުރުމަށް ލޮގައުޓްކޮށް އަލުން ގޫގުލް އިން ލޮގިން ކުރަން ޖެހޭނެއެވެ. ކުރިއަށް ގެންދަން ބޭނުންތަ؟";
-                
+
                 if (confirm(msg)) {
                     localStorage.removeItem('thaana_parentPin');
                     this.state.parentPin = '1234';
@@ -667,16 +667,16 @@
 
             addNewKid() { this.state.kids.push({ name: 'ކުއްޖާ', ageGroup: 'preschool', avatar: '👶', points: 0, badges: [], unlockedAvatars: ['👶', '👧', '👦'] }); this.renderProfileEdits(); }
             removeKid(i) { if (this.state.kids.length > 1) { this.state.kids.splice(i, 1); if (this.state.activeKidIndex >= i) this.state.activeKidIndex = 0; this.renderProfileEdits(); } else alert("At least one profile needed!"); }
-            updateKidProp(i, prop, val) { 
-                this.state.kids[i][prop] = val; 
-                this.renderProfileEdits(); 
+            updateKidProp(i, prop, val) {
+                this.state.kids[i][prop] = val;
+                this.renderProfileEdits();
                 this.renderProfileHub();
                 this.syncKidProgress(i);
             }
 
             updateLanguage(lang) {
                 if (lang !== 'dhivehi' && !this.state.isPremium) { this.showUpgradePopup(); this.render(); return; }
-                this.state.language = lang; 
+                this.state.language = lang;
                 localStorage.setItem('thaana_language', lang);
                 this.render();
             }
@@ -734,15 +734,174 @@
 
             renderTracing() {
                 const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
-                this.viewContainer.innerHTML = `<div class="tracing-container" style="padding:2rem; text-align:center"><div class="letter-selector" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px">${items.map(item => `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')">${item.letter}</button>`).join('')}</div><div id="canvas-area"></div></div>`;
+                if (!items.length) return;
+                this.viewContainer.innerHTML = `
+                    <div class="tracing-container" style="padding:2rem; text-align:center">
+                        <div class="letter-selector" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px">
+                            ${items.map(item => `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')">${item.letter}</button>`).join('')}
+                        </div>
+                        <div id="canvas-area"></div>
+                        <div id="tracing-feedback" style="margin-top:20px; font-size:1.6rem; font-weight:900; min-height:60px; transition:all 0.3s"></div>
+                    </div>`;
                 this.initTracingCanvas(items[0].letter);
             }
 
             initTracingCanvas(letter) {
+                this.currentTracingLetter = letter;
+                this.drawnPixels = new Set();
+                this.referencePixels = null;
+
                 const canvasArea = document.getElementById('canvas-area');
-                canvasArea.innerHTML = `<div class="canvas-wrapper" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:2rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark)"><div class="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:clamp(8rem, 40vw, 15rem); opacity:0.1">${letter}</div><canvas id="tracing-canvas" width="400" height="400" style="position:relative; z-index:2; width:100%; height:100%;"></canvas></div><div class="controls" style="margin-top:40px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap"><button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:#f0f0f0" onclick="app.playSound('click'); ctx.clearRect(0,0,400,400)">🗑️ ފޮހެލާ</button><button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:var(--secondary)" onclick="app.playSound('click'); app.triggerExplosion(); app.addTaskProgress()">🌟 ${this.t('Done')}</button></div>`;
-                initCanvas('tracing-canvas');
+                canvasArea.innerHTML = `
+                    <div class="canvas-wrapper" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden">
+                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:clamp(8rem, 40vw, 15rem); opacity:0.13; pointer-events:none; z-index:1; font-family:'Fredoka',sans-serif; line-height:1">${letter}</div>
+                        <canvas id="tracing-canvas" width="400" height="400" style="position:absolute; top:0; left:0; z-index:2; width:100%; height:100%; cursor:crosshair; touch-action:none"></canvas>
+                    </div>
+                    <div style="margin:12px auto; max-width:400px">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700; color:#64748b; margin-bottom:5px">
+                            <span>Coverage</span><span id="accuracy-pct">0%</span>
+                        </div>
+                        <div style="height:14px; background:#e2e8f0; border-radius:20px; overflow:hidden; border:2px solid var(--border-dark)">
+                            <div id="accuracy-fill" style="height:100%; width:0%; background:linear-gradient(90deg,#FF6B6B 0%,#FFD93D 50%,#6BCB77 100%); border-radius:20px; transition:width 0.2s ease"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap">
+                        <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:#f0f0f0" onclick="app.playSound('click'); app.clearTracingCanvas()">🗑️ ފޮހެލާ</button>
+                        <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:var(--secondary)" onclick="app.playSound('click'); app.checkTracingAccuracy()">🌟 ${this.t('Done')}</button>
+                    </div>`;
+
+                this.setupTracingCanvas();
+                this.buildReferenceCanvas(letter);
             }
+
+            buildReferenceCanvas(letter) {
+                const ref = document.createElement('canvas');
+                ref.width = 400; ref.height = 400;
+                const rCtx = ref.getContext('2d');
+                const draw = () => {
+                    rCtx.clearRect(0, 0, 400, 400);
+                    rCtx.fillStyle = '#000';
+                    rCtx.font = 'bold 230px Fredoka, Arial, sans-serif';
+                    rCtx.textAlign = 'center';
+                    rCtx.textBaseline = 'middle';
+                    rCtx.fillText(letter, 200, 210);
+                    const imgData = rCtx.getImageData(0, 0, 400, 400).data;
+                    const set = new Set();
+                    for (let i = 0; i < imgData.length; i += 4) {
+                        if (imgData[i + 3] > 40) set.add(i >> 2);
+                    }
+                    this.referencePixels = set;
+                };
+                if (document.fonts && document.fonts.ready) {
+                    document.fonts.ready.then(draw);
+                } else {
+                    setTimeout(draw, 600);
+                }
+            }
+
+            setupTracingCanvas() {
+                const canvas = document.getElementById('tracing-canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.lineWidth = 20; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#4D96FF';
+                let drawing = false, lx = 0, ly = 0;
+
+                const pos = (e) => {
+                    const r = canvas.getBoundingClientRect();
+                    const sx = 400 / r.width, sy = 400 / r.height;
+                    const src = e.touches ? e.touches[0] : e;
+                    return { x: (src.clientX - r.left) * sx, y: (src.clientY - r.top) * sy };
+                };
+
+                const start = (e) => {
+                    e.preventDefault(); drawing = true;
+                    const p = pos(e); lx = p.x; ly = p.y;
+                    ctx.beginPath(); ctx.moveTo(lx, ly);
+                };
+
+                const move = (e) => {
+                    if (!drawing) return; e.preventDefault();
+                    const p = pos(e);
+                    ctx.lineTo(p.x, p.y); ctx.stroke();
+                    // Track pixels covered by the brush stroke
+                    const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 4));
+                    for (let s = 0; s <= steps; s++) {
+                        const bx = Math.round(lx + (p.x - lx) * s / steps);
+                        const by = Math.round(ly + (p.y - ly) * s / steps);
+                        const br = 12;
+                        for (let dx = -br; dx <= br; dx++) {
+                            for (let dy = -br; dy <= br; dy++) {
+                                if (dx*dx + dy*dy <= br*br) {
+                                    const px = bx + dx, py = by + dy;
+                                    if (px >= 0 && px < 400 && py >= 0 && py < 400) {
+                                        this.drawnPixels.add(py * 400 + px);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    lx = p.x; ly = p.y;
+                    this.updateAccuracyBar();
+                };
+
+                const stop = () => { drawing = false; };
+                canvas.addEventListener('mousedown', start);
+                canvas.addEventListener('mousemove', move);
+                canvas.addEventListener('mouseup', stop);
+                canvas.addEventListener('mouseleave', stop);
+                canvas.addEventListener('touchstart', start, { passive: false });
+                canvas.addEventListener('touchmove', move, { passive: false });
+                canvas.addEventListener('touchend', stop);
+            }
+
+            updateAccuracyBar() {
+                if (!this.referencePixels || !this.referencePixels.size) return;
+                let covered = 0;
+                for (const px of this.drawnPixels) {
+                    if (this.referencePixels.has(px)) covered++;
+                }
+                const pct = Math.min(100, Math.round(covered / this.referencePixels.size * 100));
+                const fill = document.getElementById('accuracy-fill');
+                const pctEl = document.getElementById('accuracy-pct');
+                if (fill) fill.style.width = pct + '%';
+                if (pctEl) pctEl.textContent = pct + '%';
+            }
+
+            clearTracingCanvas() {
+                const canvas = document.getElementById('tracing-canvas');
+                if (canvas) canvas.getContext('2d').clearRect(0, 0, 400, 400);
+                this.drawnPixels = new Set();
+                const fill = document.getElementById('accuracy-fill');
+                const pctEl = document.getElementById('accuracy-pct');
+                if (fill) fill.style.width = '0%';
+                if (pctEl) pctEl.textContent = '0%';
+                const fb = document.getElementById('tracing-feedback');
+                if (fb) fb.innerHTML = '';
+            }
+
+            checkTracingAccuracy() {
+                if (!this.referencePixels || !this.referencePixels.size) {
+                    this.triggerExplosion(); this.addTaskProgress(); return;
+                }
+                let covered = 0;
+                for (const px of this.drawnPixels) {
+                    if (this.referencePixels.has(px)) covered++;
+                }
+                const pct = Math.min(100, Math.round(covered / this.referencePixels.size * 100));
+                const fb = document.getElementById('tracing-feedback');
+                if (pct >= 65) {
+                    if (fb) fb.innerHTML = `<span style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! ${pct}% traced correctly!</span>`;
+                    this.triggerExplosion();
+                    this.addTaskProgress();
+                } else if (pct >= 35) {
+                    if (fb) fb.innerHTML = `<span style="color:var(--orange)">👍 Almost! ${pct}% — Try to cover more of the letter!</span>`;
+                } else {
+                    if (fb) fb.innerHTML = `<span style="color:#ef4444">✏️ Keep practicing! Only ${pct}% — Follow the ghost letter outline!</span>`;
+                }
+            }
+
+
 
             renderVocabulary() {
                 const items = this.state.customContent[this.state.language] || [];
@@ -867,7 +1026,7 @@
                 const key = sounds[type] || `assets/${type}.mp3`;
                 if (!this.audioPool[key]) this.audioPool[key] = new Audio(key);
                 this.audioPool[key].currentTime = 0;
-                this.audioPool[key].play().catch(() => {});
+                this.audioPool[key].play().catch(() => { });
             }
 
             playAudio(filename) {
