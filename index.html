@@ -778,13 +778,29 @@
                 const ref = document.createElement('canvas');
                 ref.width = 400; ref.height = 400;
                 const rCtx = ref.getContext('2d');
+
                 const draw = () => {
+                    // Read the actual rendered font size of the ghost letter element
+                    // and the canvas wrapper's rendered size, so the reference matches
+                    // exactly what the user sees on screen (critical for mobile scaling).
+                    const ghostEl = document.querySelector('#canvas-area [style*="opacity:0.13"]');
+                    const wrapperEl = document.querySelector('#canvas-area .canvas-wrapper');
+
+                    let fontSize = 230; // fallback
+                    if (ghostEl && wrapperEl) {
+                        const wrapperRect = wrapperEl.getBoundingClientRect();
+                        const scale = 400 / wrapperRect.width; // canvas internal → CSS pixels
+                        const cssFont = parseFloat(getComputedStyle(ghostEl).fontSize);
+                        fontSize = cssFont * scale;
+                    }
+
                     rCtx.clearRect(0, 0, 400, 400);
                     rCtx.fillStyle = '#000';
-                    rCtx.font = 'bold 230px Fredoka, Arial, sans-serif';
+                    rCtx.font = `bold ${Math.round(fontSize)}px Fredoka, Arial, sans-serif`;
                     rCtx.textAlign = 'center';
                     rCtx.textBaseline = 'middle';
-                    rCtx.fillText(letter, 200, 210);
+                    rCtx.fillText(letter, 200, 200);
+
                     const imgData = rCtx.getImageData(0, 0, 400, 400).data;
                     const set = new Set();
                     for (let i = 0; i < imgData.length; i += 4) {
@@ -792,12 +808,19 @@
                     }
                     this.referencePixels = set;
                 };
-                if (document.fonts && document.fonts.ready) {
-                    document.fonts.ready.then(draw);
-                } else {
-                    setTimeout(draw, 600);
-                }
+
+                // Wait for fonts + layout to be ready
+                const runAfterLayout = () => {
+                    if (document.fonts && document.fonts.ready) {
+                        document.fonts.ready.then(() => setTimeout(draw, 50));
+                    } else {
+                        setTimeout(draw, 600);
+                    }
+                };
+                // Use rAF to ensure the DOM has painted and we can read getBoundingClientRect
+                requestAnimationFrame(() => requestAnimationFrame(runAfterLayout));
             }
+
 
             setupTracingCanvas() {
                 const canvas = document.getElementById('tracing-canvas');
