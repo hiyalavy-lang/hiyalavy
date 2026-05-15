@@ -267,9 +267,13 @@
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_content' }, async () => {
                         const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
                         if (cData) {
-                            this.state.customContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
+                            const dbContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
                             cData.forEach(c => {
-                                if (this.state.customContent[c.category]) this.state.customContent[c.category].push(c);
+                                if (dbContent[c.category]) dbContent[c.category].push(c);
+                            });
+                            // Merge with fallbacks
+                            Object.keys(dbContent).forEach(cat => {
+                                this.state.customContent[cat] = dbContent[cat].length > 0 ? dbContent[cat] : content[cat];
                             });
                             this.render();
                         }
@@ -312,9 +316,9 @@
                     if (this.state.view === 'landing' || this.state.view === 'login') {
                         this.switchView('soundboard');
                         // PIN Setup prompt for first timers
-                        if (this.state.kids[0] && this.state.kids[0].pin === '1234') {
+                        if (this.state.parentPin === '2345' || this.state.parentPin === '1234') {
                             setTimeout(() => {
-                                this.mascotSay("Welcome! Please set a unique PIN in Settings to keep your profile safe! 🔒", 6000);
+                                this.mascotSay("Welcome! Please set a unique PIN in Settings to keep your account safe! 🔒", 6000);
                                 this.handleParentAuth();
                             }, 3000);
                         }
@@ -947,8 +951,18 @@
                 const grid = document.createElement('div'); grid.className = 'alphabet-grid';
                 items.forEach(item => {
                     const card = document.createElement('div'); card.className = 'letter-card';
-                    card.innerHTML = `<div style="font-size:4rem; font-weight:900; color:var(--primary)">${item.letter}</div><div style="font-size:1.4rem; font-weight:800; color:var(--secondary)">${item.dhivehi}</div><div style="font-size:1rem; color:#64748b">${item.english}</div>`;
-                    card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); this.addTaskProgress(); };
+                    card.innerHTML = `
+                        <div style="font-size:4rem; font-weight:900; color:var(--primary); line-height:1">${item.letter}</div>
+                        <div style="font-size:1.4rem; font-weight:800; color:var(--secondary); margin-top:8px">${item.dhivehi || item.name || ''}</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#475569">${item.english || ''}</div>
+                    `;
+                    card.onclick = (e) => { 
+                        this.playSound('click'); 
+                        this.playAudio(item.audio_dhivehi || item.audio); 
+                        if (item.audio_english) setTimeout(() => this.playAudio(item.audio_english), 1000);
+                        this.createPop(e.pageX, e.pageY); 
+                        this.addTaskProgress(); 
+                    };
                     grid.appendChild(card);
                 });
                 this.viewContainer.appendChild(grid);
@@ -960,11 +974,16 @@
                 items.forEach(item => {
                     const card = document.createElement('div'); card.className = 'letter-card';
                     card.innerHTML = `
-                        <div style="font-size:4rem; font-weight:900; color:var(--primary)">${item.letter}</div>
-                        <div style="font-size:1.4rem; font-weight:800; color:var(--secondary)">${item.count_word_dhivehi || 'Count'}</div>
-                        <div style="font-size:1rem; font-weight:700; color:#64748b">${item.count_word_english || ''}</div>
+                        <div style="font-size:4rem; font-weight:900; color:var(--primary); line-height:1">${item.letter}</div>
+                        <div style="font-size:1.4rem; font-weight:800; color:var(--secondary); margin-top:8px">${item.count_word_dhivehi || item.dhivehi || item.name || 'Count'}</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#475569">${item.count_word_english || item.english || ''}</div>
                     `;
-                    card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); };
+                    card.onclick = (e) => { 
+                        this.playSound('click'); 
+                        this.playAudio(item.audio_dhivehi || item.audio); 
+                        if (item.audio_english) setTimeout(() => this.playAudio(item.audio_english), 1200);
+                        this.createPop(e.pageX, e.pageY); 
+                    };
                     grid.appendChild(card);
                 });
                 this.viewContainer.appendChild(grid);

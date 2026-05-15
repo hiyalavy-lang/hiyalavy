@@ -469,7 +469,8 @@
                 return `
                 <div class="res-card" onclick="openResEditor(${item.originalIndex})" title="${item.name || item.mark || ''}">
                     <div class="r-letter">${item.letter || item.mark || ''}</div>
-                    <div class="r-name">${item.name || item.word || ''}</div>
+                    <div class="r-name" style="font-size:0.8rem; color:var(--primary)">${item.dhivehi || item.name || item.word || ''}</div>
+                    <div class="r-name" style="font-size:0.7rem; color:#64748b">${item.english || ''}</div>
                     <div class="r-dots">
                         <div class="r-dot ${item.audio_dhivehi || item.audio ? 'on' : 'off'}" title="Dhivehi Audio"></div>
                         <div class="r-dot ${item.audio_english ? 'on' : 'off'}" style="background:${item.audio_english ? '#2dd4bf' : ''}" title="English Audio"></div>
