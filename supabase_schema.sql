@@ -74,6 +74,13 @@ CREATE TABLE IF NOT EXISTS public.app_fili (
 -- Storage bucket for slips (must be run in Supabase SQL Editor manually or via API)
 -- insert into storage.buckets (id, name, public) values ('slips', 'slips', true);
 
+-- Storage RLS Policies
+DROP POLICY IF EXISTS "Public access to slips" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload slips" ON storage.objects;
+
+CREATE POLICY "Public access to slips" ON storage.objects FOR SELECT USING (bucket_id = 'slips');
+CREATE POLICY "Authenticated users can upload slips" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'slips' AND auth.role() = 'authenticated');
+
 -- RLS (Row Level Security) - Simplified for starting
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Access Settings" ON public.settings;
