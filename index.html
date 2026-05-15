@@ -236,9 +236,13 @@
 
                 const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
                 if (cData && cData.length > 0) {
-                    this.state.customContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
+                    const dbContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
                     cData.forEach(c => {
-                        if (this.state.customContent[c.category]) this.state.customContent[c.category].push(c);
+                        if (dbContent[c.category]) dbContent[c.category].push(c);
+                    });
+                    // Merge DB content with local fallbacks for empty categories
+                    Object.keys(dbContent).forEach(cat => {
+                        this.state.customContent[cat] = dbContent[cat].length > 0 ? dbContent[cat] : content[cat];
                     });
                 }
 
@@ -357,27 +361,45 @@
             }
 
             showPasscodeModal() {
-                const modal = document.createElement('div');
-                modal.className = 'modal-overlay'; modal.id = 'passcode-modal';
-                modal.innerHTML = `
-                    <div class="parent-modal" style="max-width:420px; text-align:center; padding: 40px">
-                        <button class="modal-close" onclick="document.getElementById('passcode-modal').remove()">✖</button>
-                        <h2 style="margin-bottom:30px; font-size:1.8rem">${this.t('Parent Code')} 🔒</h2>
-                        <div class="settings-group">
-                            <input type="password" class="settings-input" id="parent-pin-input" placeholder="****" style="text-align:center; font-size:3rem; letter-spacing: 15px; margin-bottom:10px">
-                            <div class="forgot-link" onclick="app.forgotPin()">${this.t('Forgot PIN?')}</div>
-                        </div>
-                        <button class="start-btn" style="width:100%; margin-top:20px" onclick="app.verifyPasscode()">${this.t('Unlock')} 🔓</button>
+                const existing = document.getElementById('passcode-dropdown');
+                if (existing) { existing.remove(); return; }
+
+                const dropdown = document.createElement('div');
+                dropdown.id = 'passcode-dropdown';
+                dropdown.className = 'hub-dropdown-menu';
+                dropdown.style.cssText = `position:fixed; top:80px; right:20px; width:340px; background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 15px 45px rgba(0,0,0,0.2); z-index:9000; padding:30px; animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); text-align:center`;
+
+                dropdown.innerHTML = `
+                    <h2 style="margin-bottom:20px; font-size:1.6rem; color:var(--primary)">${this.t('Parent Code')} 🔒</h2>
+                    <div class="settings-group">
+                        <input type="password" class="settings-input" id="parent-pin-input" placeholder="****" style="text-align:center; font-size:2.5rem; letter-spacing: 12px; margin-bottom:10px; width:100%">
+                        <div class="forgot-link" onclick="app.forgotPin()" style="cursor:pointer; font-size:0.85rem; font-weight:800; color:#64748b; text-decoration:underline">${this.t('Forgot PIN?')}</div>
                     </div>
+                    <button class="hub-action-btn" style="margin-top:20px; background:var(--primary); color:white; border-color:var(--primary-dark)" onclick="app.verifyPasscode()">${this.t('Unlock')} 🔓</button>
                 `;
-                document.getElementById('modal-container').appendChild(modal);
+                document.body.appendChild(dropdown);
+                document.getElementById('parent-pin-input').focus();
+
+                setTimeout(() => {
+                    const closer = (e) => {
+                        if (!dropdown.contains(e.target) && !e.target.closest('.hub-action-btn')) {
+                            dropdown.remove();
+                            document.removeEventListener('click', closer);
+                        }
+                    };
+                    document.addEventListener('click', closer);
+                }, 100);
             }
 
             verifyPasscode() {
                 if (document.getElementById('parent-pin-input').value === this.state.parentPin) {
-                    document.getElementById('passcode-modal').remove();
+                    const dropdown = document.getElementById('passcode-dropdown');
+                    if (dropdown) dropdown.remove();
                     this.showSettings();
-                } else alert("Wrong PIN!");
+                } else {
+                    this.mascotSay("Oops! Wrong PIN! 🧐");
+                    document.getElementById('parent-pin-input').value = '';
+                }
             }
 
             forgotPin() {
@@ -628,7 +650,13 @@
             }
 
 
-            switchKid(i) { this.state.activeKidIndex = i; document.getElementById('hub-menu-modal').remove(); this.playSound('click'); this.render(); }
+            switchKid(i) { 
+                this.state.activeKidIndex = i; 
+                const hub = document.getElementById('hub-dropdown');
+                if (hub) hub.remove(); 
+                this.playSound('click'); 
+                this.render(); 
+            }
 
             renderNav() {
                 if (!this.state.isLoggedIn || this.state.view === 'landing') { this.mainNav.innerHTML = ''; return; }
@@ -836,14 +864,16 @@
                 if (lang !== 'dhivehi' && !this.state.isPremium) { this.showUpgradePopup(); this.render(); return; }
                 this.state.language = lang;
                 localStorage.setItem('thaana_language', lang);
-                if (lang === 'numbers') { this.renderNumbers(); return; }
+                // Immediately switch to the relevant view for the new language
+                if (lang === 'numbers') this.state.view = 'soundboard';
                 this.render();
             }
 
             async logout() {
                 if (this.supabase) await this.supabase.auth.signOut();
                 this.state.isLoggedIn = false;
-                if (document.getElementById('hub-menu-modal')) document.getElementById('hub-menu-modal').remove();
+                const hub = document.getElementById('hub-dropdown');
+                if (hub) hub.remove();
                 this.switchView('landing');
             }
 
@@ -862,7 +892,10 @@
 
                 const items = this.state.customContent[this.state.language] || [];
                 items.forEach(item => {
-                    const card = document.createElement('div'); card.className = 'letter-card'; card.innerHTML = `<div style="font-size:4rem; font-weight:900">${item.letter}</div><div style="font-size:1.2rem; font-weight:800">${item.name}</div>`;
+                    const isDual = item.letter.length > 1 && this.state.language === 'english';
+                    const displayLetter = isDual ? `${item.letter[0]} ${item.letter[1]}` : item.letter;
+                    const card = document.createElement('div'); card.className = 'letter-card'; 
+                    card.innerHTML = `<div style="font-size:${isDual ? '3.2rem' : '4rem'}; font-weight:900; letter-spacing:${isDual ? '8px' : 'normal'}">${displayLetter}</div><div style="font-size:1.2rem; font-weight:800">${item.name}</div>`;
                     card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); this.addTaskProgress(); };
                     grid.appendChild(card);
                 });
@@ -897,7 +930,11 @@
                 this.viewContainer.innerHTML = `
                     <div class="tracing-container" style="padding:2rem; text-align:center">
                         <div class="letter-selector" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px">
-                            ${items.map(item => `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')">${item.letter}</button>`).join('')}
+                            ${items.map(item => {
+                                const isDual = item.letter.length > 1 && this.state.language === 'english';
+                                const display = isDual ? `${item.letter[0]} ${item.letter[1]}` : item.letter;
+                                return `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')" style="min-width:60px">${display}</button>`;
+                            }).join('')}
                         </div>
                         <div id="canvas-area"></div>
                         <div id="tracing-feedback" style="margin-top:20px; font-size:1.6rem; font-weight:900; min-height:60px; transition:all 0.3s"></div>
