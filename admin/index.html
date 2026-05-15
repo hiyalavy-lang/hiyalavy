@@ -145,7 +145,7 @@
 
             <div class="admin-card">
                 <h2>RESOURCE MANAGER 📚</h2>
-                <p style="color:#94a3b8; margin-bottom:20px; font-size:0.9rem">Click any tile to open its editor. Green dots = configured. <span style="color:#4D96FF">🔊 Audio</span> &nbsp;<span style="color:#FF8400">🎵 Word Audio</span> &nbsp;<span style="color:#6BCB77">🖼 Image</span> &nbsp;<span style="color:#e879f9">❓ Quiz Q</span></p>
+                <p style="color:#94a3b8; margin-bottom:20px; font-size:0.9rem">Click any tile to open its editor. Green dots = configured. <span style="color:#4D96FF">🔊 Audio</span> &nbsp;<span style="color:#FF8400">🎵 Word Audio</span> &nbsp;<span style="color:#6BCB77">🖼 Image</span> &nbsp;<span style="color:#e879f9">❓ Quiz Q</span> &nbsp;<span style="color:#22c55e">🔢 Count</span></p>
                 <div class="res-cat-tabs" id="res-cat-tabs">
                     <button class="res-cat-tab active" onclick="switchResCat('dhivehi', this)">🇲🇻 Dhivehi</button>
                     <button class="res-cat-tab" onclick="switchResCat('english', this)">🇬🇧 English</button>
@@ -183,6 +183,12 @@
                     <input type="text" class="admin-input" id="ed-word" style="margin:0">
                     <span class="res-label">English (romanized)</span>
                     <input type="text" class="admin-input" id="ed-english" style="margin:0">
+                    <div id="ed-num-section" style="display:none">
+                        <span class="res-label">Count Word (Dhivehi - e.g. "1 އާފަލު")</span>
+                        <input type="text" class="admin-input" id="ed-count-word-dhivehi" style="margin:0">
+                        <span class="res-label">Count Word (English - e.g. "1 Apple")</span>
+                        <input type="text" class="admin-input" id="ed-count-word-english" style="margin:0">
+                    </div>
                 </div>
 
                 <div class="res-section" id="ed-quiz-section">
@@ -450,6 +456,7 @@
                         ${!isFili ? `<div class="r-dot ${hasWordAudio ? 'on' : 'off'}" style="background:${hasWordAudio ? '#FF8400' : ''}" title="Word Audio"></div>` : ''}
                         ${!isFili ? `<div class="r-dot ${hasImage ? 'on' : 'off'}" style="background:${hasImage ? '#6BCB77' : ''}" title="Image"></div>` : ''}
                         ${!isFili ? `<div class="r-dot ${hasQuiz ? 'on' : 'off'}" style="background:${hasQuiz ? '#e879f9' : ''}" title="Quiz Q"></div>` : ''}
+                        ${resCat === 'numbers' ? `<div class="r-dot ${item.count_word_dhivehi && item.count_word_english ? 'on' : 'off'}" style="background:${item.count_word_dhivehi && item.count_word_english ? '#22c55e' : ''}" title="Count Words"></div>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -477,8 +484,11 @@
 
             // Show/hide fili-specific fields
             document.getElementById('ed-quiz-section').style.display   = isFili ? 'none' : '';
+            document.getElementById('ed-num-section').style.display    = resCat === 'numbers' ? 'block' : 'none';
             document.getElementById('ed-word-audio-row').style.display  = isFili ? 'none' : '';
             document.getElementById('ed-word-audio-label').style.display= isFili ? 'none' : '';
+            document.getElementById('ed-count-word-dhivehi').value = item.count_word_dhivehi || '';
+            document.getElementById('ed-count-word-english').value = item.count_word_english || '';
 
             // Image preview
             const prev = document.getElementById('ed-img-preview');
@@ -552,6 +562,8 @@
                 audio:         document.getElementById('ed-audio').value,
                 word_audio:    document.getElementById('ed-word-audio').value,
                 image:         document.getElementById('ed-image').value,
+                count_word_dhivehi: document.getElementById('ed-count-word-dhivehi').value,
+                count_word_english: document.getElementById('ed-count-word-english').value,
             };
             if (isFili) {
                 Object.assign(window.adminFili[resIdx], fields);

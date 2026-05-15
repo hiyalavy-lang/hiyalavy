@@ -959,7 +959,11 @@
                 const grid = document.createElement('div'); grid.className = 'alphabet-grid';
                 items.forEach(item => {
                     const card = document.createElement('div'); card.className = 'letter-card';
-                    card.innerHTML = `<div style="font-size:4rem; font-weight:900; color:var(--primary)">${item.letter}</div><div style="font-size:1.4rem; font-weight:800; color:var(--secondary)">${item.count_word || 'Count'}</div>`;
+                    card.innerHTML = `
+                        <div style="font-size:4rem; font-weight:900; color:var(--primary)">${item.letter}</div>
+                        <div style="font-size:1.4rem; font-weight:800; color:var(--secondary)">${item.count_word_dhivehi || 'Count'}</div>
+                        <div style="font-size:1rem; font-weight:700; color:#64748b">${item.count_word_english || ''}</div>
+                    `;
                     card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); };
                     grid.appendChild(card);
                 });
