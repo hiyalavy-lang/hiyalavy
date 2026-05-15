@@ -187,6 +187,8 @@
                     <h4>❓ Quiz Question</h4>
                     <span class="res-label">Custom question shown during quiz (leave blank for default)</span>
                     <input type="text" class="admin-input" id="ed-quiz-q" style="margin:0" placeholder="e.g. What letter is this?">
+                    <span class="res-label">Multiple Choice Options (comma separated)</span>
+                    <input type="text" class="admin-input" id="ed-quiz-opts" style="margin:0" placeholder="e.g. އ, ބ, ނ, ރ">
                 </div>
 
                 <div class="res-section">
@@ -465,6 +467,7 @@
             document.getElementById('ed-word').value    = item.word || '';
             document.getElementById('ed-english').value = item.english || '';
             document.getElementById('ed-quiz-q').value  = item.quiz_question || '';
+            document.getElementById('ed-quiz-opts').value = item.quiz_options || '';
             document.getElementById('ed-audio').value      = item.audio || '';
             document.getElementById('ed-word-audio').value = item.word_audio || '';
             document.getElementById('ed-image').value      = item.image || '';
@@ -542,6 +545,7 @@
                 word:          document.getElementById('ed-word').value,
                 english:       document.getElementById('ed-english').value,
                 quiz_question: document.getElementById('ed-quiz-q').value,
+                quiz_options:  document.getElementById('ed-quiz-opts').value,
                 audio:         document.getElementById('ed-audio').value,
                 word_audio:    document.getElementById('ed-word-audio').value,
                 image:         document.getElementById('ed-image').value,

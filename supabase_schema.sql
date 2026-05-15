@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS public.app_content (
     word_audio TEXT,
     english TEXT,
     dhivehi TEXT,
+    quiz_question TEXT,
+    quiz_options TEXT,
     order_index INTEGER DEFAULT 0
 );
 
@@ -71,15 +73,21 @@ CREATE TABLE IF NOT EXISTS public.app_fili (
     order_index INTEGER DEFAULT 0
 );
 
--- Storage bucket for slips (must be run in Supabase SQL Editor manually or via API)
+-- Storage buckets (must be run in Supabase SQL Editor manually or via API)
 -- insert into storage.buckets (id, name, public) values ('slips', 'slips', true);
+-- insert into storage.buckets (id, name, public) values ('audio', 'audio', true);
 
 -- Storage RLS Policies
 DROP POLICY IF EXISTS "Public access to slips" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated users can upload slips" ON storage.objects;
+DROP POLICY IF EXISTS "Public access to audio" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload audio" ON storage.objects;
 
 CREATE POLICY "Public access to slips" ON storage.objects FOR SELECT USING (bucket_id = 'slips');
 CREATE POLICY "Authenticated users can upload slips" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'slips' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Public access to audio" ON storage.objects FOR SELECT USING (bucket_id = 'audio');
+CREATE POLICY "Authenticated users can upload audio" ON storage.objects FOR ALL USING (bucket_id = 'audio' AND (auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
 
 -- RLS (Row Level Security) - Simplified for starting
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;

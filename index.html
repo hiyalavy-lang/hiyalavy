@@ -991,13 +991,29 @@
             nextQuizQuestion() {
                 const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
                 if (!items.length) {
-                    document.getElementById('quiz-options').innerHTML = `<p style="grid-column:1/-1; color:#94a3b8; font-size:1rem">No images uploaded yet. Add images via the Admin Dashboard!</p>`;
+                    document.getElementById('quiz-options').innerHTML = `<p style="grid-column:1/-1; color:#94a3b8; font-size:1rem">Waiting for quiz content...</p>`;
                     return;
                 }
                 const target = items[Math.floor(Math.random() * items.length)];
                 const pool = this.state.customContent[this.state.language] || [];
-                const options = [target];
-                while (options.length < 4 && options.length < pool.length) { const r = pool[Math.floor(Math.random() * pool.length)]; if (!options.find(o => o.letter === r.letter)) options.push(r); }
+                
+                let options = [target];
+                if (target.quiz_options) {
+                    // Use custom options from DB if they exist (comma-separated)
+                    const customOpts = target.quiz_options.split(',').map(s => s.trim()).filter(s => s);
+                    if (customOpts.length > 0) {
+                        // Map strings to objects that look like content items for the loop below
+                        options = customOpts.map(opt => ({ letter: opt }));
+                    }
+                }
+
+                if (options.length < 2) {
+                    // Generate random options if none or only 1 provided
+                    while (options.length < 4 && options.length < pool.length) { 
+                        const r = pool[Math.floor(Math.random() * pool.length)]; 
+                        if (!options.find(o => o.letter === r.letter)) options.push(r); 
+                    }
+                }
                 options.sort(() => Math.random() - 0.5);
                 const imgUrl = window.supabaseClient
                     ? window.supabaseClient.storage.from('images').getPublicUrl(target.image).data.publicUrl
@@ -1005,9 +1021,11 @@
                 const quizImg = document.getElementById('quiz-img');
                 quizImg.src = imgUrl;
                 quizImg.onerror = () => quizImg.src = `https://placehold.co/200/e2e8f0/64748b?text=${encodeURIComponent(target.word || target.letter)}`;
-                // Update question text per item
+                // Update question text per item - Strictly use DB question or fallback to translated default
                 const titleEl = document.getElementById('quiz-title');
-                if (titleEl) titleEl.textContent = target.quiz_question || this.t('What is this letter?');
+                if (titleEl) {
+                    titleEl.textContent = target.quiz_question || this.t('What is this letter?');
+                }
                 const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
                 options.forEach(opt => {
                     const btn = document.createElement('button'); btn.className = 'start-btn'; btn.innerText = opt.letter; btn.style.background = 'var(--pink)';
