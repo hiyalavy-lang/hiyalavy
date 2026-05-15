@@ -79,7 +79,7 @@ ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Access Settings" ON public.settings;
 DROP POLICY IF EXISTS "Admin Write Access Settings" ON public.settings;
 CREATE POLICY "Public Read Access Settings" ON public.settings FOR SELECT USING (true);
-CREATE POLICY "Admin Write Access Settings" ON public.settings FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+CREATE POLICY "Admin Write Access Settings" ON public.settings FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
 
 ALTER TABLE public.kids ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own kids" ON public.kids;
@@ -91,23 +91,23 @@ DROP POLICY IF EXISTS "Users can insert their own payments" ON public.payments;
 DROP POLICY IF EXISTS "Admin can manage all payments" ON public.payments;
 CREATE POLICY "Users can see their own payments" ON public.payments FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert their own payments" ON public.payments FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admin can manage all payments" ON public.payments FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+CREATE POLICY "Admin can manage all payments" ON public.payments FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
 
 ALTER TABLE public.app_nav ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Access Nav" ON public.app_nav;
 DROP POLICY IF EXISTS "Admin Write Access Nav" ON public.app_nav;
 CREATE POLICY "Public Read Access Nav" ON public.app_nav FOR SELECT USING (true);
-CREATE POLICY "Admin Write Access Nav" ON public.app_nav FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+CREATE POLICY "Admin Write Access Nav" ON public.app_nav FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
 
 ALTER TABLE public.app_content ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Access Content" ON public.app_content;
 DROP POLICY IF EXISTS "Admin Write Access Content" ON public.app_content;
 CREATE POLICY "Public Read Access Content" ON public.app_content FOR SELECT USING (true);
-CREATE POLICY "Admin Write Access Content" ON public.app_content FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+CREATE POLICY "Admin Write Access Content" ON public.app_content FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
 
 ALTER TABLE public.app_fili ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Access Fili" ON public.app_fili;
 DROP POLICY IF EXISTS "Admin Write Access Fili" ON public.app_fili;
 CREATE POLICY "Public Read Access Fili" ON public.app_fili FOR SELECT USING (true);
-CREATE POLICY "Admin Write Access Fili" ON public.app_fili FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+CREATE POLICY "Admin Write Access Fili" ON public.app_fili FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
 
