@@ -1200,6 +1200,10 @@
                 const canvas = document.getElementById('tracing-canvas');
                 if (!canvas) return;
                 const ctx = canvas.getContext('2d');
+                this.tracingColor = this.tracingColor || '#4D96FF';
+                this.tracingBrushSize = this.tracingBrushSize || 28;
+                ctx.lineWidth = this.tracingBrushSize;
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 ctx.strokeStyle = this.tracingColor;
                 let drawing = false, lx = 0, ly = 0;
                 let lastUpdate = 0;
