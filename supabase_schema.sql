@@ -51,14 +51,14 @@ CREATE TABLE IF NOT EXISTS public.app_nav (
 -- 5. App Curriculum Content (Letters/Words)
 CREATE TABLE IF NOT EXISTS public.app_content (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    category TEXT NOT NULL, -- 'dhivehi', 'english', 'arabic', 'engdhi'
+    category TEXT NOT NULL,
     letter TEXT NOT NULL,
     name TEXT,
     audio TEXT,
     word TEXT,
     word_audio TEXT,
     english TEXT,
-    dhivehi TEXT, -- For Engdhi translations
+    dhivehi TEXT,
     order_index INTEGER DEFAULT 0
 );
 
