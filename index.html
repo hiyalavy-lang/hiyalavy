@@ -1096,7 +1096,7 @@
                 const isDual = displayLetter.length > 1;
                 
                 const ghostFontSize = isDual ? 'clamp(8.5rem, 42vw, 13.5rem)' : 'clamp(13rem, 55vw, 20rem)';
-                const ghostSpacing = isDual ? '0.35em' : 'normal';
+                const ghostSpacing = isDual ? '0.22em' : 'normal';
 
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
@@ -1162,7 +1162,7 @@
                     const displayLetterForCanvas = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                     const isDual = displayLetterForCanvas.length > 1;
                     const displaySize = isDual ? Math.round(fontSize * 0.85) : Math.round(fontSize * 1.15); 
-                    const spacingVal = isDual ? (displaySize * 0.35) : 0;
+                    const spacingVal = isDual ? (displaySize * 0.22) : 0;
                     
                     const items = this.state.customContent[this.state.language] || [];
                     const item = items.find(i => i.letter === letter);
