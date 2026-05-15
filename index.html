@@ -1095,8 +1095,8 @@
                 const displayLetter = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                 const isDual = displayLetter.length > 1;
                 
-                const ghostFontSize = isDual ? 'clamp(7rem, 35vw, 11rem)' : 'clamp(10rem, 45vw, 16rem)';
-                const ghostSpacing = isDual ? '-0.05em' : 'normal';
+                const ghostFontSize = isDual ? 'clamp(8.5rem, 42vw, 13.5rem)' : 'clamp(13rem, 55vw, 20rem)';
+                const ghostSpacing = isDual ? '0.35em' : 'normal';
 
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
@@ -1161,7 +1161,8 @@
                     const isEnglish = this.state.language === 'english';
                     const displayLetterForCanvas = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                     const isDual = displayLetterForCanvas.length > 1;
-                    const displaySize = isDual ? Math.round(fontSize * 0.70) : Math.round(fontSize * 1.1); 
+                    const displaySize = isDual ? Math.round(fontSize * 0.85) : Math.round(fontSize * 1.15); 
+                    const spacingVal = isDual ? (displaySize * 0.35) : 0;
                     
                     const items = this.state.customContent[this.state.language] || [];
                     const item = items.find(i => i.letter === letter);
@@ -1192,7 +1193,13 @@
                         rCtx.font = `bold ${displaySize}px Fredoka, Arial, sans-serif`;
                         rCtx.textAlign = 'center';
                         rCtx.textBaseline = 'middle';
-                        rCtx.fillText(displayLetterForCanvas, 200, 200);
+                        if (rCtx.letterSpacing !== undefined) {
+                            rCtx.letterSpacing = spacingVal + 'px';
+                            rCtx.fillText(displayLetterForCanvas, 200, 200);
+                        } else {
+                            // Fallback for older browsers
+                            rCtx.fillText(displayLetterForCanvas, 200, 200);
+                        }
                         process();
                     }
                 };
