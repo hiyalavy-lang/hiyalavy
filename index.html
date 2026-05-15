@@ -111,7 +111,7 @@
 
                 this.state = {
                     view: 'landing',
-                    language: 'dhivehi',
+                    language: localStorage.getItem('thaana_language') || 'dhivehi',
                     isPremium: isPremium,
                     isLoggedIn: false,
                     parentEmail: 'parent@example.com',
@@ -676,7 +676,9 @@
 
             updateLanguage(lang) {
                 if (lang !== 'dhivehi' && !this.state.isPremium) { this.showUpgradePopup(); this.render(); return; }
-                this.state.language = lang; this.render();
+                this.state.language = lang; 
+                localStorage.setItem('thaana_language', lang);
+                this.render();
             }
 
             async logout() {
@@ -876,6 +878,7 @@
                 this.audioPool[url].currentTime = 0;
                 this.audioPool[url].play().catch((e) => console.log("Audio play blocked:", e));
             }
+            createPop(x, y) { const pop = document.createElement('div'); pop.className = 'pop-star'; pop.innerHTML = '⭐'; pop.style.left = (x - 20) + 'px'; pop.style.top = (y - 20) + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 800); }
             triggerExplosion() {
                 const container = document.getElementById('confetti-container'); const centerX = window.innerWidth / 2; const centerY = window.innerHeight / 2;
                 const colors = ['#FFD93D', '#FF6B6B', '#4D96FF', '#6BCB77', '#FF8400', '#e0c3fc', '#9b59b6', '#1abc9c'];
