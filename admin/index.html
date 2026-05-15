@@ -401,8 +401,17 @@
                 const { data: fData } = await window.supabaseClient.from('app_fili').select('*').order('order_index');
                 
                 if (cData && cData.length > 0) {
-                    window.adminContent = { dhivehi: [], english: [], arabic: [], engdhi: [] };
-                    cData.forEach(c => window.adminContent[c.category].push(c));
+                    const dbContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
+                    cData.forEach(c => {
+                        if (dbContent[c.category]) dbContent[c.category].push(c);
+                    });
+                    
+                    // Merge: If category is empty in DB, use local content.js fallback
+                    window.adminContent = {};
+                    const defaultContent = JSON.parse(localStorage.getItem('thaana_content')) || content;
+                    ['dhivehi', 'english', 'arabic', 'engdhi', 'numbers'].forEach(cat => {
+                        window.adminContent[cat] = (dbContent[cat].length > 0) ? dbContent[cat] : defaultContent[cat];
+                    });
                 } else {
                     window.adminContent = JSON.parse(localStorage.getItem('thaana_content')) || content;
                 }
