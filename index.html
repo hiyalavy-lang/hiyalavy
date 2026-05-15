@@ -853,9 +853,29 @@
                 this.playSound('click');
             }
 
-            playSound(type) { const key = `assets/audio/${type}.mp3`; if (!this.audioPool[key]) this.audioPool[key] = new Audio(key); this.audioPool[key].currentTime = 0; this.audioPool[key].play().catch(() => { }); }
-            playAudio(f) { if (!f) return; const key = `assets/audio/${f}`; if (!this.audioPool[key]) this.audioPool[key] = new Audio(key); this.audioPool[key].currentTime = 0; this.audioPool[key].play().catch(() => { }); }
-            createPop(x, y) { const pop = document.createElement('div'); pop.className = 'pop-star'; pop.innerHTML = '⭐'; pop.style.left = (x - 20) + 'px'; pop.style.top = (y - 20) + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 800); }
+            playSound(type) {
+                const sounds = {
+                    click: 'assets/click.mp3',
+                    success: 'assets/success.mp3',
+                    wrong: 'assets/wrong.mp3',
+                    pop: 'assets/pop.mp3',
+                    fanfare: 'assets/fanfare.mp3',
+                    magic: 'assets/magic.mp3'
+                };
+                const key = sounds[type] || `assets/${type}.mp3`;
+                if (!this.audioPool[key]) this.audioPool[key] = new Audio(key);
+                this.audioPool[key].currentTime = 0;
+                this.audioPool[key].play().catch(() => {});
+            }
+
+            playAudio(filename) {
+                if (!filename) return;
+                const cleanFilename = filename.trim();
+                const url = window.supabaseClient ? window.supabaseClient.storage.from('audio').getPublicUrl(cleanFilename).data.publicUrl : `assets/audio/${cleanFilename}`;
+                if (!this.audioPool[url]) this.audioPool[url] = new Audio(url);
+                this.audioPool[url].currentTime = 0;
+                this.audioPool[url].play().catch((e) => console.log("Audio play blocked:", e));
+            }
             triggerExplosion() {
                 const container = document.getElementById('confetti-container'); const centerX = window.innerWidth / 2; const centerY = window.innerHeight / 2;
                 const colors = ['#FFD93D', '#FF6B6B', '#4D96FF', '#6BCB77', '#FF8400', '#e0c3fc', '#9b59b6', '#1abc9c'];
