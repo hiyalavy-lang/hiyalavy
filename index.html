@@ -1117,9 +1117,7 @@
                                     `<div id="col-${c.slice(1)}" onclick="app.setTracingColor('${c}')" style="width:30px;height:30px;border-radius:50%;background:${c};border:3px solid ${c==='#4D96FF'?'#000':'transparent'};cursor:pointer;transition:transform 0.15s;box-shadow:0 2px 6px rgba(0,0,0,0.2)" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`
                                 ).join('')}
                             </div>
-                            <input type="range" id="brush-size" min="10" max="50" value="28"
-                                style="width:90px; accent-color:var(--primary); cursor:pointer"
-                                oninput="app.setBrushSize(this.value)">
+                            </div>
                         </div>
                     </div>
                     <div style="margin-top:16px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap">
@@ -1249,7 +1247,7 @@
                 if (!canvas) return;
                 const ctx = canvas.getContext('2d');
                 this.tracingColor = this.tracingColor || '#4D96FF';
-                this.tracingBrushSize = this.tracingBrushSize || 28;
+                this.tracingBrushSize = 30;
                 ctx.lineWidth = this.tracingBrushSize;
                 ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 ctx.strokeStyle = this.tracingColor;
@@ -1278,7 +1276,7 @@
                     const p = pos(e);
                     ctx.lineTo(p.x, p.y); ctx.stroke();
                     const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 8)); 
-                    const br = Math.ceil((this.tracingBrushSize || 28) / 2);
+                    const br = Math.ceil(this.tracingBrushSize / 2);
                     const brSq = br * br;
                     
                     for (let s = 0; s <= steps; s++) {
