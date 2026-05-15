@@ -747,7 +747,7 @@
                 items.forEach(item => {
                     const card = document.createElement('div'); card.className = 'letter-card';
                     card.innerHTML = `<img src="assets/${item.english.toLowerCase()}.png" style="width:120px; height:120px; object-fit:contain" onerror="this.src='https://placehold.co/120?text=${item.word}'"><div style="margin-top:15px"><span style="font-size:2rem; font-weight:900">${item.letter}</span><h3 style="font-size:1.2rem">${item.word}</h3></div>`;
-                    card.onclick = () => { this.playSound('click'); this.playAudio(item.wordAudio); };
+                    card.onclick = () => { this.playSound('click'); this.playAudio(item.word_audio); };
                     grid.appendChild(card);
                 });
                 this.viewContainer.appendChild(grid);

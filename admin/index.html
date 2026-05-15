@@ -330,17 +330,22 @@
             } else {
                 const data = window.adminContent || content;
                 const items = data[cat] || [];
-                head.innerHTML = '<tr><th>LTR</th><th>NAME</th><th>WORD</th><th>ENG</th><th>AUDIO</th></tr>';
+                head.innerHTML = '<tr><th>LTR</th><th>NAME</th><th>WORD</th><th>ENG</th><th>LTR AUDIO</th><th>WRD AUDIO</th></tr>';
                 table.innerHTML = items.map((item, i) => `
                     <tr>
                         <td><input type="text" class="admin-input" style="margin:0; width:50px" value="${item.letter}" onchange="updateResource('${cat}', ${i}, 'letter', this.value)"></td>
-                        <td><input type="text" class="admin-input" style="margin:0" value="${item.name || ''}" onchange="updateResource('${cat}', ${i}, 'name', this.value)"></td>
-                        <td><input type="text" class="admin-input" style="margin:0" value="${item.word || ''}" onchange="updateResource('${cat}', ${i}, 'word', this.value)"></td>
-                        <td><input type="text" class="admin-input" style="margin:0" value="${item.english || ''}" onchange="updateResource('${cat}', ${i}, 'english', this.value)"></td>
-                        <td style="display:flex; gap:10px; align-items:center">
-                            <input type="text" class="admin-input" id="audio-${cat}-${i}" style="margin:0; flex:1" value="${item.audio || ''}" onchange="updateResource('${cat}', ${i}, 'audio', this.value)">
+                        <td><input type="text" class="admin-input" style="margin:0; width:80px" value="${item.name || ''}" onchange="updateResource('${cat}', ${i}, 'name', this.value)"></td>
+                        <td><input type="text" class="admin-input" style="margin:0; width:100px" value="${item.word || ''}" onchange="updateResource('${cat}', ${i}, 'word', this.value)"></td>
+                        <td><input type="text" class="admin-input" style="margin:0; width:80px" value="${item.english || ''}" onchange="updateResource('${cat}', ${i}, 'english', this.value)"></td>
+                        <td style="display:flex; gap:5px; align-items:center">
+                            <input type="text" class="admin-input" id="audio-${cat}-${i}" style="margin:0; width:80px" value="${item.audio || ''}" onchange="updateResource('${cat}', ${i}, 'audio', this.value)">
                             <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('${cat}', ${i}, 'audio')">📤</button>
                             <input type="file" id="file-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'audio')">
+                        </td>
+                        <td style="display:flex; gap:5px; align-items:center">
+                            <input type="text" class="admin-input" id="word_audio-${cat}-${i}" style="margin:0; width:80px" value="${item.word_audio || ''}" onchange="updateResource('${cat}', ${i}, 'word_audio', this.value)">
+                            <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('${cat}', ${i}, 'word_audio')">📤</button>
+                            <input type="file" id="file_word_audio-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'word_audio')">
                         </td>
                     </tr>
                 `).join('');
