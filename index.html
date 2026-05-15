@@ -1721,14 +1721,14 @@
             }
 
             prevTracingLetter() {
-                const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
+                const items = this.state.customContent[this.state.language] || [];
                 const idx = items.findIndex(i => i.letter === this.currentTracingLetter);
                 const prev = items[idx - 1] || items[items.length - 1];
                 if (prev) this.initTracingCanvas(prev.letter);
             }
 
             nextTracingLetter() {
-                const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
+                const items = this.state.customContent[this.state.language] || [];
                 const idx = items.findIndex(i => i.letter === this.currentTracingLetter);
                 const next = items[idx + 1] || items[0];
                 if (next) this.initTracingCanvas(next.letter);
