@@ -1502,9 +1502,9 @@
                                 const isEarned = earned.includes(b.id);
                                 const progress = this.getBadgeProgress(b.id, activeKid);
                                 return `
-                                <div class="badge-card ${isEarned ? 'earned' : 'locked'}" onclick="app.showBadgeInfo(${b.id})" style="padding:15px; border:3px solid ${isEarned ? 'var(--secondary)' : '#e2e8f0'}; border-radius:20px; text-align:center; filter:${isEarned ? 'none' : 'grayscale(1)'}; opacity:${isEarned ? '1' : '0.6'}; cursor:pointer; position:relative">
-                                    <div style="font-size:3rem; margin-bottom:8px">${b.icon}</div>
-                                    <div style="font-size:0.75rem; font-weight:900; color:var(--border-dark)">${b.name}</div>
+                                <div class="badge-card ${isEarned ? 'earned' : 'locked'}" onclick="app.showBadgeInfo(${b.id})" style="padding:15px; border:3px solid ${isEarned ? 'var(--secondary)' : '#e2e8f0'}; border-radius:20px; text-align:center; opacity:${isEarned ? '1' : '0.8'}; cursor:pointer; position:relative">
+                                    <div style="font-size:3rem; margin-bottom:8px; filter:${isEarned ? 'none' : 'grayscale(1)'}">${b.icon}</div>
+                                    <div style="font-size:0.75rem; font-weight:900; color:var(--border-dark); filter:${isEarned ? 'none' : 'grayscale(1)'}">${b.name}</div>
                                     ${!isEarned ? `
                                         <div style="width:100%; height:8px; background:#f1f5f9; border-radius:10px; margin-top:10px; overflow:hidden; border:1px solid #e2e8f0">
                                             <div style="width:${progress}%; height:100%; background:#22c55e; border-radius:10px"></div>
