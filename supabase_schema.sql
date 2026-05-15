@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.kids (
     points INTEGER DEFAULT 0,
     badges INTEGER[] DEFAULT '{}',
     unlocked_avatars TEXT[] DEFAULT '{"👶", "👧", "👦"}',
+    stats JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 

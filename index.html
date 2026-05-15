@@ -328,6 +328,7 @@
                             avatar: k.avatar,
                             points: k.points,
                             badges: k.badges || [],
+                            stats: k.stats || {},
                             unlockedAvatars: k.unlocked_avatars || ['👶', '👧', '👦'],
                             pin: k.pin || '1234'
                         }));
@@ -336,7 +337,7 @@
                         const defaultKid = { user_id: session.user.id, name: 'ކުޑަކުއްޖާ', age_group: 'preschool', avatar: '👶', points: 0, pin: '1234' };
                         const { data: newKid } = await this.supabase.from('kids').insert(defaultKid).select().single();
                         if (newKid) {
-                            this.state.kids = [{ dbId: newKid.id, name: newKid.name, ageGroup: newKid.age_group, avatar: newKid.avatar, points: newKid.points, badges: [], unlockedAvatars: ['👶', '👧', '👦'] }];
+                            this.state.kids = [{ dbId: newKid.id, name: newKid.name, ageGroup: newKid.age_group, avatar: newKid.avatar, points: newKid.points, badges: [], stats: {}, unlockedAvatars: ['👶', '👧', '👦'] }];
                         }
                     }
 
@@ -369,6 +370,7 @@
                     await this.supabase.from('kids').update({
                         points: kid.points,
                         badges: kid.badges,
+                        stats: kid.stats,
                         unlocked_avatars: kid.unlockedAvatars,
                         avatar: kid.avatar,
                         name: kid.name,
@@ -1372,57 +1374,57 @@
             }
 
             renderQuiz() {
+                const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
+                const questionText = items.length && items[0].quiz_question ? '' : this.t('What is this letter?');
+                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:4rem; text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${questionText}</h2><div style="background:white; padding:40px; border-radius:50px; border:6px solid var(--border-dark); box-shadow:15px 15px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
                 this.nextQuizQuestion();
             }
 
             nextQuizQuestion() {
-                const items = (this.state.customContent[this.state.language] || []).filter(i => i.image || i.letter);
+                const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
                 if (!items.length) {
-                    this.viewContainer.innerHTML = `<p style="text-align:center; padding:40px; color:#94a3b8">Waiting for quiz content...</p>`;
+                    document.getElementById('quiz-options').innerHTML = `<p style="grid-column:1/-1; color:#94a3b8; font-size:1rem">Waiting for quiz content...</p>`;
                     return;
                 }
                 const target = items[Math.floor(Math.random() * items.length)];
                 const pool = this.state.customContent[this.state.language] || [];
                 
-                let opts = [target];
-                while (opts.length < 4 && opts.length < pool.length) { 
-                    const r = pool[Math.floor(Math.random() * pool.length)]; 
-                    if (!opts.find(o => o.letter === r.letter)) opts.push(r); 
+                let options = [target];
+                if (target.quiz_options) {
+                    const customOpts = target.quiz_options.split(',').map(s => s.trim()).filter(s => s);
+                    if (customOpts.length > 0) options = customOpts.map(opt => ({ letter: opt }));
                 }
-                opts.sort(() => Math.random() - 0.5);
 
-                this.viewContainer.innerHTML = `
-                    <div class="hall-container" style="max-width:550px; margin:1rem auto; padding:25px; border-color:var(--pink)">
-                        <h2 style="text-align:center; font-size:1.8rem; margin-bottom:15px; color:var(--pink)">✨ ${this.t('Quiz')}</h2>
-                        <div style="background:#fff5f7; border-radius:30px; padding:25px; text-align:center; border:4px dashed var(--pink); margin-bottom:15px">
-                            ${target.image ? `<img src="${window.supabaseClient ? window.supabaseClient.storage.from('images').getPublicUrl(target.image).data.publicUrl : target.image}" style="width:120px; height:120px; object-fit:cover; border-radius:20px; margin-bottom:10px; border:3px solid var(--pink)">` : ''}
-                            <div style="font-size:1.6rem; font-weight:900; color:#1e293b; margin-bottom:10px">${target.quiz_question || (this.state.language === 'english' ? 'What letter is this?' : 'މިއީ ކޮން އަކުރެއް؟')}</div>
-                            ${!target.image ? `<div style="font-size:5rem; font-weight:900; color:var(--pink); line-height:1">${target.letter}</div>` : ''}
-                        </div>
-                        <div class="quiz-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
-                            ${opts.map(opt => `
-                                <button class="start-btn" style="padding:12px; font-size:1.1rem; background:white; border:3px solid var(--border-dark); box-shadow:4px 4px 0 var(--border-dark)" 
-                                    onclick="app.handleQuizAnswer(this, '${opt.letter}', '${target.letter}')">
-                                    ${opt.letter}
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>`;
-            }
-
-            handleQuizAnswer(btn, selected, correct) {
-                this.playSound('click');
-                if (selected === correct) {
-                    this.triggerExplosion();
-                    this.addTaskProgress();
-                    setTimeout(() => this.nextQuizQuestion(), 1500);
-                } else {
-                    btn.style.background = '#fee2e2';
-                    btn.style.borderColor = '#ef4444';
-                    btn.style.transform = 'translateX(5px)';
-                    setTimeout(() => btn.style.transform = 'translateX(0)', 100);
-                    this.playSound('wrong');
+                if (options.length < 2) {
+                    while (options.length < 4 && options.length < pool.length) { 
+                        const r = pool[Math.floor(Math.random() * pool.length)]; 
+                        if (!options.find(o => o.letter === r.letter)) options.push(r); 
+                    }
                 }
+                options.sort(() => Math.random() - 0.5);
+                const imgUrl = target.image && window.supabaseClient
+                    ? window.supabaseClient.storage.from('images').getPublicUrl(target.image).data.publicUrl
+                    : `https://placehold.co/200?text=${encodeURIComponent(target.word || target.letter)}`;
+                const quizImg = document.getElementById('quiz-img');
+                quizImg.src = imgUrl;
+                quizImg.onerror = () => quizImg.src = `https://placehold.co/200/e2e8f0/64748b?text=${encodeURIComponent(target.word || target.letter)}`;
+                
+                const titleEl = document.getElementById('quiz-title');
+                if (titleEl) titleEl.textContent = target.quiz_question || this.t('What is this letter?');
+                
+                const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
+                options.forEach(opt => {
+                    const btn = document.createElement('button'); btn.className = 'start-btn'; btn.innerText = opt.letter; btn.style.background = 'var(--pink)';
+                    btn.onclick = () => { 
+                        this.playSound('click'); 
+                        if (opt.letter === target.letter) { 
+                            this.triggerExplosion(); 
+                            this.addTaskProgress(); 
+                            setTimeout(() => this.nextQuizQuestion(), 1500); 
+                        } else btn.style.background = '#94a3b8'; 
+                    };
+                    grid.appendChild(btn);
+                });
             }
 
             trackBadgeMetric(metric, value) {
