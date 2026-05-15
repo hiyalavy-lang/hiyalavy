@@ -145,7 +145,7 @@
 
             <div class="admin-card">
                 <h2>RESOURCE MANAGER 📚</h2>
-                <p style="color:#94a3b8; margin-bottom:20px; font-size:0.9rem">Click any tile to open its editor. Green dots = configured. <span style="color:#4D96FF">🔊 Audio</span> &nbsp;<span style="color:#FF8400">🎵 Word Audio</span> &nbsp;<span style="color:#6BCB77">🖼 Image</span> &nbsp;<span style="color:#e879f9">❓ Quiz Q</span> &nbsp;<span style="color:#22c55e">🔢 Count</span></p>
+                <p style="color:#94a3b8; margin-bottom:20px; font-size:0.9rem">Click any tile to open its editor. Green dots = configured. <span style="color:#4D96FF">🔊 Audio (DH)</span> &nbsp;<span style="color:#2dd4bf">🗣 Audio (EN)</span> &nbsp;<span style="color:#FF8400">🎵 Word Audio</span> &nbsp;<span style="color:#6BCB77">🖼 Image</span> &nbsp;<span style="color:#e879f9">❓ Quiz Q</span> &nbsp;<span style="color:#22c55e">🔢 Count</span></p>
                 <div class="res-cat-tabs" id="res-cat-tabs">
                     <button class="res-cat-tab active" onclick="switchResCat('dhivehi', this)">🇲🇻 Dhivehi</button>
                     <button class="res-cat-tab" onclick="switchResCat('english', this)">🇬🇧 English</button>
@@ -181,8 +181,10 @@
                     <input type="text" class="admin-input" id="ed-name" style="margin:0">
                     <span class="res-label">Word (vocabulary)</span>
                     <input type="text" class="admin-input" id="ed-word" style="margin:0">
-                    <span class="res-label">English (romanized)</span>
+                    <span class="res-label">English Text (e.g. "One")</span>
                     <input type="text" class="admin-input" id="ed-english" style="margin:0">
+                    <span class="res-label">Dhivehi Text (e.g. "އެކެއް")</span>
+                    <input type="text" class="admin-input" id="ed-dhivehi" style="margin:0">
                     <div id="ed-num-section" style="display:none">
                         <span class="res-label">Count Word (Dhivehi - e.g. "1 އާފަލު")</span>
                         <input type="text" class="admin-input" id="ed-count-word-dhivehi" style="margin:0">
@@ -202,12 +204,20 @@
 
                 <div class="res-section">
                     <h4>🔊 Audio</h4>
-                    <span class="res-label">Letter Audio</span>
+                    <span class="res-label">Dhivehi Audio</span>
                     <div class="upload-row">
-                        <input type="text" class="admin-input" id="ed-audio" placeholder="filename.mp3">
-                        <button class="upload-btn" style="background:#4D96FF; color:white" onclick="edTriggerUpload('audio')">📤 Upload</button>
-                        <input type="file" id="ed-file-audio" style="display:none" accept="audio/*" onchange="edHandleUpload(this,'audio')">
-                        <button class="upload-btn" style="background:#334155; color:#94a3b8" onclick="edPlayPreview('audio')" title="Preview">▶</button>
+                        <input type="text" class="admin-input" id="ed-audio-dhivehi" placeholder="dhivehi.mp3">
+                        <button class="upload-btn" style="background:#4D96FF; color:white" onclick="edTriggerUpload('audio_dhivehi')">📤 Upload</button>
+                        <input type="file" id="ed-file-audio_dhivehi" style="display:none" accept="audio/*" onchange="edHandleUpload(this,'audio_dhivehi')">
+                        <button class="upload-btn" style="background:#334155; color:#94a3b8" onclick="edPlayPreview('audio_dhivehi')" title="Preview">▶</button>
+                    </div>
+
+                    <span class="res-label">English Audio</span>
+                    <div class="upload-row">
+                        <input type="text" class="admin-input" id="ed-audio-english" placeholder="english.mp3">
+                        <button class="upload-btn" style="background:#2dd4bf; color:white" onclick="edTriggerUpload('audio_english')">📤 Upload</button>
+                        <input type="file" id="ed-file-audio_english" style="display:none" accept="audio/*" onchange="edHandleUpload(this,'audio_english')">
+                        <button class="upload-btn" style="background:#334155; color:#94a3b8" onclick="edPlayPreview('audio_english')" title="Preview">▶</button>
                     </div>
                     <span class="res-label" id="ed-word-audio-label">Word Audio</span>
                     <div class="upload-row" id="ed-word-audio-row">
@@ -461,7 +471,8 @@
                     <div class="r-letter">${item.letter || item.mark || ''}</div>
                     <div class="r-name">${item.name || item.word || ''}</div>
                     <div class="r-dots">
-                        <div class="r-dot ${hasAudio ? 'on' : 'off'}" title="Letter Audio"></div>
+                        <div class="r-dot ${item.audio_dhivehi || item.audio ? 'on' : 'off'}" title="Dhivehi Audio"></div>
+                        <div class="r-dot ${item.audio_english ? 'on' : 'off'}" style="background:${item.audio_english ? '#2dd4bf' : ''}" title="English Audio"></div>
                         ${!isFili ? `<div class="r-dot ${hasWordAudio ? 'on' : 'off'}" style="background:${hasWordAudio ? '#FF8400' : ''}" title="Word Audio"></div>` : ''}
                         ${!isFili ? `<div class="r-dot ${hasImage ? 'on' : 'off'}" style="background:${hasImage ? '#6BCB77' : ''}" title="Image"></div>` : ''}
                         ${!isFili ? `<div class="r-dot ${hasQuiz ? 'on' : 'off'}" style="background:${hasQuiz ? '#e879f9' : ''}" title="Quiz Q"></div>` : ''}
@@ -485,9 +496,11 @@
             document.getElementById('ed-name').value    = item.name || '';
             document.getElementById('ed-word').value    = item.word || '';
             document.getElementById('ed-english').value = item.english || '';
+            document.getElementById('ed-dhivehi').value = item.dhivehi || '';
             document.getElementById('ed-quiz-q').value  = item.quiz_question || '';
             document.getElementById('ed-quiz-opts').value = item.quiz_options || '';
-            document.getElementById('ed-audio').value      = item.audio || '';
+            document.getElementById('ed-audio-dhivehi').value = item.audio_dhivehi || item.audio || '';
+            document.getElementById('ed-audio-english').value = item.audio_english || '';
             document.getElementById('ed-word-audio').value = item.word_audio || '';
             document.getElementById('ed-image').value      = item.image || '';
 
@@ -566,9 +579,11 @@
                 name:          document.getElementById('ed-name').value,
                 word:          document.getElementById('ed-word').value,
                 english:       document.getElementById('ed-english').value,
+                dhivehi:       document.getElementById('ed-dhivehi').value,
                 quiz_question: document.getElementById('ed-quiz-q').value,
                 quiz_options:  document.getElementById('ed-quiz-opts').value,
-                audio:         document.getElementById('ed-audio').value,
+                audio_dhivehi: document.getElementById('ed-audio-dhivehi').value,
+                audio_english: document.getElementById('ed-audio-english').value,
                 word_audio:    document.getElementById('ed-word-audio').value,
                 image:         document.getElementById('ed-image').value,
                 count_word_dhivehi: document.getElementById('ed-count-word-dhivehi').value,
