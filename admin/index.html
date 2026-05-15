@@ -43,8 +43,11 @@
             <div class="admin-card" style="width: 400px; text-align: center; position: relative;">
                 <img src="../assets/mascot_a.png" class="app-mascot" style="width: 120px; margin-bottom: 10px;">
                 <h1 style="margin-bottom: 20px;">Secure Login 🔐</h1>
-                <input type="password" id="admin-pin" class="admin-input" placeholder="Enter Admin PIN" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
-                <button class="admin-btn" style="width: 100%; margin-top: 20px;" onclick="verifyAdmin()">ACCESS TERMINAL</button>
+                <p style="margin-bottom: 20px; color: #94a3b8;">Terminal access restricted to authorized personnel.</p>
+                <button class="admin-btn" style="width: 100%; margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; background: white; color: black;" onclick="verifyAdmin()">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="24">
+                    Authenticate via Google
+                </button>
             </div>
         </div>
 
@@ -157,16 +160,59 @@
             { id: 102, user: 'Mariyam Shifa', date: '2026-05-11', amount: '200 MVR', status: 'verified' }
         ];
 
-        function verifyAdmin() {
-            const masterPin = (typeof CONFIG !== 'undefined') ? CONFIG.ADMIN_PIN : 'admin123';
-            if (document.getElementById('admin-pin').value === masterPin) {
-                document.getElementById('login-container').style.display = 'none';
-                document.getElementById('dashboard-container').style.display = 'block';
-                loadDashboard();
-            } else {
-                alert('ACCESS DENIED');
+        async function verifyAdmin() {
+            if (!window.supabaseClient) {
+                alert("Supabase not connected. Check config.");
+                return;
+            }
+            
+            const { error } = await window.supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.href
+                }
+            });
+
+            if (error) {
+                alert('Login failed: ' + error.message);
             }
         }
+
+        async function checkAdminSession() {
+            if (!window.supabaseClient) return;
+
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (session) {
+                const email = session.user.email;
+                if (email === 'alippalhey@gmail.com') {
+                    document.getElementById('login-container').style.display = 'none';
+                    document.getElementById('dashboard-container').style.display = 'block';
+                    loadDashboard();
+                } else {
+                    document.getElementById('login-container').innerHTML = `
+                        <div class="admin-card" style="width: 400px; text-align: center; border-color: #ef4444;">
+                            <h2 style="color: #ef4444; margin-bottom: 20px;">ACCESS DENIED 🚫</h2>
+                            <p style="margin-bottom: 20px; font-weight: 800;">Email ${email} is not authorized for terminal access.</p>
+                            <button class="admin-btn" style="background: #ef4444;" onclick="logout()">GO BACK</button>
+                        </div>
+                    `;
+                }
+            }
+            
+            window.supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    if (!session || session.user.email !== 'alippalhey@gmail.com') return;
+                    document.getElementById('login-container').style.display = 'none';
+                    document.getElementById('dashboard-container').style.display = 'block';
+                    loadDashboard();
+                } else if (event === 'SIGNED_OUT') {
+                    location.reload();
+                }
+            });
+        }
+        
+        // Check session on load
+        document.addEventListener('DOMContentLoaded', checkAdminSession);
 
         async function loadDashboard() {
             document.getElementById('set-name-site').value = settings.siteName || 'Thaana Kids';
