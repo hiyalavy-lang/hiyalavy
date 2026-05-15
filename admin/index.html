@@ -340,12 +340,12 @@
                         <td style="display:flex; gap:5px; align-items:center">
                             <input type="text" class="admin-input" id="audio-${cat}-${i}" style="margin:0; width:80px" value="${item.audio || ''}" onchange="updateResource('${cat}', ${i}, 'audio', this.value)">
                             <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('${cat}', ${i}, 'audio')">📤</button>
-                            <input type="file" id="file-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'audio')">
+                            <input type="file" id="file-audio-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'audio')">
                         </td>
                         <td style="display:flex; gap:5px; align-items:center">
                             <input type="text" class="admin-input" id="word_audio-${cat}-${i}" style="margin:0; width:80px" value="${item.word_audio || ''}" onchange="updateResource('${cat}', ${i}, 'word_audio', this.value)">
                             <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('${cat}', ${i}, 'word_audio')">📤</button>
-                            <input type="file" id="file_word_audio-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'word_audio')">
+                            <input type="file" id="file-word_audio-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'word_audio')">
                         </td>
                     </tr>
                 `).join('');
@@ -353,7 +353,7 @@
         }
 
         function triggerUpload(cat, i, field) {
-            document.getElementById(`file-${cat}-${i}`).click();
+            document.getElementById(`file-${field}-${cat}-${i}`).click();
         }
 
         async function handleFileUpload(input, cat, i, field) {
@@ -365,26 +365,22 @@
             btn.innerText = '⏳';
 
             try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    headers: { 'x-filename': filename },
-                    body: file
-                });
-
-                if (response.ok) {
-                    btn.innerText = '✅';
-                    // Update the text input and localStorage
-                    const textInput = document.getElementById(`audio-${cat}-${i}`);
-                    if (textInput) textInput.value = filename;
-                    updateResource(cat, i, field, filename);
-                    setTimeout(() => btn.innerText = '📤', 2000);
-                } else {
-                    throw new Error('Upload failed');
-                }
+                if (!window.supabaseClient) throw new Error("Supabase not connected");
+                
+                const { error } = await window.supabaseClient.storage.from('audio').upload(filename, file, { upsert: true });
+                if (error) throw error;
+                
+                const inputFieldId = field === 'audio' ? `audio-${cat}-${i}` : `word_audio-${cat}-${i}`;
+                const textInput = document.getElementById(inputFieldId);
+                if (textInput) textInput.value = filename;
+                updateResource(cat, i, field, filename);
+                
+                btn.innerText = '✅';
+                setTimeout(() => btn.innerText = '📤', 2000);
             } catch (err) {
                 console.error(err);
                 btn.innerText = '❌';
-                alert('Upload failed. Make sure the server is running with upload support.');
+                alert('Upload failed: ' + err.message);
                 setTimeout(() => btn.innerText = '📤', 2000);
             }
         }
