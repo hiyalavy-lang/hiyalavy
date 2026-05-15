@@ -39,14 +39,62 @@ CREATE TABLE IF NOT EXISTS public.payments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
+-- 4. App Navigation
+CREATE TABLE IF NOT EXISTS public.app_nav (
+    id TEXT PRIMARY KEY,
+    icon TEXT,
+    label TEXT,
+    premium BOOLEAN DEFAULT false,
+    order_index INTEGER DEFAULT 0
+);
+
+-- 5. App Curriculum Content (Letters/Words)
+CREATE TABLE IF NOT EXISTS public.app_content (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category TEXT NOT NULL, -- 'dhivehi', 'english', 'arabic', 'engdhi'
+    letter TEXT NOT NULL,
+    name TEXT,
+    audio TEXT,
+    word TEXT,
+    word_audio TEXT,
+    english TEXT,
+    dhivehi TEXT, -- For Engdhi translations
+    order_index INTEGER DEFAULT 0
+);
+
+-- 6. App Vowels (Fili)
+CREATE TABLE IF NOT EXISTS public.app_fili (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mark TEXT NOT NULL,
+    name TEXT NOT NULL,
+    audio TEXT,
+    order_index INTEGER DEFAULT 0
+);
+
+-- Storage bucket for slips (must be run in Supabase SQL Editor manually or via API)
+-- insert into storage.buckets (id, name, public) values ('slips', 'slips', true);
+
 -- RLS (Row Level Security) - Simplified for starting
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public Read Access" ON public.settings FOR SELECT USING (true);
-CREATE POLICY "Admin Write Access" ON public.settings FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+CREATE POLICY "Public Read Access Settings" ON public.settings FOR SELECT USING (true);
+CREATE POLICY "Admin Write Access Settings" ON public.settings FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
 
 ALTER TABLE public.kids ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own kids" ON public.kids FOR ALL USING (auth.uid() = user_id);
 
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can see their own payments" ON public.payments FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert their own payments" ON public.payments FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Admin can manage all payments" ON public.payments FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+
+ALTER TABLE public.app_nav ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Read Access Nav" ON public.app_nav FOR SELECT USING (true);
+CREATE POLICY "Admin Write Access Nav" ON public.app_nav FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+
+ALTER TABLE public.app_content ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Read Access Content" ON public.app_content FOR SELECT USING (true);
+CREATE POLICY "Admin Write Access Content" ON public.app_content FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));
+
+ALTER TABLE public.app_fili ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Read Access Fili" ON public.app_fili FOR SELECT USING (true);
+CREATE POLICY "Admin Write Access Fili" ON public.app_fili FOR ALL USING (auth.uid() IN (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL'));

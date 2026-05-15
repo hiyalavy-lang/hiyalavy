@@ -168,7 +168,7 @@
             }
         }
 
-        function loadDashboard() {
+        async function loadDashboard() {
             document.getElementById('set-name-site').value = settings.siteName || 'Thaana Kids';
             document.getElementById('set-price').value = settings.premiumPrice;
             document.getElementById('set-account').value = settings.bankAccount;
@@ -180,25 +180,44 @@
             document.getElementById('set-hero-emoji').value = settings.heroEmoji || '🎨';
             document.getElementById('set-footer').value = settings.footerText || '';
 
+            await fetchPayments();
+            await fetchNavTable();
+            await fetchResources();
+        }
+
+        async function fetchPayments() {
+            if (window.supabaseClient) {
+                const { data } = await window.supabaseClient.from('payments').select('*').order('created_at', { ascending: false });
+                if (data) window.slips = data;
+            }
             renderPayments();
             renderStats();
+        }
+
+        async function fetchNavTable() {
+            if (window.supabaseClient) {
+                const { data } = await window.supabaseClient.from('app_nav').select('*').order('order_index');
+                if (data && data.length > 0) {
+                    window.adminNav = data;
+                } else {
+                    window.adminNav = JSON.parse(localStorage.getItem('thaana_nav')) || [
+                        { id: 'soundboard', icon: '🔊', label: 'Letters', premium: false, order_index: 1 },
+                        { id: 'engdhi', icon: '🔤', label: 'Engdhi', premium: true, order_index: 2 },
+                        { id: 'fili', icon: '✨', label: 'Fili', premium: true, order_index: 3 },
+                        { id: 'tracing', icon: '✏️', label: 'Tracing', premium: true, order_index: 4 },
+                        { id: 'vocabulary', icon: '🖼️', label: 'Words', premium: true, order_index: 5 },
+                        { id: 'quiz', icon: '⭐', label: 'Quiz', premium: true, order_index: 6 },
+                        { id: 'hall', icon: '🏆', label: 'Hall', premium: true, order_index: 7 },
+                        { id: 'badges', icon: '🏅', label: 'Badges', premium: true, order_index: 8 }
+                    ];
+                }
+            }
             renderNavTable();
-            loadResources();
         }
 
         function renderNavTable() {
-            const nav = JSON.parse(localStorage.getItem('thaana_nav')) || [
-                { id: 'soundboard', icon: '🔊', label: 'Letters', premium: false },
-                { id: 'engdhi', icon: '🔤', label: 'Engdhi', premium: true },
-                { id: 'fili', icon: '✨', label: 'Fili', premium: true },
-                { id: 'tracing', icon: '✏️', label: 'Tracing', premium: true },
-                { id: 'vocabulary', icon: '🖼️', label: 'Words', premium: true },
-                { id: 'quiz', icon: '⭐', label: 'Quiz', premium: true },
-                { id: 'hall', icon: '🏆', label: 'Hall', premium: true },
-                { id: 'badges', icon: '🏅', label: 'Badges', premium: true }
-            ];
             const table = document.getElementById('nav-table');
-            table.innerHTML = nav.map((item, i) => `
+            table.innerHTML = window.adminNav.map((item, i) => `
                 <tr>
                     <td>${item.id}</td>
                     <td><input type="text" class="admin-input" style="margin:0" value="${item.label}" onchange="updateNavItem(${i}, 'label', this.value)"></td>
@@ -206,17 +225,41 @@
                     <td><input type="checkbox" ${item.premium ? 'checked' : ''} onchange="updateNavItem(${i}, 'premium', this.checked)"></td>
                 </tr>
             `).join('');
-            localStorage.setItem('thaana_nav', JSON.stringify(nav));
         }
 
         function updateNavItem(i, prop, val) {
-            const nav = JSON.parse(localStorage.getItem('thaana_nav'));
-            nav[i][prop] = val;
-            localStorage.setItem('thaana_nav', JSON.stringify(nav));
+            window.adminNav[i][prop] = val;
         }
 
-        function saveNav() {
-            alert('Navigation labels and icons saved!');
+        async function saveNav() {
+            if (!window.supabaseClient) return alert("Supabase not connected");
+            const btn = event.target; btn.innerText = "SAVING...";
+            for (let item of window.adminNav) {
+                await window.supabaseClient.from('app_nav').upsert(item);
+            }
+            btn.innerText = "SAVE NAVIGATION";
+            alert('Navigation synced to cloud!');
+        }
+
+        async function fetchResources() {
+            if (window.supabaseClient) {
+                const { data: cData } = await window.supabaseClient.from('app_content').select('*').order('order_index');
+                const { data: fData } = await window.supabaseClient.from('app_fili').select('*').order('order_index');
+                
+                if (cData && cData.length > 0) {
+                    window.adminContent = { dhivehi: [], english: [], arabic: [], engdhi: [] };
+                    cData.forEach(c => window.adminContent[c.category].push(c));
+                } else {
+                    window.adminContent = JSON.parse(localStorage.getItem('thaana_content')) || content;
+                }
+                
+                if (fData && fData.length > 0) {
+                    window.adminFili = fData;
+                } else {
+                    window.adminFili = JSON.parse(localStorage.getItem('thaana_fili')) || filiData;
+                }
+            }
+            loadResources();
         }
 
         function loadResources() {
@@ -225,38 +268,36 @@
             const head = document.getElementById('resource-head');
             
             if (cat === 'fili') {
-                const data = JSON.parse(localStorage.getItem('thaana_fili')) || filiData;
+                const data = window.adminFili || filiData;
                 head.innerHTML = '<tr><th>MARK</th><th>NAME</th><th>AUDIO</th></tr>';
                 table.innerHTML = data.map((item, i) => `
                     <tr>
                         <td><input type="text" class="admin-input" style="margin:0" value="${item.mark}" onchange="updateResource('fili', ${i}, 'mark', this.value)"></td>
                         <td><input type="text" class="admin-input" style="margin:0" value="${item.name}" onchange="updateResource('fili', ${i}, 'name', this.value)"></td>
                         <td style="display:flex; gap:10px; align-items:center">
-                            <input type="text" class="admin-input" id="audio-fili-${i}" style="margin:0; flex:1" value="${item.audio}" onchange="updateResource('fili', ${i}, 'audio', this.value)">
+                            <input type="text" class="admin-input" id="audio-fili-${i}" style="margin:0; flex:1" value="${item.audio || ''}" onchange="updateResource('fili', ${i}, 'audio', this.value)">
                             <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('fili', ${i}, 'audio')">📤</button>
                             <input type="file" id="file-fili-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, 'fili', ${i}, 'audio')">
                         </td>
                     </tr>
                 `).join('');
-                if (!localStorage.getItem('thaana_fili')) localStorage.setItem('thaana_fili', JSON.stringify(data));
             } else {
-                const data = JSON.parse(localStorage.getItem('thaana_content')) || content;
-                const items = data[cat];
+                const data = window.adminContent || content;
+                const items = data[cat] || [];
                 head.innerHTML = '<tr><th>LTR</th><th>NAME</th><th>WORD</th><th>ENG</th><th>AUDIO</th></tr>';
                 table.innerHTML = items.map((item, i) => `
                     <tr>
                         <td><input type="text" class="admin-input" style="margin:0; width:50px" value="${item.letter}" onchange="updateResource('${cat}', ${i}, 'letter', this.value)"></td>
-                        <td><input type="text" class="admin-input" style="margin:0" value="${item.name}" onchange="updateResource('${cat}', ${i}, 'name', this.value)"></td>
+                        <td><input type="text" class="admin-input" style="margin:0" value="${item.name || ''}" onchange="updateResource('${cat}', ${i}, 'name', this.value)"></td>
                         <td><input type="text" class="admin-input" style="margin:0" value="${item.word || ''}" onchange="updateResource('${cat}', ${i}, 'word', this.value)"></td>
                         <td><input type="text" class="admin-input" style="margin:0" value="${item.english || ''}" onchange="updateResource('${cat}', ${i}, 'english', this.value)"></td>
                         <td style="display:flex; gap:10px; align-items:center">
-                            <input type="text" class="admin-input" id="audio-${cat}-${i}" style="margin:0; flex:1" value="${item.audio}" onchange="updateResource('${cat}', ${i}, 'audio', this.value)">
+                            <input type="text" class="admin-input" id="audio-${cat}-${i}" style="margin:0; flex:1" value="${item.audio || ''}" onchange="updateResource('${cat}', ${i}, 'audio', this.value)">
                             <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('${cat}', ${i}, 'audio')">📤</button>
                             <input type="file" id="file-${cat}-${i}" style="display:none" accept="audio/*" onchange="handleFileUpload(this, '${cat}', ${i}, 'audio')">
                         </td>
                     </tr>
                 `).join('');
-                if (!localStorage.getItem('thaana_content')) localStorage.setItem('thaana_content', JSON.stringify(data));
             }
         }
 
@@ -299,18 +340,37 @@
 
         function updateResource(cat, i, prop, val) {
             if (cat === 'fili') {
-                const data = JSON.parse(localStorage.getItem('thaana_fili'));
-                data[i][prop] = val;
-                localStorage.setItem('thaana_fili', JSON.stringify(data));
+                window.adminFili[i][prop] = val;
             } else {
-                const data = JSON.parse(localStorage.getItem('thaana_content'));
-                data[cat][i][prop] = val;
-                localStorage.setItem('thaana_content', JSON.stringify(data));
+                window.adminContent[cat][i][prop] = val;
             }
         }
 
-        function saveResources() {
-            alert('All resource changes saved to LocalStorage!');
+        async function saveResources() {
+            if (!window.supabaseClient) return alert("Supabase not connected");
+            const btn = event.target; btn.innerText = "SAVING TO CLOUD...";
+            
+            // Upsert Fili
+            if (window.adminFili) {
+                const fToSave = window.adminFili.map((f, i) => ({ ...f, order_index: i }));
+                await window.supabaseClient.from('app_fili').upsert(fToSave);
+            }
+
+            // Upsert Content
+            if (window.adminContent) {
+                let allContent = [];
+                for (let category in window.adminContent) {
+                    const mapped = window.adminContent[category].map((c, i) => ({ ...c, category, order_index: i }));
+                    allContent = allContent.concat(mapped);
+                }
+                // Supabase upsert handles batches up to a certain size
+                for (let i = 0; i < allContent.length; i += 100) {
+                    await window.supabaseClient.from('app_content').upsert(allContent.slice(i, i + 100));
+                }
+            }
+
+            btn.innerText = "SAVE RESOURCES";
+            alert('All resources successfully synced to cloud!');
         }
 
         function resetSystem() {

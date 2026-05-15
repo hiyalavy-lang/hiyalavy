@@ -182,9 +182,23 @@
                         heroEmoji: settings.hero_emoji,
                         footerText: settings.footer_text
                     };
-                    this.updateUIStrings();
-                    this.render();
                 }
+
+                // 2. Fetch Curriculum & Nav
+                const { data: nData } = await this.supabase.from('app_nav').select('*').order('order_index');
+                if (nData && nData.length > 0) this.state.customNav = nData;
+
+                const { data: fData } = await this.supabase.from('app_fili').select('*').order('order_index');
+                if (fData && fData.length > 0) this.state.customFili = fData;
+
+                const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
+                if (cData && cData.length > 0) {
+                    this.state.customContent = { dhivehi: [], english: [], arabic: [], engdhi: [] };
+                    cData.forEach(c => this.state.customContent[c.category].push(c));
+                }
+
+                this.updateUIStrings();
+                this.render();
 
                 // 2. Realtime Listener for Settings
                 this.supabase.channel('settings-db-changes')
@@ -200,15 +214,59 @@
                     }).subscribe();
             }
 
-            handleSessionUpdate(session) {
+            async handleSessionUpdate(session) {
                 if (session) {
                     this.state.isLoggedIn = true;
                     this.state.parentEmail = session.user.email;
+                    
+                    // Fetch kids profiles
+                    const { data: kidsData } = await this.supabase.from('kids').select('*').eq('user_id', session.user.id);
+                    if (kidsData && kidsData.length > 0) {
+                        this.state.kids = kidsData.map(k => ({
+                            dbId: k.id,
+                            name: k.name,
+                            ageGroup: k.age_group,
+                            avatar: k.avatar,
+                            points: k.points,
+                            badges: k.badges || [],
+                            unlockedAvatars: k.unlocked_avatars || ['👶', '👧', '👦']
+                        }));
+                    } else {
+                        // Create default kid if none exists
+                        const defaultKid = { user_id: session.user.id, name: 'ކުޑަކުއްޖާ', age_group: 'preschool', avatar: '👶', points: 0 };
+                        const { data: newKid } = await this.supabase.from('kids').insert(defaultKid).select().single();
+                        if (newKid) {
+                            this.state.kids = [{ dbId: newKid.id, name: newKid.name, ageGroup: newKid.age_group, avatar: newKid.avatar, points: newKid.points, badges: [], unlockedAvatars: ['👶', '👧', '👦'] }];
+                        }
+                    }
+
+                    // Check Premium Payment Status
+                    const { data: paymentsData } = await this.supabase.from('payments').select('status').eq('user_id', session.user.id).eq('status', 'verified');
+                    if (paymentsData && paymentsData.length > 0) {
+                        this.state.isPremium = true;
+                    }
+
                     if (this.state.view === 'landing' || this.state.view === 'login') {
                         this.switchView('soundboard');
                     } else {
                         this.render();
                     }
+                }
+            }
+
+            async syncKidProgress(index) {
+                if (!this.state.isLoggedIn || !this.supabase) return;
+                const idx = index !== undefined ? index : this.state.activeKidIndex;
+                const kid = this.state.kids[idx];
+                if (kid && kid.dbId) {
+                    await this.supabase.from('kids').update({
+                        points: kid.points,
+                        badges: kid.badges,
+                        unlocked_avatars: kid.unlockedAvatars,
+                        avatar: kid.avatar,
+                        name: kid.name,
+                        age_group: kid.ageGroup
+                    }).eq('id', kid.dbId);
                 }
             }
 
@@ -446,11 +504,42 @@
                 document.getElementById('modal-container').appendChild(modal);
             }
 
-            submitPayment() {
-                if (!document.getElementById('slip-upload').files[0]) { alert("Please upload a slip!"); return; }
-                alert("Slip uploaded! Our team will verify and unlock your premium features shortly. ✨");
-                document.getElementById('payment-modal').remove();
+            async submitPayment() {
+                const fileInput = document.getElementById('slip-upload');
+                const file = fileInput.files[0];
+                if (!file) { alert("Please upload a slip!"); return; }
+                if (!this.supabase) return alert("System offline. Try again later.");
+
+                const btn = event.target;
+                btn.innerText = "UPLOADING...";
+
+                try {
+                    // Upload slip to Supabase Storage
+                    const ext = file.name.split('.').pop();
+                    const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+                    const { data: uploadData, error: uploadError } = await this.supabase.storage.from('slips').upload(filename, file);
+                    if (uploadError) throw uploadError;
+
+                    // Insert into Payments table
+                    const { data: { session } } = await this.supabase.auth.getSession();
+                    const { error: dbError } = await this.supabase.from('payments').insert({
+                        user_id: session.user.id,
+                        user_email: session.user.email,
+                        amount: this.state.globalSettings.premiumPrice,
+                        slip_url: filename,
+                        status: 'pending'
+                    });
+                    if (dbError) throw dbError;
+
+                    alert("Slip uploaded! Our team will verify and unlock your premium features shortly. ✨");
+                    document.getElementById('payment-modal').remove();
+                } catch (e) {
+                    console.error(e);
+                    alert("Upload failed. Please try again. " + e.message);
+                    btn.innerText = "Verify Payment";
+                }
             }
+
 
             switchKid(i) { this.state.activeKidIndex = i; document.getElementById('hub-menu-modal').remove(); this.playSound('click'); this.render(); }
 
@@ -587,7 +676,12 @@
 
             addNewKid() { this.state.kids.push({ name: 'ކުއްޖާ', ageGroup: 'preschool', avatar: '👶', points: 0, badges: [], unlockedAvatars: ['👶', '👧', '👦'] }); this.renderProfileEdits(); }
             removeKid(i) { if (this.state.kids.length > 1) { this.state.kids.splice(i, 1); if (this.state.activeKidIndex >= i) this.state.activeKidIndex = 0; this.renderProfileEdits(); } else alert("At least one profile needed!"); }
-            updateKidProp(i, prop, val) { this.state.kids[i][prop] = val; this.renderProfileEdits(); this.renderProfileHub(); }
+            updateKidProp(i, prop, val) { 
+                this.state.kids[i][prop] = val; 
+                this.renderProfileEdits(); 
+                this.renderProfileHub();
+                this.syncKidProgress(i);
+            }
 
             updateLanguage(lang) {
                 if (lang !== 'dhivehi' && !this.state.isPremium) { this.showUpgradePopup(); this.render(); return; }
@@ -711,6 +805,7 @@
 
             addTaskProgress() {
                 this.state.kids[this.state.activeKidIndex].points += 10;
+                this.syncKidProgress();
                 this.state.dailyTasksCompleted++;
                 if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) document.getElementById('mystery-box').innerHTML = '🎁✨';
 
