@@ -126,7 +126,6 @@
                 // Dynamic Content & Nav Initialization
                 const defaultNav = [
                     { id: 'soundboard', icon: '🔊', label: 'Letters', premium: false },
-                    { id: 'engdhi', icon: '🔤', label: 'Engdhi', premium: true },
                     { id: 'fili', icon: '✨', label: 'Fili', premium: true },
                     { id: 'tracing', icon: '✏️', label: 'Tracing', premium: true },
                     { id: 'vocabulary', icon: '🖼️', label: 'Words', premium: true },
@@ -456,7 +455,7 @@
             }
 
             switchView(view) {
-                const premiumViews = ['fili', 'tracing', 'vocabulary', 'quiz', 'hall', 'badges', 'mystery-game', 'engdhi'];
+                const premiumViews = ['fili', 'tracing', 'vocabulary', 'quiz', 'hall', 'badges', 'mystery-game'];
                 if (premiumViews.includes(view) && !this.state.isPremium) {
                     this.showUpgradePopup();
                     return;
@@ -517,7 +516,6 @@
                     case 'hall': this.renderHallOfFame(); break;
                     case 'badges': this.renderBadges(); break;
                     case 'mystery-game': this.renderMysteryGame(); break;
-                    case 'engdhi': this.renderEngdhi(); break;
                 }
             }
 
@@ -723,9 +721,7 @@
                         if (item.id === 'soundboard') label = 'Numbers';
                         if (item.id === 'vocabulary') label = 'Count';
                     }
-                    const hidden = (item.id === 'engdhi' && this.state.language !== 'engdhi') ||
-                        (item.id === 'fili' && this.state.language !== 'dhivehi') ||
-                        (item.id === 'tracing' && this.state.language === 'engdhi') ||
+                    const hidden = (item.id === 'fili' && this.state.language !== 'dhivehi') ||
                         (item.id === 'vocabulary' && (this.state.language === 'arabic' || (this.state.language === 'numbers' && !this.state.isPremium))) ||
                         (item.id === 'quiz' && this.state.language === 'arabic');
                     return { ...item, label, hidden };
@@ -837,7 +833,6 @@
                                 <button class="lang-opt ${this.state.language === 'dhivehi' ? 'active' : ''}" onclick="app.updateLanguage('dhivehi')">ދިވެހި</button>
                                 <button class="lang-opt ${this.state.language === 'english' ? 'active' : ''}" onclick="app.updateLanguage('english')">English ${!this.state.isPremium ? '🔒' : ''}</button>
                                 <button class="lang-opt ${this.state.language === 'arabic' ? 'active' : ''}" onclick="app.updateLanguage('arabic')">العربية ${!this.state.isPremium ? '🔒' : ''}</button>
-                                <button class="lang-opt ${this.state.language === 'engdhi' ? 'active' : ''}" onclick="app.updateLanguage('engdhi')">Engdhi ${!this.state.isPremium ? '🔒' : ''}</button>
                                 <button class="lang-opt ${this.state.language === 'numbers' ? 'active' : ''}" onclick="app.updateLanguage('numbers')" style="grid-column: span 2">Numbers ${!this.state.isPremium ? '🔒' : ''}</button>
                             </div>
                         </div>
@@ -949,7 +944,7 @@
                 const isNumbers = this.state.language === 'numbers';
                 const items = this.state.customContent[this.state.language] || [];
                 items.forEach(item => {
-                    const isDual = item.letter.length > 1 && (this.state.language === 'english' || this.state.language === 'engdhi');
+                    const isDual = item.letter.length > 1 && this.state.language === 'english';
                     const displayLetter = (isDual && item.letter.length === 1) ? item.letter.toUpperCase() + item.letter.toLowerCase() : item.letter;
                     const card = document.createElement('div'); card.className = 'letter-card'; 
                     
@@ -976,16 +971,6 @@
                 this.viewContainer.appendChild(container);
             }
 
-            renderEngdhi() {
-                const grid = document.createElement('div'); grid.className = 'alphabet-grid';
-                this.state.customContent.engdhi.forEach(item => {
-                    const card = document.createElement('div'); card.className = 'letter-card';
-                    card.innerHTML = `<div style="font-size:3rem; font-weight:900; color:var(--orange)">${item.letter}</div><div style="font-weight:800; font-size:1.4rem">${item.english}</div><div style="font-weight:800; color:var(--primary)">${item.dhivehi}</div>`;
-                    card.onclick = (e) => { this.playSound('click'); this.playAudio(item.audio); this.createPop(e.pageX, e.pageY); this.addTaskProgress(); };
-                    grid.appendChild(card);
-                });
-                this.viewContainer.appendChild(grid);
-            }
 
             renderVocabulary() {
                 const isNumbers = this.state.language === 'numbers';
@@ -1034,7 +1019,7 @@
             }
 
             renderTracing() {
-                const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
+                const items = this.state.customContent[this.state.language] || [];
                 if (!items.length) return;
                 this.viewContainer.innerHTML = `
                     <div class="tracing-container" style="padding:2rem; text-align:center">
