@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
     <style>
         /* Prevent zooming on mobile */
         html, body { touch-action: manipulation; overscroll-behavior: none; }
@@ -266,11 +267,12 @@
                             avatar: k.avatar,
                             points: k.points,
                             badges: k.badges || [],
-                            unlockedAvatars: k.unlocked_avatars || ['👶', '👧', '👦']
+                            unlockedAvatars: k.unlocked_avatars || ['👶', '👧', '👦'],
+                            pin: k.pin || '1234'
                         }));
                     } else {
                         // Create default kid if none exists
-                        const defaultKid = { user_id: session.user.id, name: 'ކުޑަކުއްޖާ', age_group: 'preschool', avatar: '👶', points: 0 };
+                        const defaultKid = { user_id: session.user.id, name: 'ކުޑަކުއްޖާ', age_group: 'preschool', avatar: '👶', points: 0, pin: '1234' };
                         const { data: newKid } = await this.supabase.from('kids').insert(defaultKid).select().single();
                         if (newKid) {
                             this.state.kids = [{ dbId: newKid.id, name: newKid.name, ageGroup: newKid.age_group, avatar: newKid.avatar, points: newKid.points, badges: [], unlockedAvatars: ['👶', '👧', '👦'] }];
@@ -285,6 +287,13 @@
 
                     if (this.state.view === 'landing' || this.state.view === 'login') {
                         this.switchView('soundboard');
+                        // PIN Setup prompt for first timers
+                        if (this.state.kids[0] && this.state.kids[0].pin === '1234') {
+                            setTimeout(() => {
+                                this.mascotSay("Welcome! Please set a unique PIN in Settings to keep your profile safe! 🔒", 6000);
+                                this.handleParentAuth();
+                            }, 3000);
+                        }
                     } else {
                         this.render();
                     }
@@ -302,7 +311,8 @@
                         unlocked_avatars: kid.unlockedAvatars,
                         avatar: kid.avatar,
                         name: kid.name,
-                        age_group: kid.ageGroup
+                        age_group: kid.ageGroup,
+                        pin: kid.pin
                     }).eq('id', kid.dbId);
                 }
             }
@@ -434,6 +444,7 @@
                 const logoContainer = document.getElementById('logo-home');
                 if (logoContainer && this.state.globalSettings.siteName) {
                     const name = this.state.globalSettings.siteName;
+                    document.title = name; // Sync Tab Name
                     const icon = this.state.globalSettings.heroEmoji || '🎨';
                     logoContainer.innerHTML = `<span class="icon">${icon}</span> <span class="english-text">${name}</span>`;
                     logoContainer.onclick = () => {
@@ -579,7 +590,8 @@
                         (item.id === 'fili' && this.state.language !== 'dhivehi') ||
                         (item.id === 'tracing' && this.state.language === 'engdhi') ||
                         (item.id === 'vocabulary' && this.state.language === 'arabic') ||
-                        (item.id === 'quiz' && this.state.language === 'arabic');
+                        (item.id === 'quiz' && this.state.language === 'arabic') ||
+                        (item.id === 'numbers' && this.state.language === 'arabic');
                     return { ...item, hidden };
                 });
 
@@ -699,7 +711,22 @@
 
             renderProfileEdits() {
                 const list = document.getElementById('profile-edit-list');
-                list.innerHTML = this.state.kids.map((k, i) => `<div class="profile-item" style="padding:25px; border-radius:25px; border:4px solid var(--border-dark); background:white; margin-bottom:20px"><div style="display:flex; gap:15px; margin-bottom:15px"><input type="text" class="settings-input" value="${k.name}" onchange="app.updateKidProp(${i}, 'name', this.value)" style="flex:1; margin-bottom:0"><select class="settings-select" onchange="app.updateKidProp(${i}, 'ageGroup', this.value)" style="width:120px; margin-bottom:0"><option value="toddler" ${k.ageGroup === 'toddler' ? 'selected' : ''}>2-3</option><option value="preschool" ${k.ageGroup === 'preschool' ? 'selected' : ''}>4-5</option><option value="junior" ${k.ageGroup === 'junior' ? 'selected' : ''}>6+</option></select></div><div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">${k.unlockedAvatars.map(a => `<div onclick="app.updateKidProp(${i}, 'avatar', '${a}')" style="font-size:1.8rem; cursor:pointer; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:15px; border:3px solid var(--border-dark); background:${k.avatar === a ? 'var(--warning)' : '#f8f9fa'}">${a}</div>`).join('')}<button onclick="app.removeKid(${i})" style="margin-right:auto; border:none; background:#fee2e2; width:50px; height:50px; border-radius:15px; cursor:pointer; font-size:1.5rem; border:3px solid #ef4444">🗑️</button></div></div>`).join('');
+                list.innerHTML = this.state.kids.map((k, i) => `
+                    <div class="profile-item" style="padding:25px; border-radius:25px; border:4px solid var(--border-dark); background:white; margin-bottom:20px">
+                        <div style="display:flex; gap:15px; margin-bottom:15px">
+                            <input type="text" class="settings-input" value="${k.name}" placeholder="Name" onchange="app.updateKidProp(${i}, 'name', this.value)" style="flex:1; margin-bottom:0">
+                            <input type="password" class="settings-input" value="${k.pin || ''}" placeholder="PIN" onchange="app.updateKidProp(${i}, 'pin', this.value)" style="width:100px; margin-bottom:0; text-align:center">
+                            <select class="settings-select" onchange="app.updateKidProp(${i}, 'ageGroup', this.value)" style="width:120px; margin-bottom:0">
+                                <option value="toddler" ${k.ageGroup === 'toddler' ? 'selected' : ''}>2-3</option>
+                                <option value="preschool" ${k.ageGroup === 'preschool' ? 'selected' : ''}>4-5</option>
+                                <option value="junior" ${k.ageGroup === 'junior' ? 'selected' : ''}>6+</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+                            ${k.unlockedAvatars.map(a => `<div onclick="app.updateKidProp(${i}, 'avatar', '${a}')" style="font-size:1.8rem; cursor:pointer; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:15px; border:3px solid var(--border-dark); background:${k.avatar === a ? 'var(--warning)' : '#f8f9fa'}">${a}</div>`).join('')}
+                            <button onclick="app.removeKid(${i})" style="margin-right:auto; border:none; background:#fee2e2; width:50px; height:50px; border-radius:15px; cursor:pointer; font-size:1.5rem; border:3px solid #ef4444">🗑️</button>
+                        </div>
+                    </div>`).join('');
             }
 
             async addNewKid() { 
@@ -1034,10 +1061,14 @@
                 }
                 const pct = Math.min(100, Math.round(covered / this.referencePixels.size * 100));
                 const fb = document.getElementById('tracing-feedback');
-                if (pct >= 65) {
+                if (pct >= 75) {
                     if (fb) fb.innerHTML = `<span style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! ${pct}% traced correctly!</span>`;
                     this.triggerExplosion();
                     this.addTaskProgress();
+                    // Auto-advance logic
+                    const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
+                    const next = items[items.findIndex(i => i.letter === this.currentTracingLetter) + 1] || items[0];
+                    setTimeout(() => { if (this.state.view === 'tracing') this.initTracingCanvas(next.letter); }, 2000);
                 } else if (pct >= 35) {
                     if (fb) fb.innerHTML = `<span style="color:var(--orange)">👍 Almost! ${pct}% — Try to cover more of the letter!</span>`;
                 } else {
@@ -1208,7 +1239,6 @@
                 this.syncKidProgress();
                 this.state.dailyTasksCompleted++;
                 if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) document.getElementById('mystery-box').innerHTML = '🎁✨';
-
                 // Show celebration mascot
                 const mascotPop = document.createElement('img');
                 mascotPop.src = 'assets/mascot_a.png';
@@ -1333,6 +1363,17 @@
             }
         }
         const app = new App();
+        
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('SW Registered!', reg);
+                }).catch(err => {
+                    console.log('SW Registration failed:', err);
+                });
+            });
+        }
         let ctx;
         function initCanvas(id) { const canvas = document.getElementById(id); ctx = canvas.getContext('2d'); let drawing = false; ctx.lineWidth = 15; ctx.lineCap = 'round'; ctx.strokeStyle = '#4D96FF'; canvas.onmousedown = () => { drawing = true; ctx.beginPath(); }; canvas.onmouseup = () => { drawing = false; }; canvas.onmousemove = (e) => { if (!drawing) return; const rect = canvas.getBoundingClientRect(); ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke(); }; }
     </script>

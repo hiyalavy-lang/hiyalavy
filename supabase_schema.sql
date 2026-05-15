@@ -96,6 +96,8 @@ DROP POLICY IF EXISTS "Admin Write Access Settings" ON public.settings;
 CREATE POLICY "Public Read Access Settings" ON public.settings FOR SELECT USING (true);
 CREATE POLICY "Admin Write Access Settings" ON public.settings FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
 
+ALTER TABLE public.kids ADD COLUMN IF NOT EXISTS pin TEXT DEFAULT '1234';
+
 ALTER TABLE public.kids ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own kids" ON public.kids;
 CREATE POLICY "Users can manage their own kids" ON public.kids FOR ALL USING (auth.uid() = user_id);

@@ -1,0 +1,21 @@
+{
+  "name": "Thaana Kids",
+  "short_name": "ThaanaKids",
+  "description": "Interactive Dhivehi & English learning for kids.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#FF6B6B",
+  "icons": [
+    {
+      "src": "assets/mascot_board.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/mascot_board.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
