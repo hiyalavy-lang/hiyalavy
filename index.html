@@ -55,23 +55,24 @@
 
     <script src="content.js"></script>
     <script>
+        // Global Supabase Initialization
+        const sbUrl = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_URL : (window.CONFIG ? window.CONFIG.SUPABASE_URL : 'YOUR_SUPABASE_URL');
+        const sbKey = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_KEY : (window.CONFIG ? window.CONFIG.SUPABASE_KEY : 'YOUR_SUPABASE_ANON_KEY');
+        window.supabaseClient = null;
+        try {
+            if (sbUrl !== 'YOUR_SUPABASE_URL' && typeof supabase !== 'undefined') {
+                window.supabaseClient = supabase.createClient(sbUrl, sbKey);
+            } else {
+                console.warn("Supabase not initialized globally. Missing config or CDN.");
+            }
+        } catch (e) {
+            console.error("Supabase Global Init Error:", e);
+        }
+
         class App {
             constructor() {
                 // Cloud Sync (Supabase)
-                this.sbUrl = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_URL : (window.CONFIG ? window.CONFIG.SUPABASE_URL : 'YOUR_SUPABASE_URL');
-                this.sbKey = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_KEY : (window.CONFIG ? window.CONFIG.SUPABASE_KEY : 'YOUR_SUPABASE_ANON_KEY');
-                
-                try {
-                    if (this.sbUrl !== 'YOUR_SUPABASE_URL' && typeof supabase !== 'undefined') {
-                        this.supabase = supabase.createClient(this.sbUrl, this.sbKey);
-                    } else {
-                        this.supabase = null;
-                        console.warn("Supabase not initialized. Using local fallback.");
-                    }
-                } catch (e) {
-                    console.error("Supabase Init Error:", e);
-                    this.supabase = null;
-                }
+                this.supabase = window.supabaseClient;
 
                 // Sync settings from LocalStorage (managed by admin.html)
                 const savedSettings = JSON.parse(localStorage.getItem('thaana_settings')) || {
