@@ -497,6 +497,14 @@
                 document.getElementById('mystery-box-widget').style.display = (this.state.isLoggedIn && this.state.view !== 'mystery-game') ? 'block' : 'none';
                 document.getElementById('app-helper').style.display = (this.state.isLoggedIn && showMascot) ? 'flex' : 'none';
 
+                if (this.state.view === 'tracing' && !this.currentTracingLetter) {
+                    const lastL = localStorage.getItem('last_tracing_letter');
+                    const lastLng = localStorage.getItem('last_tracing_lang');
+                    if (lastL && lastLng === this.state.language) {
+                        setTimeout(() => this.initTracingCanvas(lastL), 50);
+                    }
+                }
+
                 switch (this.state.view) {
                     case 'landing': this.renderLanding(); break;
                     case 'login': this.renderLogin(); break;
@@ -1093,13 +1101,14 @@
                 this.drawnPixels = new Set();
                 this.referencePixels = null;
                 this.coveredCount = 0;
+                localStorage.setItem('last_tracing_letter', letter);
+                localStorage.setItem('last_tracing_lang', this.state.language);
 
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
                     <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden">
                         <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:clamp(10rem, 45vw, 16rem); opacity:0.13; pointer-events:none; z-index:1; font-family:'Fredoka',sans-serif; line-height:1">${letter}</div>
                         <canvas id="tracing-canvas" width="400" height="400" style="position:absolute; top:0; left:0; z-index:2; width:100%; height:100%; cursor:crosshair; touch-action:none"></canvas>
-                        <div id="start-dot" style="position:absolute; width:20px; height:20px; background:#22c55e; border-radius:50%; border:3px solid white; box-shadow:0 0 10px rgba(0,0,0,0.3); z-index:3; display:none; pointer-events:none"></div>
                     </div>
                     <div style="margin:12px auto; max-width:400px">
                         <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700; color:#64748b; margin-bottom:5px">
@@ -1121,7 +1130,9 @@
                         </div>
                     </div>
                     <div style="margin-top:16px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap">
-                        <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:#f0f0f0; color:#64748b" onclick="app.playSound('click'); app.clearTracingCanvas()">🗑️ ފޮހެލާ</button>
+                        <button class="nav-btn" style="padding:10px 20px; background:#f8fafc; font-size:1.5rem" onclick="app.prevTracingLetter()">⬅️</button>
+                        <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:#f0f0f0; color:#64748b; margin:0" onclick="app.playSound('click'); app.clearTracingCanvas()">🗑️ ފޮހެލާ</button>
+                        <button class="nav-btn" style="padding:10px 20px; background:#f8fafc; font-size:1.5rem" onclick="app.nextTracingLetter()">➡️</button>
                     </div>`;
 
                 this.setupTracingCanvas();
@@ -1202,15 +1213,6 @@
                         }
                     }
                     this.referencePixels = set;
-
-                    const dot = document.getElementById('start-dot');
-                    if (dot && firstPx !== -1) {
-                        const x = firstPx % 400;
-                        const y = Math.floor(firstPx / 400);
-                        dot.style.left = (x - 10) + 'px';
-                        dot.style.top = (y - 10) + 'px';
-                        dot.style.display = 'block';
-                    }
                 };
 
                 const runAfterLayout = () => {
@@ -1236,18 +1238,13 @@
                 if (sel) sel.style.border = '3px solid #000';
             }
 
-            setBrushSize(size) {
-                this.tracingBrushSize = parseInt(size);
-                const canvas = document.getElementById('tracing-canvas');
-                if (canvas) canvas.getContext('2d').lineWidth = this.tracingBrushSize;
-            }
 
             setupTracingCanvas() {
                 const canvas = document.getElementById('tracing-canvas');
                 if (!canvas) return;
                 const ctx = canvas.getContext('2d');
                 this.tracingColor = this.tracingColor || '#4D96FF';
-                this.tracingBrushSize = 30;
+                this.tracingBrushSize = 32;
                 ctx.lineWidth = this.tracingBrushSize;
                 ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 ctx.strokeStyle = this.tracingColor;
@@ -1711,6 +1708,20 @@
                     c.style.cssText = `left: ${centerX}px; top: ${centerY}px; background: ${color}; --tx: ${tx}px; --ty: ${ty}px;`; fragment.appendChild(c);
                 }
                 container.appendChild(fragment); setTimeout(() => container.innerHTML = '', 2500);
+            }
+
+            prevTracingLetter() {
+                const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
+                const idx = items.findIndex(i => i.letter === this.currentTracingLetter);
+                const prev = items[idx - 1] || items[items.length - 1];
+                if (prev) this.initTracingCanvas(prev.letter);
+            }
+
+            nextTracingLetter() {
+                const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
+                const idx = items.findIndex(i => i.letter === this.currentTracingLetter);
+                const next = items[idx + 1] || items[0];
+                if (next) this.initTracingCanvas(next.letter);
             }
         }
         const app = new App();
