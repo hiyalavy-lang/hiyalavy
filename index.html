@@ -154,7 +154,9 @@
                     globalSettings: savedSettings,
                     customNav: JSON.parse(localStorage.getItem('thaana_nav')) || defaultNav,
                     customContent: JSON.parse(localStorage.getItem('thaana_content')) || content,
-                    customFili: JSON.parse(localStorage.getItem('thaana_fili')) || filiData
+                    customFili: JSON.parse(localStorage.getItem('thaana_fili')) || filiData,
+                    mascotShowsToday: parseInt(localStorage.getItem('thaana_mascotShows')) || 0,
+                    mascotLastDate: localStorage.getItem('thaana_mascotDate') || ''
                 };
 
                 // Add numbers to content if missing
@@ -178,17 +180,48 @@
             init() {
                 document.getElementById('mystery-box').onclick = () => { this.playSound('click'); this.openMysteryBox(); };
                 this.initDecorations();
+                this.initMascotTracking();
                 this.render();
                 this.initSupabase();
 
-                // Mascot random greeting
+                // Mascot random greeting - Only if visible
                 setTimeout(() => { 
-                    if (this.state.isLoggedIn) {
+                    const mascot = document.getElementById('app-helper');
+                    if (this.state.isLoggedIn && mascot && mascot.style.display !== 'none') {
                         const kid = this.state.kids[this.state.activeKidIndex];
                         const name = kid ? kid.name : '';
                         this.mascotSay(`${this.t('mascot_hello')} ${name}! 👋`); 
                     } 
                 }, 2000);
+            }
+
+            initMascotTracking() {
+                const today = new Date().toDateString();
+                if (this.state.mascotLastDate !== today) {
+                    this.state.mascotShowsToday = 0;
+                    this.state.mascotLastDate = today;
+                    localStorage.setItem('thaana_mascotDate', today);
+                    localStorage.setItem('thaana_mascotShows', 0);
+                }
+            }
+
+            checkMascotVisibility() {
+                if (!this.state.isLoggedIn) return false;
+                
+                // If already shown 3 times today, hide it
+                if (this.state.mascotShowsToday >= 3) return false;
+
+                // Random chance (20%) to show it on a view switch if not already visible
+                const mascot = document.getElementById('app-helper');
+                if (mascot && mascot.style.display === 'none') {
+                    if (Math.random() < 0.20) {
+                        this.state.mascotShowsToday++;
+                        localStorage.setItem('thaana_mascotShows', this.state.mascotShowsToday);
+                        return true;
+                    }
+                    return false;
+                }
+                return mascot && mascot.style.display !== 'none';
             }
 
             async initSupabase() {
@@ -458,8 +491,9 @@
                 this.renderProfileHub();
                 this.updateUIStrings();
 
+                const showMascot = this.checkMascotVisibility();
                 document.getElementById('mystery-box-widget').style.display = (this.state.isLoggedIn && this.state.view !== 'mystery-game') ? 'block' : 'none';
-                document.getElementById('app-helper').style.display = (this.state.isLoggedIn) ? 'flex' : 'none';
+                document.getElementById('app-helper').style.display = (this.state.isLoggedIn && showMascot) ? 'flex' : 'none';
 
                 switch (this.state.view) {
                     case 'landing': this.renderLanding(); break;
@@ -885,11 +919,6 @@
                 const container = document.createElement('div');
                 container.style.position = 'relative';
 
-                const mascotDeco = document.createElement('img');
-                mascotDeco.src = 'assets/mascot_board.png';
-                mascotDeco.style.cssText = `position:absolute; top:-80px; right:20px; width:220px; z-index:0; opacity:0.8; filter:drop-shadow(0 10px 15px rgba(0,0,0,0.1))`;
-                container.appendChild(mascotDeco);
-
                 const grid = document.createElement('div'); grid.className = 'alphabet-grid';
                 grid.style.position = 'relative';
                 grid.style.zIndex = '1';
@@ -1046,6 +1075,7 @@
                 this.currentTracingLetter = letter;
                 this.drawnPixels = new Set();
                 this.referencePixels = null;
+                this.coveredCount = 0;
 
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
@@ -1170,23 +1200,22 @@
                 const canvas = document.getElementById('tracing-canvas');
                 if (!canvas) return;
                 const ctx = canvas.getContext('2d');
-                this.tracingColor = this.tracingColor || '#4D96FF';
-                this.tracingBrushSize = this.tracingBrushSize || 28;
-                ctx.lineWidth = this.tracingBrushSize;
-                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 ctx.strokeStyle = this.tracingColor;
                 let drawing = false, lx = 0, ly = 0;
                 let lastUpdate = 0;
+                let rect = canvas.getBoundingClientRect(); // Initial rect
+                let scaleX = 400 / rect.width, scaleY = 400 / rect.height;
 
                 const pos = (e) => {
-                    const r = canvas.getBoundingClientRect();
-                    const sx = 400 / r.width, sy = 400 / r.height;
                     const src = e.touches ? e.touches[0] : e;
-                    return { x: (src.clientX - r.left) * sx, y: (src.clientY - r.top) * sy };
+                    return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
                 };
 
                 const start = (e) => {
-                    e.preventDefault(); drawing = true;
+                    e.preventDefault(); 
+                    rect = canvas.getBoundingClientRect(); // Cache on start
+                    scaleX = 400 / rect.width; scaleY = 400 / rect.height;
+                    drawing = true;
                     const p = pos(e); lx = p.x; ly = p.y;
                     ctx.beginPath(); ctx.moveTo(lx, ly);
                 };
@@ -1203,13 +1232,19 @@
                     for (let s = 0; s <= steps; s++) {
                         const bx = Math.round(lx + (p.x - lx) * s / steps);
                         const by = Math.round(ly + (p.y - ly) * s / steps);
-                        // Only sample a few points in the circle instead of every pixel
-                        for (let dx = -br; dx <= br; dx += 2) { // Skip pixels for speed
+                        // Sampling for coverage tracking
+                        for (let dx = -br; dx <= br; dx += 2) { 
                             for (let dy = -br; dy <= br; dy += 2) {
                                 if (dx*dx + dy*dy <= brSq) {
                                     const px = bx + dx, py = by + dy;
                                     if (px >= 0 && px < 400 && py >= 0 && py < 400) {
-                                        this.drawnPixels.add(py * 400 + px);
+                                        const idx = py * 400 + px;
+                                        if (!this.drawnPixels.has(idx)) {
+                                            if (this.referencePixels && this.referencePixels.has(idx)) {
+                                                this.coveredCount++;
+                                            }
+                                            this.drawnPixels.add(idx);
+                                        }
                                     }
                                 }
                             }
@@ -1242,11 +1277,7 @@
 
             updateAccuracyBar() {
                 if (!this.referencePixels || !this.referencePixels.size) return;
-                let covered = 0;
-                for (const px of this.drawnPixels) {
-                    if (this.referencePixels.has(px)) covered++;
-                }
-                const pct = Math.min(100, Math.round(covered / this.referencePixels.size * 100));
+                const pct = Math.min(100, Math.round(this.coveredCount / this.referencePixels.size * 100));
                 const fill = document.getElementById('accuracy-fill');
                 const pctEl = document.getElementById('accuracy-pct');
                 if (fill) fill.style.width = pct + '%';
@@ -1257,6 +1288,7 @@
                 const canvas = document.getElementById('tracing-canvas');
                 if (canvas) canvas.getContext('2d').clearRect(0, 0, 400, 400);
                 this.drawnPixels = new Set();
+                this.coveredCount = 0;
                 const fill = document.getElementById('accuracy-fill');
                 const pctEl = document.getElementById('accuracy-pct');
                 if (fill) fill.style.width = '0%';
@@ -1269,13 +1301,9 @@
                 if (!this.referencePixels || !this.referencePixels.size) {
                     this.triggerExplosion(); this.addTaskProgress(); return;
                 }
-                let covered = 0;
-                for (const px of this.drawnPixels) {
-                    if (this.referencePixels.has(px)) covered++;
-                }
-                const pct = Math.min(100, Math.round(covered / this.referencePixels.size * 100));
+                const pct = Math.min(100, Math.round(this.coveredCount / this.referencePixels.size * 100));
                 const fb = document.getElementById('tracing-feedback');
-                if (pct >= 75) {
+                if (pct >= 50) {
                     if (fb) fb.innerHTML = `<span style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! ${pct}% traced correctly!</span>`;
                     this.triggerExplosion();
                     this.addTaskProgress();
