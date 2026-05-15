@@ -765,7 +765,21 @@
                             <div id="accuracy-fill" style="height:100%; width:0%; background:linear-gradient(90deg,#FF6B6B 0%,#FFD93D 50%,#6BCB77 100%); border-radius:20px; transition:width 0.2s ease"></div>
                         </div>
                     </div>
-                    <div style="margin-top:20px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap">
+                    <div style="margin:16px auto; max-width:400px; background:white; border:3px solid var(--border-dark); border-radius:20px; padding:14px 18px; box-shadow:4px 4px 0 var(--border-dark)">
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:center">
+                            <span style="font-size:0.8rem; font-weight:800; color:#64748b; white-space:nowrap">🎨 Colour</span>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center">
+                                ${ ['#4D96FF','#FF6B6B','#6BCB77','#FFD93D','#FF8400','#9b59b6','#1abc9c','#000000'].map(c =>
+                                    `<div id="col-${c.slice(1)}" onclick="app.setTracingColor('${c}')" style="width:30px;height:30px;border-radius:50%;background:${c};border:3px solid ${c==='#4D96FF'?'#000':'transparent'};cursor:pointer;transition:transform 0.15s;box-shadow:0 2px 6px rgba(0,0,0,0.2)" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`
+                                ).join('')}
+                            </div>
+                            <span style="font-size:0.8rem; font-weight:800; color:#64748b; white-space:nowrap; margin-left:8px">✏️ Size</span>
+                            <input type="range" id="brush-size" min="10" max="50" value="28"
+                                style="width:90px; accent-color:var(--primary); cursor:pointer"
+                                oninput="app.setBrushSize(this.value)">
+                        </div>
+                    </div>
+                    <div style="margin-top:16px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap">
                         <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:#f0f0f0" onclick="app.playSound('click'); app.clearTracingCanvas()">🗑️ ފޮހެލާ</button>
                         <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:var(--secondary)" onclick="app.playSound('click'); app.checkTracingAccuracy()">🌟 ${this.t('Done')}</button>
                     </div>`;
@@ -822,12 +836,34 @@
             }
 
 
+            setTracingColor(color) {
+                this.tracingColor = color;
+                const canvas = document.getElementById('tracing-canvas');
+                if (canvas) canvas.getContext('2d').strokeStyle = color;
+                // Update selected ring on swatches
+                document.querySelectorAll('#canvas-area [id^="col-"]').forEach(el => {
+                    el.style.border = '3px solid transparent';
+                });
+                const targetId = 'col-' + color.slice(1);
+                const sel = document.getElementById(targetId);
+                if (sel) sel.style.border = '3px solid #000';
+            }
+
+            setBrushSize(size) {
+                this.tracingBrushSize = parseInt(size);
+                const canvas = document.getElementById('tracing-canvas');
+                if (canvas) canvas.getContext('2d').lineWidth = this.tracingBrushSize;
+            }
+
             setupTracingCanvas() {
                 const canvas = document.getElementById('tracing-canvas');
                 if (!canvas) return;
                 const ctx = canvas.getContext('2d');
-                ctx.lineWidth = 20; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-                ctx.strokeStyle = '#4D96FF';
+                this.tracingColor = this.tracingColor || '#4D96FF';
+                this.tracingBrushSize = this.tracingBrushSize || 28;
+                ctx.lineWidth = this.tracingBrushSize;
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.strokeStyle = this.tracingColor;
                 let drawing = false, lx = 0, ly = 0;
 
                 const pos = (e) => {
@@ -849,10 +885,10 @@
                     ctx.lineTo(p.x, p.y); ctx.stroke();
                     // Track pixels covered by the brush stroke
                     const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 4));
+                    const br = Math.ceil((this.tracingBrushSize || 28) / 2) + 2; // match brush radius
                     for (let s = 0; s <= steps; s++) {
                         const bx = Math.round(lx + (p.x - lx) * s / steps);
                         const by = Math.round(ly + (p.y - ly) * s / steps);
-                        const br = 12;
                         for (let dx = -br; dx <= br; dx++) {
                             for (let dy = -br; dy <= br; dy++) {
                                 if (dx*dx + dy*dy <= br*br) {
