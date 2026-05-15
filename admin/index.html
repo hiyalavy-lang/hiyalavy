@@ -229,6 +229,16 @@
                 </div>
 
                 <div class="res-section">
+                    <h4>🖼 Tracing Ghost Image (Optional)</h4>
+                    <img id="ed-ghost-preview" class="img-preview" style="display:none">
+                    <div class="upload-row">
+                        <input type="text" class="admin-input" id="ed-ghost-image" placeholder="ghost.png">
+                        <button class="upload-btn" style="background:#4D96FF; color:white" onclick="edTriggerUpload('ghost_image')">🖼️ Upload</button>
+                        <input type="file" id="ed-file-ghost_image" style="display:none" accept="image/*" onchange="edHandleUpload(this,'ghost_image')">
+                    </div>
+                </div>
+
+                <div class="res-section">
                     <h4>🖼 Image (for Quiz & Words tabs)</h4>
                     <img id="ed-img-preview" class="img-preview" style="display:none">
                     <div class="upload-row">
@@ -504,6 +514,7 @@
             document.getElementById('ed-audio-english').value = item.audio_english || '';
             document.getElementById('ed-word-audio').value = item.word_audio || '';
             document.getElementById('ed-image').value      = item.image || '';
+            document.getElementById('ed-ghost-image').value = item.ghost_image || '';
 
             // Show/hide fili-specific fields
             document.getElementById('ed-quiz-section').style.display   = isFili ? 'none' : '';
@@ -513,14 +524,18 @@
             document.getElementById('ed-count-word-dhivehi').value = item.count_word_dhivehi || '';
             document.getElementById('ed-count-word-english').value = item.count_word_english || '';
 
-            // Image preview
+            // Image previews
             const prev = document.getElementById('ed-img-preview');
             if (item.image && window.supabaseClient) {
                 prev.src = window.supabaseClient.storage.from('images').getPublicUrl(item.image).data.publicUrl;
                 prev.style.display = 'block';
-            } else {
-                prev.style.display = 'none';
-            }
+            } else { prev.style.display = 'none'; }
+
+            const gprev = document.getElementById('ed-ghost-preview');
+            if (item.ghost_image && window.supabaseClient) {
+                gprev.src = window.supabaseClient.storage.from('images').getPublicUrl(item.ghost_image).data.publicUrl;
+                gprev.style.display = 'block';
+            } else { gprev.style.display = 'none'; }
 
             document.getElementById('res-overlay').classList.add('open');
             document.getElementById('res-editor-panel').classList.add('open');
@@ -543,18 +558,19 @@
             const origText = btn.textContent;
             btn.textContent = '⏳';
             try {
-                const bucket = field === 'image' ? 'images' : 'audio';
+                const bucket = (field === 'image' || field === 'ghost_image') ? 'images' : 'audio';
                 const { error } = await window.supabaseClient.storage.from(bucket).upload(filename, file, { upsert: true });
                 if (error) throw error;
-                document.getElementById(`ed-${field === 'word_audio' ? 'word-audio' : field}`).value = filename;
+                document.getElementById(`ed-${field.replace('_','-')}`).value = filename;
                 // Save to in-memory model
                 const isFili = resCat === 'fili';
                 if (isFili) window.adminFili[resIdx][field] = filename;
                 else window.adminContent[resCat][resIdx][field] = filename;
                 // Update preview
-                if (field === 'image') {
+                if (field === 'image' || field === 'ghost_image') {
                     const pubUrl = window.supabaseClient.storage.from('images').getPublicUrl(filename).data.publicUrl;
-                    const prev = document.getElementById('ed-img-preview');
+                    const prevId = field === 'image' ? 'ed-img-preview' : 'ed-ghost-preview';
+                    const prev = document.getElementById(prevId);
                     prev.src = pubUrl; prev.style.display = 'block';
                 }
                 btn.textContent = '✅'; setTimeout(() => { btn.textContent = origText; }, 2000);
@@ -587,6 +603,7 @@
                 audio_english: document.getElementById('ed-audio-english').value,
                 word_audio:    document.getElementById('ed-word-audio').value,
                 image:         document.getElementById('ed-image').value,
+                ghost_image:   document.getElementById('ed-ghost-image').value,
                 count_word_dhivehi: document.getElementById('ed-count-word-dhivehi').value,
                 count_word_english: document.getElementById('ed-count-word-english').value,
             };

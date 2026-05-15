@@ -904,6 +904,11 @@
                 localStorage.setItem('thaana_language', lang);
                 // Immediately switch to the relevant view for the new language
                 if (lang === 'numbers') this.state.view = 'soundboard';
+                
+                // Collapse settings after change
+                const existing = document.getElementById('settings-dropdown');
+                if (existing) existing.remove();
+                
                 this.render();
             }
 
@@ -1079,8 +1084,8 @@
 
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
-                    <div class="canvas-wrapper" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden">
-                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:clamp(8rem, 40vw, 15rem); opacity:0.13; pointer-events:none; z-index:1; font-family:'Fredoka',sans-serif; line-height:1">${letter}</div>
+                    <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden">
+                        <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:clamp(10rem, 45vw, 16rem); opacity:0.13; pointer-events:none; z-index:1; font-family:'Fredoka',sans-serif; line-height:1">${letter}</div>
                         <canvas id="tracing-canvas" width="400" height="400" style="position:absolute; top:0; left:0; z-index:2; width:100%; height:100%; cursor:crosshair; touch-action:none"></canvas>
                         <div id="start-dot" style="position:absolute; width:20px; height:20px; background:#22c55e; border-radius:50%; border:3px solid white; box-shadow:0 0 10px rgba(0,0,0,0.3); z-index:3; display:none; pointer-events:none"></div>
                     </div>
@@ -1111,6 +1116,12 @@
 
                 this.setupTracingCanvas();
                 this.buildReferenceCanvas(letter);
+                
+                // Auto-center the tracing box on screen
+                setTimeout(() => {
+                    const box = document.getElementById('tracing-box');
+                    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
             }
 
             buildReferenceCanvas(letter) {
@@ -1136,11 +1147,33 @@
                     rCtx.clearRect(0, 0, 400, 400);
                     rCtx.fillStyle = '#000';
                     const isDual = letter.length > 1;
-                    const displaySize = isDual ? Math.round(fontSize * 0.7) : Math.round(fontSize);
-                    rCtx.font = `bold ${displaySize}px Fredoka, Arial, sans-serif`;
-                    rCtx.textAlign = 'center';
-                    rCtx.textBaseline = 'middle';
-                    rCtx.fillText(letter, 200, 200);
+                    const displaySize = isDual ? Math.round(fontSize * 0.75) : Math.round(fontSize * 1.1); // Scaled up ghost letter
+                    
+                    // Check for custom ghost image
+                    const items = this.state.customContent[this.state.language] || [];
+                    const item = items.find(i => i.letter === letter);
+                    
+                    if (item && item.ghost_image) {
+                        const img = new Image();
+                        img.crossOrigin = "anonymous";
+                        img.src = window.supabaseClient ? window.supabaseClient.storage.from('images').getPublicUrl(item.ghost_image).data.publicUrl : item.ghost_image;
+                        img.onload = () => {
+                            rCtx.drawImage(img, 50, 50, 300, 300);
+                            process();
+                            // Also update UI ghost
+                            const ghostEl = document.getElementById('ghost-letter');
+                            if (ghostEl) ghostEl.innerHTML = `<img src="${img.src}" style="width:70%; height:70%; object-fit:contain; opacity:0.3">`;
+                        };
+                    } else {
+                        rCtx.font = `bold ${displaySize}px Fredoka, Arial, sans-serif`;
+                        rCtx.textAlign = 'center';
+                        rCtx.textBaseline = 'middle';
+                        rCtx.fillText(letter, 200, 200);
+                        process();
+                    }
+                };
+
+                const process = () => {
 
                     const imgData = rCtx.getImageData(0, 0, 400, 400).data;
                     const set = new Set();
@@ -1438,6 +1471,48 @@
             renderBadges() {
                 const activeKid = this.state.kids[this.state.activeKidIndex];
                 const earned = activeKid.badges || [];
+                const badges = content.badges;
+
+                this.viewContainer.innerHTML = `
+                    <div class="hall-container" style="max-width:1000px; margin:4rem auto; padding:40px; background:white; border-color:var(--primary)">
+                        <h2 style="text-align:center; margin-bottom:10px; color:var(--primary)">🏅 ${this.t('Badges')}</h2>
+                        <p style="text-align:center; color:#64748b; margin-bottom:30px; font-weight:700">${earned.length}/70 earned — tap any badge to see progress!</p>
+                        <div class="badges-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:20px">
+                            ${badges.map(b => {
+                                const isEarned = earned.includes(b.id);
+                                const progress = this.getBadgeProgress(b.id, activeKid);
+                                return `
+                                <div class="badge-card ${isEarned ? 'earned' : 'locked'}" onclick="app.showBadgeInfo(${b.id})" style="padding:15px; border:3px solid ${isEarned ? 'var(--secondary)' : '#e2e8f0'}; border-radius:20px; text-align:center; filter:${isEarned ? 'none' : 'grayscale(1)'}; opacity:${isEarned ? '1' : '0.6'}; cursor:pointer; position:relative">
+                                    <div style="font-size:3rem; margin-bottom:8px">${b.icon}</div>
+                                    <div style="font-size:0.75rem; font-weight:900; color:var(--border-dark)">${b.name}</div>
+                                    ${!isEarned ? `
+                                        <div style="width:100%; height:6px; background:#f1f5f9; border-radius:10px; margin-top:10px; overflow:hidden">
+                                            <div style="width:${progress}%; height:100%; background:var(--primary)"></div>
+                                        </div>
+                                    ` : '<div style="font-size:0.6rem; color:var(--secondary); font-weight:900; margin-top:5px">COMPLETED!</div>'}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            getBadgeProgress(id, kid) {
+                // Simple logic mapping for badge progress
+                const p = (cur, tar) => Math.min(100, Math.round((cur / tar) * 100));
+                switch(id) {
+                    case 27: case 34: case 38: case 44: case 46: case 48: 
+                        const tar = id === 27 ? 1000 : id === 34 ? 1500 : id === 38 ? 2000 : id === 44 ? 3000 : id === 46 ? 4000 : 5000;
+                        return p(kid.points || 0, tar);
+                    case 24: return p(this.state.dailyTasksCompleted || 0, 5);
+                    case 28: return p(kid.totalTraces || 0, 20);
+                    case 25: return p(kid.totalQuizzes || 0, 25);
+                    case 45: return p(this.state.kids.length, 2);
+                    case 51: return p(kid.numClicked || 0, 10);
+                    case 58: return p(kid.numPoints || 0, 100);
+                    case 62: return p(kid.numPoints || 0, 100);
+                    default: return 0;
+                }
+            }
                 this.viewContainer.innerHTML = `
                     <div class="hall-container" style="max-width:1000px; margin:4rem auto; padding:40px; background:white; border-color:var(--primary)">
                         <h2 style="text-align:center; margin-bottom:10px; color:var(--primary)">🏅 ${this.t('Badges')}</h2>
@@ -1482,6 +1557,12 @@
             addTaskProgress() {
                 const kid = this.state.kids[this.state.activeKidIndex];
                 kid.points += 10;
+                
+                // Track metrics for badge progress
+                if (this.state.view === 'tracing') kid.totalTraces = (kid.totalTraces || 0) + 1;
+                if (this.state.view === 'quiz') kid.totalQuizzes = (kid.totalQuizzes || 0) + 1;
+                if (this.state.language === 'numbers') kid.numPoints = (kid.numPoints || 0) + 10;
+
                 this.checkBadges(kid);
                 this.syncKidProgress();
                 this.state.dailyTasksCompleted++;
