@@ -1094,8 +1094,11 @@
                 const isEnglish = this.state.language === 'english';
                 const displayLetter = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                 const isDual = displayLetter.length > 1;
+                const isWide = isEnglish && (letter.toUpperCase() === 'M' || letter.toUpperCase() === 'W');
                 
-                const ghostFontSize = isDual ? 'clamp(8.5rem, 42vw, 13.5rem)' : 'clamp(13rem, 55vw, 20rem)';
+                let ghostFontSize = isDual ? 'clamp(8.5rem, 42vw, 13.5rem)' : 'clamp(13rem, 55vw, 20rem)';
+                if (isWide) ghostFontSize = 'clamp(7rem, 35vw, 11rem)';
+                
                 const ghostSpacing = isDual ? '0.22em' : 'normal';
 
                 const canvasArea = document.getElementById('canvas-area');
@@ -1161,7 +1164,11 @@
                     const isEnglish = this.state.language === 'english';
                     const displayLetterForCanvas = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                     const isDual = displayLetterForCanvas.length > 1;
-                    const displaySize = isDual ? Math.round(fontSize * 0.85) : Math.round(fontSize * 1.15); 
+                    const isWide = isEnglish && (letter.toUpperCase() === 'M' || letter.toUpperCase() === 'W');
+                    
+                    let displaySize = isDual ? Math.round(fontSize * 0.85) : Math.round(fontSize * 1.15); 
+                    if (isWide) displaySize = Math.round(fontSize * 0.65);
+                    
                     const spacingVal = isDual ? (displaySize * 0.22) : 0;
                     
                     const items = this.state.customContent[this.state.language] || [];
