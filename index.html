@@ -685,19 +685,38 @@
             }
 
             showSettings() {
-                const modal = document.createElement('div');
-                modal.className = 'modal-overlay'; modal.id = 'settings-modal';
-                modal.innerHTML = `
-                    <div class="parent-modal" style="border-color: var(--teal)">
-                        <button class="modal-close" onclick="app.playSound('click'); document.getElementById('settings-modal').remove()">✖</button>
-                        <h2 style="font-size:2rem; margin-bottom:30px; display:flex; align-items:center; gap:15px; color:var(--teal)"><span style="font-size:2.5rem">⚙️</span> ${this.t('Settings')}</h2>
+                const existing = document.getElementById('settings-dropdown');
+                if (existing) { existing.remove(); return; }
+
+                const dropdown = document.createElement('div');
+                dropdown.id = 'settings-dropdown';
+                dropdown.style.cssText = `position:absolute; top:80px; right:20px; width:min(400px, 95vw); background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 15px 40px rgba(0,0,0,0.15); z-index:5000; padding:25px; overflow-y:auto; max-height:80vh`;
+                
+                dropdown.innerHTML = `
+                        <h2 style="font-size:1.8rem; margin-bottom:20px; display:flex; align-items:center; gap:12px; color:var(--teal)"><span style="font-size:2rem">⚙️</span> ${this.t('Settings')}</h2>
                         <div class="settings-group"><label class="settings-label">${this.t('Security (Parent PIN)')}</label><div style="display:flex; gap:10px"><input type="password" class="settings-input" id="new-pin" placeholder="New 4-digit PIN" style="margin-bottom:0"><button class="start-btn" style="padding:10px 20px; font-size:1rem; background:var(--teal)" onclick="app.updatePin()">${this.t('Save')}</button></div></div>
-                        <div class="settings-group"><label class="settings-label">Language</label><select class="settings-select" onchange="app.updateLanguage(this.value)"><option value="dhivehi" ${this.state.language === 'dhivehi' ? 'selected' : ''}>ދިވެހި</option><option value="english" ${this.state.language === 'english' ? 'selected' : ''}>English 🔒</option><option value="arabic" ${this.state.language === 'arabic' ? 'selected' : ''}>العربية 🔒</option><option value="engdhi" ${this.state.language === 'engdhi' ? 'selected' : ''}>Engdhi 🔒</option></select></div>
+                        <div class="settings-group"><label class="settings-label">App Language</label><select class="settings-select" onchange="app.updateLanguage(this.value)">
+                            <option value="dhivehi" ${this.state.language === 'dhivehi' ? 'selected' : ''}>ދިވެހި (Dhivehi)</option>
+                            <option value="english" ${this.state.language === 'english' ? 'selected' : ''}>English 🔒</option>
+                            <option value="arabic" ${this.state.language === 'arabic' ? 'selected' : ''}>العربية (Arabic) 🔒</option>
+                            <option value="engdhi" ${this.state.language === 'engdhi' ? 'selected' : ''}>English-Dhivehi Mix 🔒</option>
+                            <option value="numbers" ${this.state.language === 'numbers' ? 'selected' : ''}>Numbers (1-20) 🔒</option>
+                        </select></div>
                         <div class="settings-group"><label class="settings-label">Profiles</label><div id="profile-edit-list"></div><button class="nav-btn" style="width:100%; justify-content:center; margin-top:10px" onclick="app.addNewKid()">➕ Add Kid</button></div>
-                    </div>
                 `;
-                document.getElementById('modal-container').appendChild(modal);
+                document.body.appendChild(dropdown);
                 this.renderProfileEdits();
+                
+                // Close when clicking outside
+                setTimeout(() => {
+                    const closer = (e) => {
+                        if (!dropdown.contains(e.target) && !e.target.closest('#profile-hub-container')) {
+                            dropdown.remove();
+                            document.removeEventListener('click', closer);
+                        }
+                    };
+                    document.addEventListener('click', closer);
+                }, 100);
             }
 
             updatePin() {
@@ -763,6 +782,7 @@
                 if (lang !== 'dhivehi' && !this.state.isPremium) { this.showUpgradePopup(); this.render(); return; }
                 this.state.language = lang;
                 localStorage.setItem('thaana_language', lang);
+                if (lang === 'numbers') { this.renderNumbers(); return; }
                 this.render();
             }
 
@@ -871,15 +891,13 @@
                                     `<div id="col-${c.slice(1)}" onclick="app.setTracingColor('${c}')" style="width:30px;height:30px;border-radius:50%;background:${c};border:3px solid ${c==='#4D96FF'?'#000':'transparent'};cursor:pointer;transition:transform 0.15s;box-shadow:0 2px 6px rgba(0,0,0,0.2)" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`
                                 ).join('')}
                             </div>
-                            <span style="font-size:0.8rem; font-weight:800; color:#64748b; white-space:nowrap; margin-left:8px">✏️ Size</span>
                             <input type="range" id="brush-size" min="10" max="50" value="28"
                                 style="width:90px; accent-color:var(--primary); cursor:pointer"
                                 oninput="app.setBrushSize(this.value)">
                         </div>
                     </div>
                     <div style="margin-top:16px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap">
-                        <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:#f0f0f0" onclick="app.playSound('click'); app.clearTracingCanvas()">🗑️ ފޮހެލާ</button>
-                        <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:var(--secondary)" onclick="app.playSound('click'); app.checkTracingAccuracy()">🌟 ${this.t('Done')}</button>
+                        <button class="start-btn" style="padding:15px 30px; font-size:1.2rem; background:#f0f0f0; color:#64748b" onclick="app.playSound('click'); app.clearTracingCanvas()">🗑️ ފޮހެލާ</button>
                     </div>`;
 
                 this.setupTracingCanvas();
@@ -1016,7 +1034,12 @@
                     this.updateAccuracyBar();
                 };
 
-                const stop = () => { drawing = false; };
+                const stop = () => { 
+                    if (drawing) {
+                        drawing = false; 
+                        this.checkTracingAccuracy();
+                    }
+                };
                 canvas.addEventListener('mousedown', start);
                 canvas.addEventListener('mousemove', move);
                 canvas.addEventListener('mouseup', stop);
@@ -1239,14 +1262,6 @@
                 this.syncKidProgress();
                 this.state.dailyTasksCompleted++;
                 if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) document.getElementById('mystery-box').innerHTML = '🎁✨';
-                // Show celebration mascot
-                const mascotPop = document.createElement('img');
-                mascotPop.src = 'assets/mascot_a.png';
-                mascotPop.style.cssText = `position:fixed; bottom:-200px; left:50%; transform:translateX(-50%); width:300px; z-index:4000; transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)`;
-                document.body.appendChild(mascotPop);
-                setTimeout(() => mascotPop.style.bottom = '50px', 100);
-                setTimeout(() => mascotPop.style.bottom = '-400px', 2000);
-                setTimeout(() => mascotPop.remove(), 2600);
             }
 
             checkBadges(kid) {
