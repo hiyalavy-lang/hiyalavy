@@ -898,7 +898,7 @@
                 const items = this.state.customContent[this.state.language] || [];
                 items.forEach(item => {
                     const isDual = item.letter.length > 1 && this.state.language === 'english';
-                    const displayLetter = isDual ? `${item.letter[0]} ${item.letter[1]}` : item.letter;
+                    const displayLetter = isDual ? item.letter : item.letter;
                     const card = document.createElement('div'); card.className = 'letter-card'; 
                     
                     if (isNumbers) {
@@ -989,7 +989,7 @@
                         <div class="letter-selector" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px">
                             ${items.map(item => {
                                 const isDual = item.letter.length > 1 && this.state.language === 'english';
-                                const display = isDual ? `${item.letter[0]} ${item.letter[1]}` : item.letter;
+                                const display = isDual ? item.letter : item.letter;
                                 return `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')" style="min-width:60px">${display}</button>`;
                             }).join('')}
                         </div>
@@ -1176,6 +1176,7 @@
                 ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 ctx.strokeStyle = this.tracingColor;
                 let drawing = false, lx = 0, ly = 0;
+                let lastUpdate = 0;
 
                 const pos = (e) => {
                     const r = canvas.getBoundingClientRect();
@@ -1194,15 +1195,18 @@
                     if (!drawing) return; e.preventDefault();
                     const p = pos(e);
                     ctx.lineTo(p.x, p.y); ctx.stroke();
-                    // Track pixels covered by the brush stroke
-                    const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 4));
-                    const br = Math.ceil((this.tracingBrushSize || 28) / 2) + 2; // match brush radius
+                    // Track pixels covered by the brush stroke - Optimized loop
+                    const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 8)); // Coarser sampling
+                    const br = Math.ceil((this.tracingBrushSize || 28) / 2);
+                    const brSq = br * br;
+                    
                     for (let s = 0; s <= steps; s++) {
                         const bx = Math.round(lx + (p.x - lx) * s / steps);
                         const by = Math.round(ly + (p.y - ly) * s / steps);
-                        for (let dx = -br; dx <= br; dx++) {
-                            for (let dy = -br; dy <= br; dy++) {
-                                if (dx*dx + dy*dy <= br*br) {
+                        // Only sample a few points in the circle instead of every pixel
+                        for (let dx = -br; dx <= br; dx += 2) { // Skip pixels for speed
+                            for (let dy = -br; dy <= br; dy += 2) {
+                                if (dx*dx + dy*dy <= brSq) {
                                     const px = bx + dx, py = by + dy;
                                     if (px >= 0 && px < 400 && py >= 0 && py < 400) {
                                         this.drawnPixels.add(py * 400 + px);
@@ -1212,7 +1216,13 @@
                         }
                     }
                     lx = p.x; ly = p.y;
-                    this.updateAccuracyBar();
+                    
+                    // Throttle accuracy bar updates to 100ms
+                    const now = Date.now();
+                    if (now - lastUpdate > 100) {
+                        this.updateAccuracyBar();
+                        lastUpdate = now;
+                    }
                 };
 
                 const stop = () => { 
@@ -1399,7 +1409,7 @@
                 this.viewContainer.innerHTML = `
                     <div class="hall-container" style="max-width:1000px; margin:4rem auto; padding:40px; background:white; border-color:var(--primary)">
                         <h2 style="text-align:center; margin-bottom:10px; color:var(--primary)">🏅 ${this.t('Badges')}</h2>
-                        <p style="text-align:center; color:#64748b; margin-bottom:30px; font-weight:700">${earned.length}/50 earned — tap any badge to learn how!</p>
+                        <p style="text-align:center; color:#64748b; margin-bottom:30px; font-weight:700">${earned.length}/70 earned — tap any badge to learn how!</p>
                         <div class="badges-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:20px">
                             ${badges.map(b => {
                                 const isEarned = earned.includes(b.id);

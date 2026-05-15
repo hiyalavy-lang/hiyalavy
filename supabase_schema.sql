@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS public.app_content (
     dhivehi TEXT,
     count_word_dhivehi TEXT,
     count_word_english TEXT,
+    audio_dhivehi TEXT,
+    audio_english TEXT,
     quiz_question TEXT,
     quiz_options TEXT,
     order_index INTEGER DEFAULT 0
