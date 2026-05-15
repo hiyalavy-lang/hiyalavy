@@ -132,6 +132,14 @@
                 <button class="admin-btn" style="width: 100%; margin-top: 20px;" onclick="saveResources()">SAVE RESOURCES</button>
             </div>
 
+            <div class="admin-card">
+                <h2>MASCOT TIPS 🐢</h2>
+                <p style="color:#94a3b8; margin-bottom:20px">These are the tips shown when users tap the floating mascot. Edit or add new ones below.</p>
+                <div id="mascot-tips-list" style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px"></div>
+                <button class="admin-btn" style="background:#6BCB77; margin-bottom:12px" onclick="addMascotTip()">➕ ADD TIP</button>
+                <button class="admin-btn" style="width:100%" onclick="saveMascotTips()">SAVE MASCOT TIPS</button>
+            </div>
+
             <div class="admin-card" style="margin-top: 30px; border-color: #ef4444;">
                 <h2 style="color: #ef4444;">DANGER ZONE ⚠️</h2>
                 <p style="margin: 15px 0; color: #94a3b8;">Revert all content, navigation, and settings to original defaults. This action cannot be undone.</p>
@@ -229,6 +237,7 @@
             await fetchPayments();
             await fetchNavTable();
             await fetchResources();
+            await fetchMascotTips();
         }
 
         async function fetchPayments() {
@@ -330,13 +339,14 @@
             } else {
                 const data = window.adminContent || content;
                 const items = data[cat] || [];
-                head.innerHTML = '<tr><th>LTR</th><th>NAME</th><th>WORD</th><th>ENG</th><th>LTR AUDIO</th><th>WRD AUDIO</th><th>IMAGE</th></tr>';
+                head.innerHTML = '<tr><th>LTR</th><th>NAME</th><th>WORD</th><th>ENG</th><th>QUIZ QUESTION</th><th>LTR AUDIO</th><th>WRD AUDIO</th><th>IMAGE</th></tr>';
                 table.innerHTML = items.map((item, i) => `
                     <tr>
                         <td><input type="text" class="admin-input" style="margin:0; width:50px" value="${item.letter}" onchange="updateResource('${cat}', ${i}, 'letter', this.value)"></td>
                         <td><input type="text" class="admin-input" style="margin:0; width:80px" value="${item.name || ''}" onchange="updateResource('${cat}', ${i}, 'name', this.value)"></td>
                         <td><input type="text" class="admin-input" style="margin:0; width:100px" value="${item.word || ''}" onchange="updateResource('${cat}', ${i}, 'word', this.value)"></td>
                         <td><input type="text" class="admin-input" style="margin:0; width:80px" value="${item.english || ''}" onchange="updateResource('${cat}', ${i}, 'english', this.value)"></td>
+                        <td><input type="text" class="admin-input" style="margin:0; width:200px" placeholder="e.g. Which letter is this?" value="${item.quiz_question || ''}" onchange="updateResource('${cat}', ${i}, 'quiz_question', this.value)"></td>
                         <td style="display:flex; gap:5px; align-items:center">
                             <input type="text" class="admin-input" id="audio-${cat}-${i}" style="margin:0; width:80px" value="${item.audio || ''}" onchange="updateResource('${cat}', ${i}, 'audio', this.value)">
                             <button class="admin-btn" style="padding:8px; font-size:0.8rem" onclick="triggerUpload('${cat}', ${i}, 'audio')">📤</button>
@@ -554,6 +564,58 @@
             } else {
                 alert('SETTINGS SYNCED TO PUBLIC SITE (Local Only)');
             }
+        }
+
+        async function fetchMascotTips() {
+            let tips = ['ތިޔަ ކިތަންމެ ވެދާނެ! 🌟', 'ހިތްވަރު ކޮށްލާ! 💪', 'ވަރަށް ރަނގަޅު! ⭐', 'ކޮންމެ ދުވަހަކު ތަންކޮޅެއް ދަސްކޮށްލަ! 📚'];
+            if (window.supabaseClient) {
+                const { data } = await window.supabaseClient.from('settings').select('mascot_tips').eq('id', 'global').single();
+                if (data && data.mascot_tips) {
+                    try { tips = JSON.parse(data.mascot_tips); } catch(e) {}
+                }
+            }
+            window.adminMascotTips = tips;
+            renderMascotTips();
+        }
+
+        function renderMascotTips() {
+            const list = document.getElementById('mascot-tips-list');
+            if (!list) return;
+            list.innerHTML = (window.adminMascotTips || []).map((tip, i) => `
+                <div style="display:flex; gap:10px; align-items:center">
+                    <input type="text" class="admin-input" style="margin:0; flex:1" value="${tip.replace(/"/g, '&quot;')}" onchange="window.adminMascotTips[${i}] = this.value" placeholder="Enter mascot tip text...">
+                    <button class="admin-btn" style="background:#ef4444; padding:8px 14px" onclick="removeMascotTip(${i})">🗑</button>
+                </div>`).join('');
+        }
+
+        function addMascotTip() {
+            if (!window.adminMascotTips) window.adminMascotTips = [];
+            window.adminMascotTips.push('');
+            renderMascotTips();
+            // Focus the last input
+            const inputs = document.querySelectorAll('#mascot-tips-list input');
+            if (inputs.length) inputs[inputs.length - 1].focus();
+        }
+
+        function removeMascotTip(i) {
+            window.adminMascotTips.splice(i, 1);
+            renderMascotTips();
+        }
+
+        async function saveMascotTips() {
+            // Collect current values from inputs
+            const inputs = document.querySelectorAll('#mascot-tips-list input');
+            window.adminMascotTips = Array.from(inputs).map(el => el.value).filter(v => v.trim());
+
+            if (!window.supabaseClient) {
+                alert('Supabase not connected'); return;
+            }
+            const { error } = await window.supabaseClient.from('settings').upsert({
+                id: 'global',
+                mascot_tips: JSON.stringify(window.adminMascotTips)
+            });
+            if (error) alert('Save failed: ' + error.message);
+            else alert('Mascot tips saved! ✅ Changes are live on the site.');
         }
 
         function logout() { location.reload(); }

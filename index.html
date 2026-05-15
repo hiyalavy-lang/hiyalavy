@@ -183,6 +183,10 @@
                         heroEmoji: settings.hero_emoji,
                         footerText: settings.footer_text
                     };
+                    // Load mascot tips if stored
+                    if (settings.mascot_tips) {
+                        try { this.state.mascotTips = JSON.parse(settings.mascot_tips); } catch(e) {}
+                    }
                 }
 
                 // 2. Fetch Curriculum & Nav
@@ -978,7 +982,9 @@
             }
 
             renderQuiz() {
-                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:4rem; text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${this.t('What is this letter?')}</h2><div style="background:white; padding:40px; border-radius:50px; border:6px solid var(--border-dark); box-shadow:15px 15px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
+                const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
+                const questionText = items.length && items[0].quiz_question ? '' : this.t('What is this letter?');
+                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:4rem; text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${questionText}</h2><div style="background:white; padding:40px; border-radius:50px; border:6px solid var(--border-dark); box-shadow:15px 15px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
                 this.nextQuizQuestion();
             }
 
@@ -999,6 +1005,9 @@
                 const quizImg = document.getElementById('quiz-img');
                 quizImg.src = imgUrl;
                 quizImg.onerror = () => quizImg.src = `https://placehold.co/200/e2e8f0/64748b?text=${encodeURIComponent(target.word || target.letter)}`;
+                // Update question text per item
+                const titleEl = document.getElementById('quiz-title');
+                if (titleEl) titleEl.textContent = target.quiz_question || this.t('What is this letter?');
                 const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
                 options.forEach(opt => {
                     const btn = document.createElement('button'); btn.className = 'start-btn'; btn.innerText = opt.letter; btn.style.background = 'var(--pink)';
@@ -1142,12 +1151,13 @@
             }
 
             mascotRandomTip() {
-                const tips = [
+                const defaultTips = [
                     this.t('mascot_tip1'),
                     this.t('mascot_tip2'),
                     this.t('mascot_tip3'),
                     this.t('mascot_tip4')
                 ];
+                const tips = (this.state.mascotTips && this.state.mascotTips.length) ? this.state.mascotTips : defaultTips;
                 this.mascotSay(tips[Math.floor(Math.random() * tips.length)]);
                 this.playSound('click');
             }
