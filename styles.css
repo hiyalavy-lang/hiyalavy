@@ -7,6 +7,14 @@
     --purple: #9b59b6;
     --teal: #1abc9c;
     --pink: #e91e63;
+    --indigo: #6366f1;
+    --rose: #f43f5e;
+    --amber: #f59e0b;
+    --emerald: #10b981;
+    --cyan: #06b6d4;
+    --violet: #8b5cf6;
+    --fuchsia: #d946ef;
+    --lime: #84cc16;
     --bg-main: #fdfcf0;
     --text-main: #1E293B;
     --text-light: #64748B;
@@ -140,33 +148,57 @@ body[data-lang="numbers"] { background: linear-gradient(135deg, #E8F8F5 0%, #FCF
 .nav-btn {
     padding: 12px 22px;
     font-weight: 800;
-    font-size: 1rem;
+    font-size: 1.05rem;
     border: 3px solid var(--border-dark);
-    border-radius: 20px;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
     color: var(--text-main);
     cursor: pointer;
     box-shadow: 4px 4px 0 var(--border-dark);
     transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     position: relative;
 }
 
 .nav-btn:hover { 
-    transform: translate(-2px, -3px) scale(1.03); 
-    box-shadow: 6px 7px 0 var(--border-dark); 
-    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    transform: translate(-2px, -4px) scale(1.03); 
+    box-shadow: 6px 8px 0 var(--border-dark); 
+    background: linear-gradient(180deg, #ffffff 0%, #fef08a 100%);
+    border-color: var(--orange);
 }
 
 .nav-btn.active { 
-    background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%); 
+    background: linear-gradient(135deg, var(--primary) 0%, var(--indigo) 50%, var(--purple) 100%); 
     color: white; 
     transform: translate(2px, 2px); 
     box-shadow: 0 0 0; 
     border-color: var(--border-dark);
 }
+
+/* Individual tab coloring flavors for premium kids feel */
+.nav-btn[onclick*="soundboard"]:hover { background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 100%); border-color: var(--primary); }
+.nav-btn[onclick*="soundboard"].active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+
+.nav-btn[onclick*="tracing"]:hover { background: linear-gradient(180deg, #ffffff 0%, #fce7f3 100%); border-color: var(--pink); }
+.nav-btn[onclick*="tracing"].active { background: linear-gradient(135deg, #ec4899 0%, #be123c 100%); }
+
+.nav-btn[onclick*="vocabulary"]:hover { background: linear-gradient(180deg, #ffffff 0%, #dcfce7 100%); border-color: var(--secondary); }
+.nav-btn[onclick*="vocabulary"].active { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
+
+.nav-btn[onclick*="quiz"]:hover { background: linear-gradient(180deg, #ffffff 0%, #fef3c7 100%); border-color: var(--orange); }
+.nav-btn[onclick*="quiz"].active { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+
+.nav-btn[onclick*="videos"]:hover { background: linear-gradient(180deg, #ffffff 0%, #fee2e2 100%); border-color: var(--accent); }
+.nav-btn[onclick*="videos"].active { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); }
+
+.nav-btn[onclick*="hall"]:hover { background: linear-gradient(180deg, #ffffff 0%, #f3e8ff 100%); border-color: var(--violet); }
+.nav-btn[onclick*="hall"].active { background: linear-gradient(135deg, #8b5cf6 0%, #581c87 100%); }
+
+.nav-btn[onclick*="badges"]:hover { background: linear-gradient(180deg, #ffffff 0%, #ffedd5 100%); border-color: var(--orange); }
+.nav-btn[onclick*="badges"].active { background: linear-gradient(135deg, #f97316 0%, #c2410c 100%); }
 
 .nav-btn.premium::after {
     content: '🔒';
@@ -560,21 +592,40 @@ body[data-lang="numbers"] { background: linear-gradient(135deg, #E8F8F5 0%, #FCF
 /* Grid Cards */
 .alphabet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 25px; padding: 2rem; }
 .letter-card {
-    background: white;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     padding: 30px;
     border-radius: 35px;
     border: 5px solid var(--border-dark);
     box-shadow: 8px 8px 0 var(--border-dark);
     text-align: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
 }
-.letter-card:nth-child(4n+1) { border-color: var(--primary); color: var(--primary); }
-.letter-card:nth-child(4n+2) { border-color: var(--accent); color: var(--accent); }
-.letter-card:nth-child(4n+3) { border-color: var(--secondary); color: var(--secondary); }
-.letter-card:nth-child(4n+4) { border-color: var(--purple); color: var(--purple); }
 
-.letter-card:hover { transform: scale(1.05); }
+.letter-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 8px;
+    background: var(--card-accent, var(--primary));
+    opacity: 0.85;
+}
+
+.letter-card:nth-child(8n+1) { --card-accent: var(--primary); border-color: var(--primary); color: var(--primary); background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); }
+.letter-card:nth-child(8n+2) { --card-accent: var(--accent); border-color: var(--accent); color: var(--accent); background: linear-gradient(180deg, #ffffff 0%, #fff1f2 100%); }
+.letter-card:nth-child(8n+3) { --card-accent: var(--secondary); border-color: var(--secondary); color: var(--secondary); background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%); }
+.letter-card:nth-child(8n+4) { --card-accent: var(--purple); border-color: var(--purple); color: var(--purple); background: linear-gradient(180deg, #ffffff 0%, #faf5ff 100%); }
+.letter-card:nth-child(8n+5) { --card-accent: var(--orange); border-color: var(--orange); color: var(--orange); background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%); }
+.letter-card:nth-child(8n+6) { --card-accent: var(--teal); border-color: var(--teal); color: var(--teal); background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%); }
+.letter-card:nth-child(8n+7) { --card-accent: var(--pink); border-color: var(--pink); color: var(--pink); background: linear-gradient(180deg, #ffffff 0%, #fdf2f8 100%); }
+.letter-card:nth-child(8n+8) { --card-accent: var(--warning); border-color: var(--amber); color: var(--amber); background: linear-gradient(180deg, #ffffff 0%, #fefce8 100%); }
+
+.letter-card:hover { 
+    transform: translateY(-8px) scale(1.05); 
+    box-shadow: 12px 14px 0 var(--border-dark);
+    border-color: var(--border-dark);
+}
 
 /* Animations */
 @keyframes float {

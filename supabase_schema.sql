@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.app_content (
     audio_english TEXT,
     quiz_question TEXT,
     quiz_options TEXT,
+    quiz_answer TEXT,
     ghost_image TEXT,
     ghost_path TEXT,
     order_index INTEGER DEFAULT 0

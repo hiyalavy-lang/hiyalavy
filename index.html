@@ -384,21 +384,30 @@
                     // Fetch kids profiles
                     const { data: kidsData } = await this.supabase.from('kids').select('*').eq('user_id', session.user.id);
                     if (kidsData && kidsData.length > 0) {
-                        this.state.kids = kidsData.map(k => ({
-                            dbId: k.id,
-                            name: k.name,
-                            ageGroup: k.age_group,
-                            avatar: k.avatar,
-                            points: k.points,
-                            seasonPoints: (k.stats && k.stats.seasonPoints !== undefined) ? k.stats.seasonPoints : k.points,
-                            monthlyPoints: (k.stats && k.stats.monthlyPoints !== undefined) ? k.stats.monthlyPoints : k.points,
-                            weeklyPoints: (k.stats && k.stats.weeklyPoints !== undefined) ? k.stats.weeklyPoints : k.points,
-                            dailyPoints: (k.stats && k.stats.dailyPoints !== undefined) ? k.stats.dailyPoints : k.points,
-                            badges: k.badges || [],
-                            stats: k.stats || {},
-                            unlockedAvatars: k.unlocked_avatars || ['👶', '👧', '👦'],
-                            pin: k.pin || '1234'
-                        }));
+                        const todayStr = new Date().toDateString();
+                        const fridayStr = localStorage.getItem('thaana_lastWeeklyReset') || '';
+                        const currentMonthStr = localStorage.getItem('thaana_lastMonthlyReset') || '';
+                        this.state.kids = kidsData.map(k => {
+                            const stats = k.stats || {};
+                            const isToday = stats.lastActiveDate === todayStr;
+                            const isThisWeek = stats.lastWeeklyDate === fridayStr;
+                            const isThisMonth = stats.lastMonthlyDate === currentMonthStr;
+                            return {
+                                dbId: k.id,
+                                name: k.name,
+                                ageGroup: k.age_group,
+                                avatar: k.avatar,
+                                points: k.points,
+                                seasonPoints: (stats.seasonPoints !== undefined) ? stats.seasonPoints : k.points,
+                                monthlyPoints: isThisMonth && stats.monthlyPoints !== undefined ? stats.monthlyPoints : 0,
+                                weeklyPoints: isThisWeek && stats.weeklyPoints !== undefined ? stats.weeklyPoints : 0,
+                                dailyPoints: isToday && stats.dailyPoints !== undefined ? stats.dailyPoints : 0,
+                                badges: k.badges || [],
+                                stats: stats,
+                                unlockedAvatars: k.unlocked_avatars || ['👶', '👧', '👦'],
+                                pin: k.pin || '1234'
+                            };
+                        });
                     } else {
                         // Create default kid if none exists
                         const defaultKid = { user_id: session.user.id, name: 'ކުޑަކުއްޖާ', age_group: 'preschool', avatar: '👶', points: 0, pin: '1234' };
@@ -439,6 +448,9 @@
                     kid.stats.monthlyPoints = kid.monthlyPoints;
                     kid.stats.weeklyPoints = kid.weeklyPoints;
                     kid.stats.dailyPoints = kid.dailyPoints;
+                    kid.stats.lastActiveDate = new Date().toDateString();
+                    kid.stats.lastWeeklyDate = localStorage.getItem('thaana_lastWeeklyReset') || '';
+                    kid.stats.lastMonthlyDate = localStorage.getItem('thaana_lastMonthlyReset') || '';
 
                     await this.supabase.from('kids').update({
                         points: kid.points,
@@ -1197,11 +1209,11 @@
                 const filterBar = document.createElement('div');
                 filterBar.style.cssText = 'display:flex; justify-content:center; gap:12px; margin-bottom:2.5rem; flex-wrap:wrap;';
                 const categories = [
-                    { id: 'all', label: '🌟 All Videos' },
-                    { id: 'dhivehi', label: '🇲🇻 Dhivehi' },
-                    { id: 'english', label: '🇬🇧 English' },
-                    { id: 'arabic', label: '🇸🇦 Arabic' },
-                    { id: 'numbers', label: '🔢 Numbers' }
+                    { id: 'all', label: '<span style="font-size:1.2rem; vertical-align:middle">🌟</span> All Videos' },
+                    { id: 'dhivehi', label: '<img src="https://flagcdn.com/w40/mv.png" style="width:24px; height:auto; display:inline-block; vertical-align:middle; margin-right:6px; border-radius:3px" alt="MV"> Dhivehi' },
+                    { id: 'english', label: '<img src="https://flagcdn.com/w40/gb.png" style="width:24px; height:auto; display:inline-block; vertical-align:middle; margin-right:6px; border-radius:3px" alt="GB"> English' },
+                    { id: 'arabic', label: '<img src="https://flagcdn.com/w40/sa.png" style="width:24px; height:auto; display:inline-block; vertical-align:middle; margin-right:6px; border-radius:3px" alt="SA"> Arabic' },
+                    { id: 'numbers', label: '<span style="font-size:1.2rem; vertical-align:middle">🔢</span> Numbers' }
                 ];
                 categories.forEach(cat => {
                     const isActive = this.state.videoFilterCat === cat.id;
@@ -1230,6 +1242,7 @@
                 if (this.state.activeVideoId) {
                     const activeVid = baseVideos.find(v => v.youtube_id === this.state.activeVideoId) || baseVideos[0];
                     const playerSection = document.createElement('div');
+                    playerSection.id = 'yt-player-wrapper';
                     playerSection.style.cssText = 'background:black; border:6px solid var(--border-dark); border-radius:35px; overflow:hidden; margin-bottom:3.5rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4); position:relative; animation:modalEnter 0.4s cubic-bezier(0.16,1,0.3,1);';
                     
                     // 16:9 Aspect Ratio wrapper
@@ -1259,6 +1272,9 @@
                             <div style="display:flex; align-items:center; gap:12px;">
                                 <button id="yt-reward-btn" onclick="app.rewardVideoPoints('${activeVid.youtube_id}', '${activeVid.category}')" style="background:var(--yellow); border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); border-radius:16px; padding:12px 22px; font-weight:900; font-size:1rem; color:var(--border-dark); cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
                                     ⭐ I Finished Watching! (+15 pts)
+                                </button>
+                                <button onclick="app.toggleFullScreen()" style="background:#e0f2fe; border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); border-radius:16px; padding:12px 22px; font-weight:900; font-size:1rem; color:#0369a1; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                                    📺 Full Screen
                                 </button>
                                 <button onclick="app.playVideo(null)" style="background:#f1f5f9; border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); border-radius:16px; padding:12px 22px; font-weight:900; font-size:1rem; color:#64748b; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
                                     ✖ Close
@@ -1381,6 +1397,21 @@
                     if (indicator) { indicator.innerHTML = '▶'; indicator.style.opacity = '1'; setTimeout(() => indicator.style.opacity = '0', 800); }
                     if (statusText) statusText.innerText = 'Now Playing';
                     if (pulseDot) pulseDot.style.animation = 'pulse 2s infinite';
+                }
+            }
+
+            toggleFullScreen() {
+                this.playSound('click');
+                const container = document.getElementById('yt-player-wrapper');
+                if (!container) return;
+                if (!document.fullscreenElement) {
+                    if (container.requestFullscreen) container.requestFullscreen();
+                    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+                    else if (container.msRequestFullscreen) container.msRequestFullscreen();
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                    else if (document.msExitFullscreen) document.msExitFullscreen();
                 }
             }
 
@@ -1825,16 +1856,24 @@
                 const target = items[Math.floor(Math.random() * items.length)];
                 const pool = this.state.customContent[this.state.language] || [];
                 
-                let options = [target];
+                let options = [];
+                const correctAnswerStr = (target.quiz_answer || target.letter || '').trim();
+
                 if (target.quiz_options) {
-                    const customOpts = target.quiz_options.split(',').map(s => s.trim()).filter(s => s);
-                    if (customOpts.length > 0) options = customOpts.map(opt => ({ letter: opt }));
+                    const customOpts = target.quiz_options.split(/[,،]+/).map(s => s.trim()).filter(s => s);
+                    if (customOpts.length > 0) {
+                        options = customOpts.map(opt => ({ label: opt, isCorrect: opt === correctAnswerStr }));
+                    }
                 }
 
-                if (options.length < 2) {
+                if (options.length === 0) {
+                    options = [{ label: correctAnswerStr, isCorrect: true }];
                     while (options.length < 4 && options.length < pool.length) { 
                         const r = pool[Math.floor(Math.random() * pool.length)]; 
-                        if (!options.find(o => o.letter === r.letter)) options.push(r); 
+                        const rLabel = (r.letter || '').trim();
+                        if (!options.find(o => o.label === rLabel)) {
+                            options.push({ label: rLabel, isCorrect: false });
+                        }
                     }
                 }
                 options.sort(() => Math.random() - 0.5);
@@ -1850,10 +1889,10 @@
                 
                 const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
                 options.forEach(opt => {
-                    const btn = document.createElement('button'); btn.className = 'start-btn'; btn.innerText = opt.letter; btn.style.background = 'var(--pink)';
+                    const btn = document.createElement('button'); btn.className = 'start-btn'; btn.innerText = opt.label; btn.style.background = 'var(--pink)';
                     btn.onclick = () => { 
                         this.playSound('click'); 
-                        if (opt.letter === target.letter) { 
+                        if (opt.isCorrect) { 
                             this.triggerExplosion(); 
                             this.addTaskProgress(); 
                             setTimeout(() => this.nextQuizQuestion(), 1500); 
@@ -1904,13 +1943,16 @@
                         .select('name, avatar, points, stats')
                         .limit(200);
                     if (data) {
+                        const todayStr = new Date().toDateString();
+                        const fridayStr = localStorage.getItem('thaana_lastWeeklyReset') || '';
+                        const currentMonthStr = localStorage.getItem('thaana_lastMonthlyReset') || '';
                         // Map points according to active filter
                         kids = data.map(k => {
                             let pts = k.points || 0;
                             if (k.stats) {
-                                if (this.state.hallFilter === 'daily' && k.stats.dailyPoints !== undefined) pts = k.stats.dailyPoints;
-                                else if (this.state.hallFilter === 'weekly' && k.stats.weeklyPoints !== undefined) pts = k.stats.weeklyPoints;
-                                else if (this.state.hallFilter === 'monthly' && k.stats.monthlyPoints !== undefined) pts = k.stats.monthlyPoints;
+                                if (this.state.hallFilter === 'daily') pts = (k.stats.lastActiveDate === todayStr && k.stats.dailyPoints !== undefined) ? k.stats.dailyPoints : 0;
+                                else if (this.state.hallFilter === 'weekly') pts = (k.stats.lastWeeklyDate === fridayStr && k.stats.weeklyPoints !== undefined) ? k.stats.weeklyPoints : 0;
+                                else if (this.state.hallFilter === 'monthly') pts = (k.stats.lastMonthlyDate === currentMonthStr && k.stats.monthlyPoints !== undefined) ? k.stats.monthlyPoints : 0;
                                 else if (this.state.hallFilter === 'season' && k.stats.seasonPoints !== undefined) pts = k.stats.seasonPoints;
                             }
                             return { name: k.name, avatar: k.avatar, points: pts };
@@ -1950,7 +1992,7 @@
                 this.viewContainer.innerHTML = `
                     <div class="hall-container" style="max-width:1000px; margin:4rem auto; padding:40px; background:white; border-color:var(--primary)">
                         <h2 style="text-align:center; margin-bottom:10px; color:var(--primary)">🏅 ${this.t('Badges')}</h2>
-                        <p style="text-align:center; color:#64748b; margin-bottom:30px; font-weight:700">${earned.length}/70 earned — tap any badge to see progress!</p>
+                        <p style="text-align:center; color:#64748b; margin-bottom:30px; font-weight:700">${earned.length}/${badges_data.length} earned — tap any badge to see progress!</p>
                         <div class="badges-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:20px">
                             ${badges_data.map(b => {
                                 let progress = this.getBadgeProgress(b.id, activeKid);
