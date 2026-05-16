@@ -1218,7 +1218,19 @@
                 if (!baseVideos.length) {
                     const empty = document.createElement('div');
                     empty.style.cssText = 'text-align:center; padding:80px 20px; background:white; border:4px solid var(--border-dark); border-radius:35px; box-shadow:8px 8px 0 var(--border-dark); color:#94a3b8; font-size:1.3rem; font-weight:800; margin-top:2rem;';
-                    empty.innerHTML = `<div style="font-size:5rem; margin-bottom:20px">📭</div>No videos available                     // 16:9 Aspect Ratio wrapper
+                    empty.innerHTML = `<div style="font-size:5rem; margin-bottom:20px">📭</div>No videos available yet!<br><span style="font-size:1rem; font-weight:600; color:#64748b;">Check back soon or add videos via the Admin Panel.</span>`;
+                    container.appendChild(empty);
+                    this.viewContainer.appendChild(container);
+                    return;
+                }
+
+                // If an active video is selected, show the premium video player banner at the top
+                if (this.state.activeVideoId) {
+                    const activeVid = baseVideos.find(v => v.youtube_id === this.state.activeVideoId) || baseVideos[0];
+                    const playerSection = document.createElement('div');
+                    playerSection.style.cssText = 'background:black; border:6px solid var(--border-dark); border-radius:35px; overflow:hidden; margin-bottom:3.5rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4); position:relative; animation:modalEnter 0.4s cubic-bezier(0.16,1,0.3,1);';
+                    
+                    // 16:9 Aspect Ratio wrapper
                     playerSection.innerHTML = `
                         <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; background:#0f172a; pointer-events:none;">
                             <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#64748b; font-weight:800; font-size:1.2rem;">⏳ Loading Video Player...</div>
