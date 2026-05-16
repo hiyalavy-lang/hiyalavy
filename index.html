@@ -59,10 +59,7 @@
 
         <main id="view-container"></main>
 
-        <div class="app-helper" id="app-helper" style="display:none">
-            <div class="app-bubble" id="app-bubble"></div>
-            <img src="assets/mascot_board.png" class="app-mascot" id="mascot-main" onclick="app.mascotRandomTip()">
-        </div>
+
 
         <div class="mystery-box-container" id="mystery-box-widget" style="display:none">
             <div class="mystery-box" id="mystery-box">🎁</div>
@@ -188,16 +185,6 @@
                 this.initSeasonAndResets();
                 this.render();
                 this.initSupabase();
-
-                // Mascot random greeting - Only if visible
-                setTimeout(() => { 
-                    const mascot = document.getElementById('app-helper');
-                    if (this.state.isLoggedIn && mascot && mascot.style.display !== 'none') {
-                        const kid = this.state.kids[this.state.activeKidIndex];
-                        const name = kid ? kid.name : '';
-                        this.mascotSay(`${this.t('mascot_hello')} ${name}! 👋`); 
-                    } 
-                }, 2000);
             }
 
             initMascotTracking() {
@@ -289,22 +276,7 @@
             }
 
             checkMascotVisibility() {
-                if (!this.state.isLoggedIn) return false;
-                
-                // If already shown 3 times today, hide it
-                if (this.state.mascotShowsToday >= 3) return false;
-
-                // Random chance (20%) to show it on a view switch if not already visible
-                const mascot = document.getElementById('app-helper');
-                if (mascot && mascot.style.display === 'none') {
-                    if (Math.random() < 0.20) {
-                        this.state.mascotShowsToday++;
-                        localStorage.setItem('thaana_mascotShows', this.state.mascotShowsToday);
-                        return true;
-                    }
-                    return false;
-                }
-                return mascot && mascot.style.display !== 'none';
+                return false;
             }
 
             async initSupabase() {
@@ -591,7 +563,6 @@
 
                 const showMascot = this.checkMascotVisibility();
                 document.getElementById('mystery-box-widget').style.display = (this.state.isLoggedIn && this.state.view !== 'mystery-game') ? 'block' : 'none';
-                document.getElementById('app-helper').style.display = (this.state.isLoggedIn && showMascot) ? 'flex' : 'none';
 
                 if (this.state.view === 'tracing' && !this.currentTracingLetter) {
                     const lastL = localStorage.getItem('last_tracing_letter');
@@ -1663,10 +1634,10 @@
                         kids = data.map(k => {
                             let pts = k.points || 0;
                             if (k.stats) {
-                                if (this.state.hallFilter === 'daily') pts = k.stats.dailyPoints || 0;
-                                else if (this.state.hallFilter === 'weekly') pts = k.stats.weeklyPoints || 0;
-                                else if (this.state.hallFilter === 'monthly') pts = k.stats.monthlyPoints || 0;
-                                else if (this.state.hallFilter === 'season') pts = k.stats.seasonPoints || 0;
+                                if (this.state.hallFilter === 'daily' && k.stats.dailyPoints !== undefined) pts = k.stats.dailyPoints;
+                                else if (this.state.hallFilter === 'weekly' && k.stats.weeklyPoints !== undefined) pts = k.stats.weeklyPoints;
+                                else if (this.state.hallFilter === 'monthly' && k.stats.monthlyPoints !== undefined) pts = k.stats.monthlyPoints;
+                                else if (this.state.hallFilter === 'season' && k.stats.seasonPoints !== undefined) pts = k.stats.seasonPoints;
                             }
                             return { name: k.name, avatar: k.avatar, points: pts };
                         });
