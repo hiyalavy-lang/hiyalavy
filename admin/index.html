@@ -515,27 +515,36 @@
             if (!window.supabaseClient) return alert('Supabase not connected');
             const btn = event.target; btn.innerText = 'SAVING...';
             try {
-                // Delete all existing and re-insert to handle ordering/deletions cleanly
-                await window.supabaseClient.from('app_extras').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-                if (window.adminExtras.length > 0) {
-                    const toSave = window.adminExtras.map((e, i) => ({
-                        ...(e.id ? { id: e.id } : {}),
-                        title:         e.title || '',
-                        category:      e.category || 'all',
-                        description:   e.description || '',
-                        file_url:      e.file_url || '',
-                        thumbnail_url: e.thumbnail_url || '',
-                        order_index:   i
-                    }));
-                    const { error } = await window.supabaseClient.from('app_extras').upsert(toSave);
-                    if (error) throw error;
+                // Build clean rows — never pass id so Supabase always generates a fresh UUID
+                const toInsert = window.adminExtras.map((e, i) => ({
+                    title:         e.title || '',
+                    category:      e.category || 'all',
+                    description:   e.description || '',
+                    file_url:      e.file_url || '',
+                    thumbnail_url: e.thumbnail_url || '',
+                    order_index:   i
+                }));
+
+                // Only delete AFTER we've validated the data
+                if (toInsert.length === 0) {
+                    await window.supabaseClient.from('app_extras').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                } else {
+                    // Delete first, then insert fresh rows
+                    const { error: delErr } = await window.supabaseClient.from('app_extras').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                    if (delErr) throw delErr;
+
+                    const { error: insErr } = await window.supabaseClient.from('app_extras').insert(toInsert);
+                    if (insErr) throw insErr;
                 }
+
                 btn.innerText = '☁️ SAVE EXTRAS TO CLOUD';
                 alert('Extra resources saved to cloud!');
-                await fetchExtras();
+                await fetchExtras(); // Reload with real IDs from DB
             } catch (err) {
                 btn.innerText = '☁️ SAVE EXTRAS TO CLOUD';
                 alert('Failed to save: ' + err.message);
+                // Reload existing data so the list is still visible
+                await fetchExtras();
             }
         }
         // ─────────────────────────────────────────────────────────────────
