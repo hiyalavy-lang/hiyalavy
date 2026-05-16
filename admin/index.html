@@ -751,9 +751,15 @@
             const btn = event.target; btn.innerText = "SAVING TO CLOUD...";
             
             try {
-                // Upsert Fili
+                // Upsert Fili — only columns that exist in app_fili schema
                 if (window.adminFili) {
-                    const fToSave = window.adminFili.map((f, i) => ({ ...f, order_index: i }));
+                    const fToSave = window.adminFili.map((f, i) => ({
+                        ...(f.id ? { id: f.id } : {}),
+                        mark:        f.mark || '',
+                        name:        f.name || '',
+                        audio:       f.audio || '',
+                        order_index: i
+                    }));
                     const { error } = await window.supabaseClient.from('app_fili').upsert(fToSave);
                     if (error) throw error;
                 }
