@@ -143,9 +143,12 @@
                     isLoggedIn: false,
                     parentEmail: 'parent@example.com',
                     parentPin: localStorage.getItem('thaana_parentPin') || '2345',
-                    hallFilter: 'daily',
+                    hallFilter: 'monthly',
+                    seasonName: localStorage.getItem('thaana_seasonName') || 'Season 1',
+                    seasonEnd: localStorage.getItem('thaana_seasonEnd') || '',
+                    seasonDaysLeft: 90,
                     kids: [
-                        { name: 'ކުޑަކުއްޖާ', ageGroup: 'preschool', avatar: '👶', points: 0, badges: [1], unlockedAvatars: ['👶', '👧', '👦'] }
+                        { name: 'ކުޑަކުއްޖާ', ageGroup: 'preschool', avatar: '👶', points: 0, seasonPoints: 0, monthlyPoints: 0, weeklyPoints: 0, dailyPoints: 0, badges: [1], unlockedAvatars: ['👶', '👧', '👦'] }
                     ],
                     activeKidIndex: 0,
                     dailyGameCount: 0,
@@ -182,6 +185,7 @@
                 document.getElementById('mystery-box').onclick = () => { this.playSound('click'); this.openMysteryBox(); };
                 this.initDecorations();
                 this.initMascotTracking();
+                this.initSeasonAndResets();
                 this.render();
                 this.initSupabase();
 
@@ -204,6 +208,84 @@
                     localStorage.setItem('thaana_mascotDate', today);
                     localStorage.setItem('thaana_mascotShows', 0);
                 }
+            }
+
+            initSeasonAndResets() {
+                const now = new Date();
+                const todayStr = now.toDateString();
+                
+                // 1. Daily Reset (00:00)
+                const lastDaily = localStorage.getItem('thaana_lastDailyReset') || '';
+                if (lastDaily !== todayStr) {
+                    localStorage.setItem('thaana_lastDailyReset', todayStr);
+                    this.state.kids.forEach(k => k.dailyPoints = 0);
+                }
+
+                // 2. Weekly Reset (Every Friday)
+                // getDay() === 5 is Friday. We store the date string of the most recent Friday.
+                let lastFriday = new Date(now);
+                const dayOfWeek = now.getDay();
+                const diffToFriday = (dayOfWeek < 5) ? (dayOfWeek + 2) : (dayOfWeek - 5);
+                lastFriday.setDate(now.getDate() - diffToFriday);
+                const fridayStr = lastFriday.toDateString();
+
+                const lastWeekly = localStorage.getItem('thaana_lastWeeklyReset') || '';
+                if (lastWeekly !== fridayStr) {
+                    localStorage.setItem('thaana_lastWeeklyReset', fridayStr);
+                    this.state.kids.forEach(k => k.weeklyPoints = 0);
+                }
+
+                // 3. Monthly Reset
+                const currentMonthStr = `${now.getFullYear()}-${now.getMonth()}`;
+                const lastMonthly = localStorage.getItem('thaana_lastMonthlyReset') || '';
+                if (lastMonthly !== currentMonthStr) {
+                    localStorage.setItem('thaana_lastMonthlyReset', currentMonthStr);
+                    this.state.kids.forEach(k => k.monthlyPoints = 0);
+                }
+
+                // 4. Season Tracking (90 Days)
+                let seasonEndStr = localStorage.getItem('thaana_seasonEnd') || '';
+                let seasonStartStr = localStorage.getItem('thaana_seasonStart') || '';
+                let seasonIndex = parseInt(localStorage.getItem('thaana_seasonIndex') || '1');
+                
+                if (!seasonEndStr || !seasonStartStr) {
+                    const start = new Date();
+                    const end = new Date();
+                    end.setDate(start.getDate() + 90);
+                    seasonStartStr = start.toDateString();
+                    seasonEndStr = end.toDateString();
+                    localStorage.setItem('thaana_seasonStart', seasonStartStr);
+                    localStorage.setItem('thaana_seasonEnd', seasonEndStr);
+                    localStorage.setItem('thaana_seasonIndex', seasonIndex);
+                    localStorage.setItem('thaana_seasonName', `Season ${seasonIndex}`);
+                }
+
+                const seasonEndDate = new Date(seasonEndStr);
+                const timeDiff = seasonEndDate.getTime() - now.getTime();
+                let daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+                // If Season ended
+                if (daysLeft <= 0) {
+                    seasonIndex++;
+                    const start = new Date();
+                    const end = new Date();
+                    end.setDate(start.getDate() + 90);
+                    seasonStartStr = start.toDateString();
+                    seasonEndStr = end.toDateString();
+                    localStorage.setItem('thaana_seasonStart', seasonStartStr);
+                    localStorage.setItem('thaana_seasonEnd', seasonEndStr);
+                    localStorage.setItem('thaana_seasonIndex', seasonIndex);
+                    localStorage.setItem('thaana_seasonName', `Season ${seasonIndex}`);
+                    this.state.kids.forEach(k => k.seasonPoints = 0);
+                    daysLeft = 90;
+                    setTimeout(() => {
+                        this.mascotSay(`🌟 Welcome to Season ${seasonIndex}! A new 90-day learning adventure begins today! 🚀`, 8000);
+                    }, 4000);
+                }
+
+                this.state.seasonName = `Season ${seasonIndex}`;
+                this.state.seasonEnd = seasonEndStr;
+                this.state.seasonDaysLeft = daysLeft;
             }
 
             checkMascotVisibility() {
@@ -331,6 +413,10 @@
                             ageGroup: k.age_group,
                             avatar: k.avatar,
                             points: k.points,
+                            seasonPoints: (k.stats && k.stats.seasonPoints !== undefined) ? k.stats.seasonPoints : k.points,
+                            monthlyPoints: (k.stats && k.stats.monthlyPoints !== undefined) ? k.stats.monthlyPoints : k.points,
+                            weeklyPoints: (k.stats && k.stats.weeklyPoints !== undefined) ? k.stats.weeklyPoints : k.points,
+                            dailyPoints: (k.stats && k.stats.dailyPoints !== undefined) ? k.stats.dailyPoints : k.points,
                             badges: k.badges || [],
                             stats: k.stats || {},
                             unlockedAvatars: k.unlocked_avatars || ['👶', '👧', '👦'],
@@ -341,7 +427,7 @@
                         const defaultKid = { user_id: session.user.id, name: 'ކުޑަކުއްޖާ', age_group: 'preschool', avatar: '👶', points: 0, pin: '1234' };
                         const { data: newKid } = await this.supabase.from('kids').insert(defaultKid).select().single();
                         if (newKid) {
-                            this.state.kids = [{ dbId: newKid.id, name: newKid.name, ageGroup: newKid.age_group, avatar: newKid.avatar, points: newKid.points, badges: [], stats: {}, unlockedAvatars: ['👶', '👧', '👦'] }];
+                            this.state.kids = [{ dbId: newKid.id, name: newKid.name, ageGroup: newKid.age_group, avatar: newKid.avatar, points: newKid.points, seasonPoints: 0, monthlyPoints: 0, weeklyPoints: 0, dailyPoints: 0, badges: [], stats: {}, unlockedAvatars: ['👶', '👧', '👦'] }];
                         }
                     }
 
@@ -371,6 +457,12 @@
                 const idx = index !== undefined ? index : this.state.activeKidIndex;
                 const kid = this.state.kids[idx];
                 if (kid && kid.dbId) {
+                    if (!kid.stats) kid.stats = {};
+                    kid.stats.seasonPoints = kid.seasonPoints;
+                    kid.stats.monthlyPoints = kid.monthlyPoints;
+                    kid.stats.weeklyPoints = kid.weeklyPoints;
+                    kid.stats.dailyPoints = kid.dailyPoints;
+
                     await this.supabase.from('kids').update({
                         points: kid.points,
                         badges: kid.badges,
@@ -1546,12 +1638,15 @@
             }
 
             async renderHallOfFame() {
-                const filters = ['daily', 'weekly', 'monthly'];
+                const filters = ['daily', 'weekly', 'monthly', 'season'];
+                const seasonInfo = this.state.hallFilter === 'season' ? `<div style="background:#fef3c7; border:2px solid #f59e0b; border-radius:15px; padding:12px 20px; margin-bottom:25px; text-align:center; font-weight:800; color:#b45309; font-size:0.95rem">✨ ${this.state.seasonName} — ${this.state.seasonDaysLeft} days left until reset (Ends ${this.state.seasonEnd})</div>` : '';
+
                 this.viewContainer.innerHTML = `
                     <div class="hall-container" style="max-width:900px; margin:4rem auto; padding:40px; border-color:var(--orange); position:relative">
                         <img src="assets/mascot_think.png" class="app-mascot" style="position:absolute; top:-100px; left:-50px; width:180px; transform:rotate(-15deg); filter:drop-shadow(0 10px 20px rgba(0,0,0,0.1))">
                         <h2 style="text-align:center; font-size:3rem; margin-bottom:40px; color:var(--orange)">🏆 ${this.t('Hall of Fame')}</h2>
                         <div class="hall-filter-bar">${filters.map(f => `<button class="filter-btn ${this.state.hallFilter === f ? 'active' : ''}" style="${this.state.hallFilter === f ? 'background:var(--orange)' : ''}" onclick="app.setHallFilter('${f}')">${this.tHallFilter(f)}</button>`).join('')}</div>
+                        ${seasonInfo}
                         <div class="fame-list" id="fame-list-body" style="max-height:600px; overflow-y:auto; padding:20px; border:4px solid var(--border-dark); border-radius:30px; background:white">
                             <div style="text-align:center; padding:40px; color:#94a3b8">⏳ Loading leaderboard...</div>
                         </div>
@@ -1561,10 +1656,25 @@
                 if (window.supabaseClient) {
                     const { data } = await window.supabaseClient
                         .from('kids')
-                        .select('name, avatar, points')
-                        .order('points', { ascending: false })
-                        .limit(100);
-                    if (data) kids = data;
+                        .select('name, avatar, points, stats')
+                        .limit(200);
+                    if (data) {
+                        // Map points according to active filter
+                        kids = data.map(k => {
+                            let pts = k.points || 0;
+                            if (k.stats) {
+                                if (this.state.hallFilter === 'daily') pts = k.stats.dailyPoints || 0;
+                                else if (this.state.hallFilter === 'weekly') pts = k.stats.weeklyPoints || 0;
+                                else if (this.state.hallFilter === 'monthly') pts = k.stats.monthlyPoints || 0;
+                                else if (this.state.hallFilter === 'season') pts = k.stats.seasonPoints || 0;
+                            }
+                            return { name: k.name, avatar: k.avatar, points: pts };
+                        });
+                        // Sort descending
+                        kids.sort((a, b) => b.points - a.points);
+                        // Take top 100
+                        kids = kids.slice(0, 100);
+                    }
                 }
 
                 const medalColor = (i) => i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#92400e' : '#cbd5e1';
@@ -1585,7 +1695,7 @@
             }
 
             setHallFilter(f) { this.state.hallFilter = f; this.render(); }
-            tHallFilter(f) { const t = { daily: { dhivehi: 'މިއަދު', english: 'Today' }, weekly: { dhivehi: 'މިހަފްތާ', english: 'This Week' }, monthly: { dhivehi: 'މިމަހު', english: 'This Month' } }; return t[f][this.state.language === 'english' ? 'english' : 'dhivehi']; }
+            tHallFilter(f) { const t = { daily: { dhivehi: 'މިއަދު', english: 'Today' }, weekly: { dhivehi: 'މިހަފްތާ', english: 'This Week' }, monthly: { dhivehi: 'މިމަހު', english: 'This Month' }, season: { dhivehi: 'މި ސީޒަން', english: 'This Season' } }; return t[f][this.state.language === 'english' ? 'english' : 'dhivehi']; }
 
             renderBadges() {
                 const activeKid = this.state.kids[this.state.activeKidIndex];
@@ -1598,8 +1708,14 @@
                         <p style="text-align:center; color:#64748b; margin-bottom:30px; font-weight:700">${earned.length}/70 earned — tap any badge to see progress!</p>
                         <div class="badges-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:20px">
                             ${badges_data.map(b => {
-                                const isEarned = earned.includes(b.id);
-                                const progress = this.getBadgeProgress(b.id, activeKid);
+                                let progress = this.getBadgeProgress(b.id, activeKid);
+                                const isEarned = earned.includes(b.id) || progress >= 100;
+                                if (isEarned && !earned.includes(b.id)) {
+                                    earned.push(b.id);
+                                    activeKid.badges = earned;
+                                    this.syncKidProgress();
+                                }
+                                if (isEarned) progress = 100;
                                 return `
                                 <div class="badge-card ${isEarned ? 'earned' : 'locked'}" onclick="app.showBadgeInfo(${b.id})" style="padding:15px; border:3px solid ${isEarned ? 'var(--secondary)' : '#e2e8f0'}; border-radius:20px; text-align:center; opacity:${isEarned ? '1' : '0.8'}; cursor:pointer; position:relative">
                                     <div style="font-size:3rem; margin-bottom:8px; filter:${isEarned ? 'none' : 'grayscale(1)'}">${b.icon}</div>
@@ -1649,7 +1765,8 @@
                 const b = badges.find(x => x.id === id);
                 if (!b) return;
                 const activeKid = this.state.kids[this.state.activeKidIndex];
-                const isEarned = (activeKid.badges || []).includes(b.id);
+                const progress = this.getBadgeProgress(b.id, activeKid);
+                const isEarned = (activeKid.badges || []).includes(b.id) || progress >= 100;
                 const modal = document.createElement('div');
                 modal.className = 'modal-overlay'; modal.id = 'badge-info-modal';
                 modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
@@ -1672,6 +1789,10 @@
             addTaskProgress() {
                 const kid = this.state.kids[this.state.activeKidIndex];
                 kid.points += 10;
+                kid.seasonPoints = (kid.seasonPoints || 0) + 10;
+                kid.monthlyPoints = (kid.monthlyPoints || 0) + 10;
+                kid.weeklyPoints = (kid.weeklyPoints || 0) + 10;
+                kid.dailyPoints = (kid.dailyPoints || 0) + 10;
                 if (!kid.stats) kid.stats = {};
                 
                 // Track metrics for badge progress
