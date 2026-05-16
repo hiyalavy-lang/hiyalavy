@@ -593,13 +593,33 @@ body[data-lang="numbers"] { background: linear-gradient(135deg, #E8F8F5 0%, #FCF
     .app-header { padding: 1rem; flex-direction: column; gap: 15px; height: auto; }
     .main-nav { 
         width: 100%; 
+        display: flex;
+        flex-wrap: nowrap;
         overflow-x: auto; 
-        padding: 5px;
+        padding: 4px 8px;
+        gap: 8px;
         scrollbar-width: none;
         justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
     }
     .main-nav::-webkit-scrollbar { display: none; }
-    .nav-btn { padding: 8px 16px; font-size: 0.9rem; flex-shrink: 0; }
+    .nav-btn { 
+        padding: 8px 14px; 
+        font-size: 0.9rem; 
+        flex-shrink: 0; 
+        border-width: 2px;
+        border-radius: 14px;
+        box-shadow: 2px 2px 0 var(--border-dark);
+        gap: 6px;
+    }
+    .nav-btn:hover {
+        transform: none;
+        box-shadow: 2px 2px 0 var(--border-dark);
+    }
+    .nav-btn.active {
+        transform: none;
+        box-shadow: 0 0 0;
+    }
     
     .hero-section { 
         padding: 4rem 2rem; 
