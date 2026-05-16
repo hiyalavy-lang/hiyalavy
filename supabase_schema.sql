@@ -150,3 +150,17 @@ DROP POLICY IF EXISTS "Admin Write Access Fili" ON public.app_fili;
 CREATE POLICY "Public Read Access Fili" ON public.app_fili FOR SELECT USING (true);
 CREATE POLICY "Admin Write Access Fili" ON public.app_fili FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
 
+-- app_extras table RLS
+ALTER TABLE public.app_extras ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Read Access Extras" ON public.app_extras;
+DROP POLICY IF EXISTS "Admin Write Access Extras" ON public.app_extras;
+CREATE POLICY "Public Read Access Extras" ON public.app_extras FOR SELECT USING (true);
+CREATE POLICY "Admin Write Access Extras" ON public.app_extras FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
+
+-- extras storage bucket policies
+-- Run this first in Supabase SQL Editor if the bucket doesn't exist:
+-- insert into storage.buckets (id, name, public) values ('extras', 'extras', true);
+DROP POLICY IF EXISTS "Public access to extras" ON storage.objects;
+DROP POLICY IF EXISTS "Admin can upload extras" ON storage.objects;
+CREATE POLICY "Public access to extras" ON storage.objects FOR SELECT USING (bucket_id = 'extras');
+CREATE POLICY "Admin can upload extras" ON storage.objects FOR ALL USING (bucket_id = 'extras' AND (auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
