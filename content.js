@@ -213,6 +213,12 @@ const badges = [
     { id: 67, name: "Gold Counter",     icon: "🪙", how: "Complete 20 activities in the Count tab." },
     { id: 68, name: "Number Collector", icon: "💎", how: "Interact with every number from 1 to 20." },
     { id: 69, name: "Fast Finger",      icon: "⚡", how: "Trace a number in under 5 seconds." },
-    { id: 70, name: "Number Legend",    icon: "🐲", how: "Become the top learner in the Numbers category!" }
+    { id: 70, name: "Number Legend",    icon: "🐲", how: "Become the top learner in the Numbers category!" },
+    { id: 71, name: "First Video",      icon: "🎬", how: "Watch your very first educational video lesson!" },
+    { id: 72, name: "Video Buff",       icon: "🍿", how: "Watch 5 different educational video lessons." },
+    { id: 73, name: "Couch Potato",     icon: "🛋️", how: "Watch 10 different educational video lessons." },
+    { id: 74, name: "Cinema Star",      icon: "⭐", how: "Earn 150 points from watching videos." },
+    { id: 75, name: "Category Hopper",  icon: "🔀", how: "Watch videos across 3 different categories." },
+    { id: 76, name: "Binge Learner",    icon: "📺", how: "Watch 20 educational video lessons total!" }
 ];
 
