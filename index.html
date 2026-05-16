@@ -721,7 +721,16 @@
             renderNav() {
                 if (!this.state.isLoggedIn || this.state.view === 'landing') { this.mainNav.innerHTML = ''; return; }
 
-                const navItems = this.state.customNav.map(item => {
+                // Always enforce correct nav: remove engdhi, ensure extra exists
+                let nav = (this.state.customNav || []).filter(item => item.id !== 'engdhi');
+                if (!nav.find(item => item.id === 'extra')) {
+                    const quizIdx = nav.findIndex(item => item.id === 'quiz');
+                    const extraItem = { id: 'extra', icon: '📄', label: 'Extra', premium: false };
+                    if (quizIdx >= 0) nav.splice(quizIdx + 1, 0, extraItem);
+                    else nav.push(extraItem);
+                }
+
+                const navItems = nav.map(item => {
                     let label = item.label;
                     if (this.state.language === 'numbers') {
                         if (item.id === 'soundboard') label = 'Numbers';
@@ -750,6 +759,7 @@
                     'Fili': { dhivehi: 'ފިލި', english: 'Vowels' },
                     'Tracing': { dhivehi: 'ލިޔުން', english: 'Tracing' },
                     'Words': { dhivehi: 'ބަސްތައް', english: 'Words' },
+                    'Extra': { dhivehi: 'އިތުރު', english: 'Extra' },
                     'Quiz': { dhivehi: 'ކުއިޒް', english: 'Quiz' },
                     'Hall': { dhivehi: 'ޝަރަފް', english: 'Hall' },
                     'Badges': { dhivehi: 'ބެޖް', english: 'Badges' },
