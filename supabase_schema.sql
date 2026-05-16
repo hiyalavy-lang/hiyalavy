@@ -164,3 +164,21 @@ DROP POLICY IF EXISTS "Public access to extras" ON storage.objects;
 DROP POLICY IF EXISTS "Admin can upload extras" ON storage.objects;
 CREATE POLICY "Public access to extras" ON storage.objects FOR SELECT USING (bucket_id = 'extras');
 CREATE POLICY "Admin can upload extras" ON storage.objects FOR ALL USING (bucket_id = 'extras' AND (auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
+
+-- 8. Videos (YouTube Curated Library)
+CREATE TABLE IF NOT EXISTS public.app_videos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    category TEXT DEFAULT 'all', -- 'all', 'dhivehi', 'english', 'arabic', 'numbers'
+    youtube_id TEXT NOT NULL,
+    duration TEXT DEFAULT '3:00',
+    thumbnail_url TEXT,
+    order_index INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.app_videos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Read Access Videos" ON public.app_videos;
+DROP POLICY IF EXISTS "Admin Write Access Videos" ON public.app_videos;
+CREATE POLICY "Public Read Access Videos" ON public.app_videos FOR SELECT USING (true);
+CREATE POLICY "Admin Write Access Videos" ON public.app_videos FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');

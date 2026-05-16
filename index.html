@@ -325,6 +325,9 @@
                 const { data: eData } = await this.supabase.from('app_extras').select('*').order('order_index');
                 if (eData) this.state.customExtras = eData;
 
+                const { data: vData } = await this.supabase.from('app_videos').select('*').order('order_index');
+                if (vData) this.state.customVideos = vData;
+
                 const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
                 if (cData && cData.length > 0) {
                     const dbContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
@@ -581,6 +584,7 @@
                     case 'vocabulary': this.renderVocabulary(); break;
                     case 'numbers': this.renderNumbers(); break;
                     case 'quiz': this.renderQuiz(); break;
+                    case 'videos': this.renderVideos(); break;
                     case 'hall': this.renderHallOfFame(); break;
                     case 'badges': this.renderBadges(); break;
                     case 'mystery-game': this.renderMysteryGame(); break;
@@ -823,6 +827,7 @@
                     'Tracing': { dhivehi: 'ލިޔުން', english: 'Tracing' },
                     'Words': { dhivehi: 'ބަސްތައް', english: 'Words' },
                     'Extra': { dhivehi: 'އިތުރު', english: 'Extra' },
+                    'Videos': { dhivehi: 'ވީޑިއޯ', english: 'Videos' },
                     'Quiz': { dhivehi: 'ކުއިޒް', english: 'Quiz' },
                     'Hall': { dhivehi: 'ޝަރަފް', english: 'Hall' },
                     'Badges': { dhivehi: 'ބެޖް', english: 'Badges' },
@@ -1152,6 +1157,116 @@
 
                 container.appendChild(grid);
                 this.viewContainer.appendChild(container);
+            }
+
+            renderVideos() {
+                const lang = this.state.language;
+                const videos = (this.state.customVideos || []).filter(v => !v.category || v.category === 'all' || v.category === lang);
+
+                const container = document.createElement('div');
+                container.style.cssText = 'padding:2rem; max-width:1200px; margin:0 auto;';
+
+                const heading = document.createElement('div');
+                heading.style.cssText = 'text-align:center; margin-bottom:2rem;';
+                heading.innerHTML = `<div style="font-size:2.5rem; font-weight:900; color:var(--border-dark)">🎬 ${this.t('Videos') || 'Video Library'}</div>
+                    <div style="color:#64748b; font-weight:700; margin-top:8px">Watch & learn with fun educational songs and stories!</div>`;
+                container.appendChild(heading);
+
+                if (!videos.length) {
+                    const empty = document.createElement('div');
+                    empty.style.cssText = 'text-align:center; padding:60px 20px; color:#94a3b8; font-size:1.2rem; font-weight:800;';
+                    empty.innerHTML = `<div style="font-size:4rem; margin-bottom:15px">📭</div>No videos available yet!<br><span style="font-size:0.9rem; font-weight:600">Check back soon for fun video lessons.</span>`;
+                    container.appendChild(empty);
+                    this.viewContainer.appendChild(container);
+                    return;
+                }
+
+                // If an active video is selected, show the video player banner at the top
+                if (this.state.activeVideoId) {
+                    const activeVid = videos.find(v => v.youtube_id === this.state.activeVideoId) || videos[0];
+                    const playerSection = document.createElement('div');
+                    playerSection.style.cssText = 'background:black; border:6px solid var(--border-dark); border-radius:30px; overflow:hidden; margin-bottom:3rem; box-shadow:0 20px 40px rgba(0,0,0,0.3); position:relative;';
+                    
+                    // 16:9 Aspect Ratio wrapper
+                    playerSection.innerHTML = `
+                        <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden;">
+                            <iframe style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" 
+                                src="https://www.youtube.com/embed/${activeVid.youtube_id}?autoplay=1&modestbranding=1&rel=0&showinfo=0&fs=1" 
+                                title="${activeVid.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen>
+                            </iframe>
+                        </div>
+                        <div style="padding:20px 25px; background:white; display:flex; justify-content:space-between; align-items:center; border-top:4px solid var(--border-dark);">
+                            <div>
+                                <div style="font-size:1.5rem; font-weight:900; color:var(--border-dark);">${activeVid.title}</div>
+                                <div style="font-size:0.95rem; color:#64748b; font-weight:700; margin-top:4px;">▶ Now Playing · ${activeVid.duration || '3:00'}</div>
+                            </div>
+                            <button onclick="app.playVideo(null)" style="background:#f1f5f9; border:3px solid #cbd5e1; border-radius:15px; padding:10px 20px; font-weight:800; color:#64748b; cursor:pointer; transition:all 0.2s;">
+                                ✖ Close Player
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(playerSection);
+                }
+
+                // Video selection grid
+                const subHeading = document.createElement('div');
+                subHeading.style.cssText = 'font-size:1.5rem; font-weight:900; color:var(--border-dark); margin-bottom:1.5rem; display:flex; align-items:center; gap:10px;';
+                subHeading.innerHTML = `📺 <span>${this.state.activeVideoId ? 'More Videos' : 'Select a Video to Watch'}</span>`;
+                container.appendChild(subHeading);
+
+                const grid = document.createElement('div');
+                grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:25px;';
+
+                videos.forEach(v => {
+                    const card = document.createElement('div');
+                    const isPlaying = this.state.activeVideoId === v.youtube_id;
+                    card.style.cssText = `background:white; border:4px solid ${isPlaying ? 'var(--orange)' : 'var(--border-dark)'}; border-radius:25px; box-shadow:6px 6px 0 ${isPlaying ? 'var(--orange)' : 'var(--border-dark)'}; overflow:hidden; transition:transform 0.2s, box-shadow 0.2s; cursor:pointer; position:relative;`;
+
+                    let thumbSrc = `https://img.youtube.com/vi/${v.youtube_id}/hqdefault.jpg`;
+                    if (v.thumbnail_url && this.supabase) {
+                        if (v.thumbnail_url.startsWith('http')) {
+                            thumbSrc = v.thumbnail_url;
+                        } else {
+                            thumbSrc = this.supabase.storage.from('extras').getPublicUrl(v.thumbnail_url).data.publicUrl;
+                        }
+                    }
+
+                    card.innerHTML = `
+                        <div style="position:relative;">
+                            <img src="${thumbSrc}" style="width:100%; height:180px; object-fit:cover; display:block;">
+                            <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.8); color:white; font-size:0.8rem; font-weight:800; padding:4px 8px; border-radius:8px;">
+                                ${v.duration || '3:00'}
+                            </div>
+                            ${isPlaying ? `<div style="position:absolute; top:10px; left:10px; background:var(--orange); color:white; font-size:0.8rem; font-weight:900; padding:4px 10px; border-radius:10px; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                                ▶ PLAYING
+                            </div>` : ''}
+                        </div>
+                        <div style="padding:20px;">
+                            <div style="font-size:1.2rem; font-weight:900; color:var(--border-dark); line-height:1.3; margin-bottom:12px;">${v.title || 'Educational Video'}</div>
+                            <button style="width:100%; padding:12px; background:${isPlaying ? 'var(--orange)' : 'var(--primary)'}; color:white; border-radius:15px; font-weight:900; font-size:1rem; border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); cursor:pointer; transition:all 0.2s;">
+                                ${isPlaying ? '▶ Now Watching' : '▶ Watch Video'}
+                            </button>
+                        </div>`;
+
+                    card.addEventListener('mouseenter', () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = `8px 10px 0 ${isPlaying ? 'var(--orange)' : 'var(--border-dark)'}`; });
+                    card.addEventListener('mouseleave', () => { card.style.transform = ''; card.style.boxShadow = `6px 6px 0 ${isPlaying ? 'var(--orange)' : 'var(--border-dark)'}`; });
+
+                    card.addEventListener('click', () => this.playVideo(v.youtube_id));
+
+                    grid.appendChild(card);
+                });
+
+                container.appendChild(grid);
+                this.viewContainer.appendChild(container);
+            }
+
+            playVideo(youtube_id) {
+                this.playSound('click');
+                this.state.activeVideoId = youtube_id;
+                this.render();
+                if (youtube_id) {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
             }
 
             renderFili() {

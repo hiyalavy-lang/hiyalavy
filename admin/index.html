@@ -317,6 +317,50 @@
                 <button class="admin-btn" style="width:100%; margin-top:20px" onclick="saveExtras()">☁️ SAVE EXTRAS TO CLOUD</button>
             </div>
 
+            <!-- VIDEOS MANAGER -->
+            <div class="admin-card">
+                <h2>VIDEO LIBRARY MANAGER 🎬</h2>
+                <p style="color:#94a3b8; margin-bottom:20px; font-size:0.9rem">Curate YouTube videos for the kids to watch in the Video tab. Paste any YouTube video ID or full URL. Set which language category it belongs to.</p>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px; background:#0f172a; padding:20px; border-radius:16px; border:1px solid #334155">
+                    <div>
+                        <label class="res-label">Video Title</label>
+                        <input type="text" class="admin-input" id="video-title" placeholder="e.g. Alif Baa Taa Song">
+                    </div>
+                    <div>
+                        <label class="res-label">Language Category</label>
+                        <select class="admin-input" id="video-category">
+                            <option value="all">All Languages</option>
+                            <option value="dhivehi">Dhivehi</option>
+                            <option value="english">English</option>
+                            <option value="arabic">Arabic</option>
+                            <option value="numbers">Numbers</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="res-label">YouTube Video ID / URL</label>
+                        <input type="text" class="admin-input" id="video-youtube-id" placeholder="e.g. dQw4w9WgXcQ or https://youtu.be/dQw... ">
+                    </div>
+                    <div>
+                        <label class="res-label">Duration (optional)</label>
+                        <input type="text" class="admin-input" id="video-duration" placeholder="e.g. 3:15">
+                    </div>
+                    <div style="grid-column:1/-1">
+                        <label class="res-label">Custom Thumbnail URL (optional, defaults to YouTube cover)</label>
+                        <div class="upload-row">
+                            <input type="text" class="admin-input" id="video-thumbnail-url" placeholder="https://... or upload image" style="margin:0">
+                            <button class="upload-btn" style="background:#6BCB77; color:white" onclick="videoTriggerUpload()">🖼️ Upload</button>
+                            <input type="file" id="video-thumbnail-input" style="display:none" accept="image/*" onchange="videoHandleUpload(this)">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="admin-btn" style="background:#22c55e; margin-bottom:24px" onclick="addVideo()">➕ ADD VIDEO</button>
+
+                <div id="videos-list" style="display:flex; flex-direction:column; gap:12px"></div>
+                <button class="admin-btn" style="width:100%; margin-top:20px" onclick="saveVideos()">☁️ SAVE VIDEOS TO CLOUD</button>
+            </div>
+
             <div class="admin-card" style="margin-top: 30px; border-color: #ef4444;">
                 <h2 style="color: #ef4444;">DANGER ZONE ⚠️</h2>
                 <p style="margin: 15px 0; color: #94a3b8;">Revert all content, navigation, and settings to original defaults. This action cannot be undone.</p>
@@ -416,6 +460,7 @@
             await fetchResources();
             await fetchMascotTips();
             await fetchExtras();
+            await fetchVideos();
         }
 
         // ─── EXTRAS MANAGER ───────────────────────────────────────────────
@@ -545,6 +590,141 @@
                 alert('Failed to save: ' + err.message);
                 // Reload existing data so the list is still visible
                 await fetchExtras();
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
+        // ─── VIDEOS MANAGER ───────────────────────────────────────────────
+        window.adminVideos = [];
+
+        async function fetchVideos() {
+            if (!window.supabaseClient) return;
+            const { data } = await window.supabaseClient.from('app_videos').select('*').order('order_index');
+            window.adminVideos = data || [];
+            renderVideosList();
+        }
+
+        function renderVideosList() {
+            const list = document.getElementById('videos-list');
+            if (!list) return;
+            if (!window.adminVideos.length) {
+                list.innerHTML = '<div style="color:#64748b; font-size:0.9rem; padding:20px 0">No videos added yet. Use the form above to add one.</div>';
+                return;
+            }
+            list.innerHTML = window.adminVideos.map((v, i) => `
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:16px; display:flex; justify-content:space-between; align-items:center; gap:15px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:200px">
+                        <div style="font-weight:900; font-size:1rem; color:white">${v.title || 'Untitled'}</div>
+                        <div style="font-size:0.8rem; color:#64748b; margin-top:4px">${v.category === 'all' ? 'All Languages' : (v.category || '')} · YouTube ID: ${v.youtube_id} · Duration: ${v.duration || '3:00'}</div>
+                        ${v.thumbnail_url ? `<div style="font-size:0.82rem; color:#6BCB77; margin-top:4px">Custom Thumb: ${v.thumbnail_url}</div>` : ''}
+                    </div>
+                    <div style="display:flex; gap:8px; flex-shrink:0">
+                        <button class="admin-btn" style="background:#334155; padding:8px 14px;" onclick="editVideo(${i})">✏️ Edit</button>
+                        <button class="admin-btn" style="background:#ef4444; padding:8px 14px;" onclick="deleteVideo(${i})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addVideo() {
+            const title = document.getElementById('video-title').value.trim();
+            const category = document.getElementById('video-category').value;
+            let youtube_id = document.getElementById('video-youtube-id').value.trim();
+            const duration = document.getElementById('video-duration').value.trim() || '3:00';
+            const thumbnail_url = document.getElementById('video-thumbnail-url').value.trim();
+
+            if (!title) return alert('Please enter a video title.');
+            if (!youtube_id) return alert('Please enter a YouTube Video ID or URL.');
+
+            // Extract ID if user pasted full URL
+            if (youtube_id.includes('youtu.be/')) {
+                youtube_id = youtube_id.split('youtu.be/')[1].split('?')[0];
+            } else if (youtube_id.includes('youtube.com/watch')) {
+                const urlParams = new URLSearchParams(youtube_id.split('?')[1]);
+                youtube_id = urlParams.get('v') || youtube_id;
+            }
+
+            window.adminVideos.push({ title, category, youtube_id, duration, thumbnail_url });
+            renderVideosList();
+
+            // Clear form
+            document.getElementById('video-title').value = '';
+            document.getElementById('video-youtube-id').value = '';
+            document.getElementById('video-duration').value = '';
+            document.getElementById('video-thumbnail-url').value = '';
+            document.getElementById('video-category').value = 'all';
+        }
+
+        function editVideo(i) {
+            const v = window.adminVideos[i];
+            document.getElementById('video-title').value = v.title || '';
+            document.getElementById('video-youtube-id').value = v.youtube_id || '';
+            document.getElementById('video-duration').value = v.duration || '';
+            document.getElementById('video-thumbnail-url').value = v.thumbnail_url || '';
+            document.getElementById('video-category').value = v.category || 'all';
+            window.adminVideos.splice(i, 1);
+            renderVideosList();
+        }
+
+        function deleteVideo(i) {
+            if (!confirm('Delete this video?')) return;
+            window.adminVideos.splice(i, 1);
+            renderVideosList();
+        }
+
+        function videoTriggerUpload() {
+            document.getElementById('video-thumbnail-input').click();
+        }
+
+        async function videoHandleUpload(input) {
+            const file = input.files[0];
+            if (!file || !window.supabaseClient) return;
+            const filename = 'extras/video_thumb_' + Date.now() + '_' + file.name.replace(/\s+/g, '_').toLowerCase();
+            const btn = input.previousElementSibling;
+            const origText = btn.textContent;
+            btn.textContent = '⏳';
+            try {
+                const { error } = await window.supabaseClient.storage.from('extras').upload(filename, file, { upsert: true });
+                if (error) throw error;
+                document.getElementById('video-thumbnail-url').value = filename;
+                btn.textContent = '✅';
+                setTimeout(() => btn.textContent = origText, 2000);
+            } catch (err) {
+                btn.textContent = origText;
+                alert('Upload failed: ' + err.message);
+            }
+        }
+
+        async function saveVideos() {
+            if (!window.supabaseClient) return alert('Supabase not connected');
+            const btn = event.target; btn.innerText = 'SAVING...';
+            try {
+                const toInsert = window.adminVideos.map((v, i) => ({
+                    title:         v.title || '',
+                    category:      v.category || 'all',
+                    youtube_id:    v.youtube_id || '',
+                    duration:      v.duration || '3:00',
+                    thumbnail_url: v.thumbnail_url || '',
+                    order_index:   i
+                }));
+
+                if (toInsert.length === 0) {
+                    await window.supabaseClient.from('app_videos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                } else {
+                    const { error: delErr } = await window.supabaseClient.from('app_videos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                    if (delErr) throw delErr;
+
+                    const { error: insErr } = await window.supabaseClient.from('app_videos').insert(toInsert);
+                    if (insErr) throw insErr;
+                }
+
+                btn.innerText = '☁️ SAVE VIDEOS TO CLOUD';
+                alert('Video library saved to cloud!');
+                await fetchVideos();
+            } catch (err) {
+                btn.innerText = '☁️ SAVE VIDEOS TO CLOUD';
+                alert('Failed to save videos: ' + err.message);
+                await fetchVideos();
             }
         }
         // ─────────────────────────────────────────────────────────────────
