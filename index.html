@@ -1255,21 +1255,12 @@
                                 </div>
                             </div>
                             <div style="display:flex; align-items:center; gap:12px;">
-                                <button id="yt-reward-btn" onclick="app.rewardVideoPoints('${activeVid.youtube_id}', '${activeVid.category}')" style="background:var(--yellow); border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); border-radius:16px; padding:12px 22px; font-weight:900; font-size:1rem; color:var(--border-dark); cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                                    ⭐ I Finished Watching! (+15 pts)
-                                </button>
-                                <button onclick="app.playVideo(null)" style="background:#f1f5f9; border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); border-radius:16px; padding:12px 22px; font-weight:900; font-size:1rem; color:#64748b; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                                    ✖ Close
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(playerSection);
+                                <button id="yt-reward-btn" onclick="app.rewardVideoPoints('${activeVid.youtube_id}', '${activeVid.category}')" style="background:var(--yellow); border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); border-radi                    container.appendChild(playerSection);
 
                     // Check if already watched
                     const activeKid = this.state.kids[this.state.activeKidIndex];
                     const watched = (activeKid.stats && activeKid.stats.watchedVideos && activeKid.stats.watchedVideos[this.state.activeVideoId]);
-                    setTimeout(() => {
+                    const updateRewardBtn = () => {
                         const rBtn = document.getElementById('yt-reward-btn');
                         if (rBtn && watched) {
                             rBtn.style.background = '#e2e8f0';
@@ -1277,8 +1268,14 @@
                             rBtn.style.boxShadow = 'none';
                             rBtn.style.cursor = 'default';
                             rBtn.innerHTML = '✅ Already Watched (Points Claimed)';
+                            rBtn.onclick = () => {
+                                app.mascotSay("ℹ️ You already claimed points for watching this video! Try exploring another one! 🌟", 5000);
+                            };
                         }
-                    }, 50);
+                    };
+                    // Run immediately after viewContainer append
+                    setTimeout(updateRewardBtn, 0);
+                    setTimeout(updateRewardBtn, 50);
                 }
 
                 // Video selection grid
@@ -1414,6 +1411,9 @@
                     rBtn.style.boxShadow = 'none';
                     rBtn.style.cursor = 'default';
                     rBtn.innerHTML = '✅ Already Watched (Points Claimed)';
+                    rBtn.onclick = () => {
+                        app.mascotSay("ℹ️ You already claimed points for watching this video! Try exploring another one! 🌟", 5000);
+                    };
                 }
             }
 
