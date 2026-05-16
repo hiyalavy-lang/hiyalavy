@@ -1070,14 +1070,15 @@
                         thumbHtml = `<div style="height:140px; background:linear-gradient(135deg,#eff6ff,#dbeafe); display:flex; align-items:center; justify-content:center; font-size:4rem;">${isPdf ? '📄' : '📁'}</div>`;
                     }
 
+                    const filename = item.file_url ? item.file_url.split('/').pop() : 'download';
                     card.innerHTML = `
                         ${thumbHtml}
                         <div style="padding:20px;">
                             <div style="font-size:1.2rem; font-weight:900; color:var(--border-dark); margin-bottom:6px">${item.title || 'Worksheet'}</div>
                             ${item.description ? `<div style="font-size:0.9rem; color:#64748b; font-weight:600; margin-bottom:14px; line-height:1.4">${item.description}</div>` : ''}
-                            ${fileUrl ? `<a href="${fileUrl}" target="_blank" rel="noopener" style="display:inline-block; padding:10px 22px; background:var(--primary); color:white; border-radius:15px; font-weight:900; font-size:0.95rem; border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); text-decoration:none; transition:all 0.2s;">
-                                ${isPdf ? '📥 Download PDF' : '🔍 View'}
-                            </a>` : ''}
+                            ${fileUrl ? `<button onclick="app.downloadExtra('${fileUrl}','${filename}')" style="display:inline-block; padding:10px 22px; background:var(--primary); color:white; border-radius:15px; font-weight:900; font-size:0.95rem; border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); cursor:pointer; transition:all 0.2s;">
+                                ${isPdf ? '📥 Download PDF' : '📥 Download'}
+                            </button>` : ''}
                         </div>`;
 
                     card.addEventListener('mouseenter', () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '8px 10px 0 var(--border-dark)'; });
@@ -1799,6 +1800,25 @@
                     c.style.cssText = `left: ${centerX}px; top: ${centerY}px; background: ${color}; --tx: ${tx}px; --ty: ${ty}px;`; fragment.appendChild(c);
                 }
                 container.appendChild(fragment); setTimeout(() => container.innerHTML = '', 2500);
+            }
+
+            async downloadExtra(url, filename) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Network error');
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = blobUrl;
+                    a.download = filename || 'download';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+                } catch (err) {
+                    // Fallback: open in new tab if fetch fails
+                    window.open(url, '_blank');
+                }
             }
 
             prevTracingLetter() {
