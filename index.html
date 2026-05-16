@@ -59,7 +59,9 @@
 
         <main id="view-container"></main>
 
-
+        <div class="app-helper" id="app-helper" style="display:none; pointer-events:none;">
+            <div class="app-bubble" id="app-bubble" style="pointer-events:auto;"></div>
+        </div>
 
         <div class="mystery-box-container" id="mystery-box-widget" style="display:none">
             <div class="mystery-box" id="mystery-box">🎁</div>
@@ -2144,7 +2146,10 @@
             }
 
             mascotSay(text, duration = 4000) {
+                const helper = document.getElementById('app-helper');
+                if (helper) helper.style.display = 'block';
                 const bubble = document.getElementById('app-bubble');
+                if (!bubble) return;
                 bubble.innerText = text;
                 bubble.classList.add('show');
                 clearTimeout(this.state.mascotTimer);
