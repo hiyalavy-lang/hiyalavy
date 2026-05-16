@@ -1692,6 +1692,7 @@
             checkBadges(kid) {
                 const earned = kid.badges || [];
                 const newBadges = [];
+                const stats = kid.stats || {};
                 
                 const award = (id) => { if (!earned.includes(id)) { earned.push(id); newBadges.push(id); } };
 
@@ -1706,6 +1707,21 @@
                 if (kid.points >= 3000) award(44); // Idea Spark
                 if (kid.points >= 5000) award(48); // Infinite Wisdom
 
+                // Activity & Module Milestones (matching getBadgeProgress)
+                if ((stats.totalTraces || 0) >= 5) award(2);
+                if ((stats.totalTraces || 0) >= 20) award(28);
+                if ((stats.totalQuizzes || 0) >= 10) award(3);
+                if (Object.keys(stats.wordSoundsListened || {}).length >= 10) award(4);
+                if ((stats.dhivehiTasks || 0) >= 20) award(5);
+                if ((stats.englishTasks || 0) >= 10) award(6);
+                if ((stats.arabicTasks || 0) >= 10) award(7);
+                if (Object.keys(stats.colorsUsed || {}).length >= 5) award(12);
+                if ((stats.wordCardsClicked || 0) >= 15) award(14);
+                if (this.state.dailyTasksCompleted >= 5) award(24);
+                if (Object.keys(stats.numbersClicked || {}).length >= 10) award(51);
+                if ((stats.numPoints || 0) >= 100) award(58);
+                if ((stats.numPoints || 0) >= 100) award(62);
+
                 // Other milestones
                 if (this.state.kids.length >= 2) award(45); // Team Player
                 if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) award(15); // Mystery Solver
@@ -1714,8 +1730,10 @@
                     kid.badges = earned;
                     setTimeout(() => {
                         const b = badges.find(x => x.id === newBadges[0]);
-                        this.mascotSay(`🎉 WOW! You earned the ${b.name} badge! ${b.icon}`, 5000);
-                        this.playSound('fanfare');
+                        if (b) {
+                            this.mascotSay(`🎉 WOW! You earned the ${b.name} badge! ${b.icon}`, 5000);
+                            this.playSound('fanfare');
+                        }
                     }, 2000);
                 }
             }
