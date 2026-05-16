@@ -131,6 +131,7 @@
                     { id: 'vocabulary', icon: '🖼️', label: 'Words', premium: true },
                     { id: 'numbers', icon: '🔢', label: 'Numbers', premium: true },
                     { id: 'quiz', icon: '⭐', label: 'Quiz', premium: true },
+                    { id: 'extra', icon: '📄', label: 'Extra', premium: false },
                     { id: 'hall', icon: '🏆', label: 'Hall', premium: true },
                     { id: 'badges', icon: '🏅', label: 'Badges', premium: true }
                 ];
@@ -154,6 +155,7 @@
                     customNav: JSON.parse(localStorage.getItem('thaana_nav')) || defaultNav,
                     customContent: JSON.parse(localStorage.getItem('thaana_content')) || content,
                     customFili: JSON.parse(localStorage.getItem('thaana_fili')) || filiData,
+                    customExtras: [],
                     mascotShowsToday: parseInt(localStorage.getItem('thaana_mascotShows')) || 0,
                     mascotLastDate: localStorage.getItem('thaana_mascotDate') || ''
                 };
@@ -265,6 +267,9 @@
 
                 const { data: fData } = await this.supabase.from('app_fili').select('*').order('order_index');
                 if (fData && fData.length > 0) this.state.customFili = fData;
+
+                const { data: eData } = await this.supabase.from('app_extras').select('*').order('order_index');
+                if (eData) this.state.customExtras = eData;
 
                 const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
                 if (cData && cData.length > 0) {
@@ -516,6 +521,7 @@
                     case 'hall': this.renderHallOfFame(); break;
                     case 'badges': this.renderBadges(); break;
                     case 'mystery-game': this.renderMysteryGame(); break;
+                    case 'extra': this.renderExtra(); break;
                 }
             }
 
@@ -1007,6 +1013,71 @@
                     grid.appendChild(card);
                 });
                 this.viewContainer.appendChild(grid);
+            }
+
+            renderExtra() {
+                const lang = this.state.language;
+                const items = (this.state.customExtras || []).filter(e => !e.category || e.category === 'all' || e.category === lang);
+
+                const container = document.createElement('div');
+                container.style.cssText = 'padding:2rem;';
+
+                const heading = document.createElement('div');
+                heading.style.cssText = 'text-align:center; margin-bottom:2rem;';
+                heading.innerHTML = `<div style="font-size:2.5rem; font-weight:900; color:var(--border-dark)">📄 Extra Resources</div>
+                    <div style="color:#64748b; font-weight:700; margin-top:8px">Worksheets & learning materials</div>`;
+                container.appendChild(heading);
+
+                if (!items.length) {
+                    const empty = document.createElement('div');
+                    empty.style.cssText = 'text-align:center; padding:60px 20px; color:#94a3b8; font-size:1.2rem; font-weight:800;';
+                    empty.innerHTML = `<div style="font-size:4rem; margin-bottom:15px">📋</div>No extra content yet!<br><span style="font-size:0.9rem; font-weight:600">Check back soon for worksheets and activities.</span>`;
+                    container.appendChild(empty);
+                    this.viewContainer.appendChild(container);
+                    return;
+                }
+
+                const grid = document.createElement('div');
+                grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:25px;';
+
+                items.forEach(item => {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background:white; border:4px solid var(--border-dark); border-radius:25px; box-shadow:6px 6px 0 var(--border-dark); overflow:hidden; transition:transform 0.2s, box-shadow 0.2s; cursor:pointer;';
+
+                    const isImg = item.file_url && /\.(png|jpg|jpeg|gif|webp)/i.test(item.file_url);
+                    const isPdf = item.file_url && /\.pdf/i.test(item.file_url);
+                    const fileUrl = item.file_url && this.supabase
+                        ? this.supabase.storage.from('extras').getPublicUrl(item.file_url).data.publicUrl
+                        : (item.file_url || '');
+
+                    let thumbHtml = '';
+                    if (item.thumbnail_url && this.supabase) {
+                        const thumbSrc = this.supabase.storage.from('extras').getPublicUrl(item.thumbnail_url).data.publicUrl;
+                        thumbHtml = `<img src="${thumbSrc}" style="width:100%; height:180px; object-fit:cover; display:block;">`;
+                    } else if (isImg) {
+                        thumbHtml = `<img src="${fileUrl}" style="width:100%; height:180px; object-fit:cover; display:block;">`;
+                    } else {
+                        thumbHtml = `<div style="height:140px; background:linear-gradient(135deg,#eff6ff,#dbeafe); display:flex; align-items:center; justify-content:center; font-size:4rem;">${isPdf ? '📄' : '📁'}</div>`;
+                    }
+
+                    card.innerHTML = `
+                        ${thumbHtml}
+                        <div style="padding:20px;">
+                            <div style="font-size:1.2rem; font-weight:900; color:var(--border-dark); margin-bottom:6px">${item.title || 'Worksheet'}</div>
+                            ${item.description ? `<div style="font-size:0.9rem; color:#64748b; font-weight:600; margin-bottom:14px; line-height:1.4">${item.description}</div>` : ''}
+                            ${fileUrl ? `<a href="${fileUrl}" target="_blank" rel="noopener" style="display:inline-block; padding:10px 22px; background:var(--primary); color:white; border-radius:15px; font-weight:900; font-size:0.95rem; border:3px solid var(--border-dark); box-shadow:3px 3px 0 var(--border-dark); text-decoration:none; transition:all 0.2s;">
+                                ${isPdf ? '📥 Download PDF' : '🔍 View'}
+                            </a>` : ''}
+                        </div>`;
+
+                    card.addEventListener('mouseenter', () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '8px 10px 0 var(--border-dark)'; });
+                    card.addEventListener('mouseleave', () => { card.style.transform = ''; card.style.boxShadow = '6px 6px 0 var(--border-dark)'; });
+
+                    grid.appendChild(card);
+                });
+
+                container.appendChild(grid);
+                this.viewContainer.appendChild(container);
             }
 
             renderFili() {

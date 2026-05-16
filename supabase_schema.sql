@@ -80,6 +80,19 @@ CREATE TABLE IF NOT EXISTS public.app_fili (
     order_index INTEGER DEFAULT 0
 );
 
+-- 7. Extra Resources (Worksheets, PDFs, etc.)
+CREATE TABLE IF NOT EXISTS public.app_extras (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    category TEXT DEFAULT 'all', -- 'all', 'dhivehi', 'english', 'arabic', 'numbers'
+    description TEXT,
+    file_url TEXT,
+    thumbnail_url TEXT,
+    order_index INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+
 -- Storage buckets (must be run in Supabase SQL Editor manually or via API)
 -- insert into storage.buckets (id, name, public) values ('slips', 'slips', true);
 -- insert into storage.buckets (id, name, public) values ('audio', 'audio', true);

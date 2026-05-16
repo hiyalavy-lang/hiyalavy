@@ -150,7 +150,6 @@
                     <button class="res-cat-tab active" onclick="switchResCat('dhivehi', this)">🇲🇻 Dhivehi</button>
                     <button class="res-cat-tab" onclick="switchResCat('english', this)">🇬🇧 English</button>
                     <button class="res-cat-tab" onclick="switchResCat('arabic', this)">🇸🇦 Arabic</button>
-                    <button class="res-cat-tab" onclick="switchResCat('engdhi', this)">🔤 Engdhi</button>
                     <button class="res-cat-tab" onclick="switchResCat('vocabulary', this)">🖼️ Words</button>
                     <button class="res-cat-tab" onclick="switchResCat('numbers', this)">🔢 Numbers</button>
                     <button class="res-cat-tab" onclick="switchResCat('fili', this)">✨ Fili</button>
@@ -270,6 +269,54 @@
                 <button class="admin-btn" style="width:100%" onclick="saveMascotTips()">SAVE MASCOT TIPS</button>
             </div>
 
+            <!-- EXTRAS MANAGER -->
+            <div class="admin-card">
+                <h2>EXTRA RESOURCES MANAGER 📄</h2>
+                <p style="color:#94a3b8; margin-bottom:20px; font-size:0.9rem">Upload worksheets, PDFs, and other files shown in the Extra tab. Set which language the resource appears in, or select "All" to show in every language.</p>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px; background:#0f172a; padding:20px; border-radius:16px; border:1px solid #334155">
+                    <div>
+                        <label class="res-label">Title</label>
+                        <input type="text" class="admin-input" id="extra-title" placeholder="e.g. Alphabet Tracing Sheet">
+                    </div>
+                    <div>
+                        <label class="res-label">Language Category</label>
+                        <select class="admin-input" id="extra-category">
+                            <option value="all">All Languages</option>
+                            <option value="dhivehi">Dhivehi</option>
+                            <option value="english">English</option>
+                            <option value="arabic">Arabic</option>
+                            <option value="numbers">Numbers</option>
+                        </select>
+                    </div>
+                    <div style="grid-column:1/-1">
+                        <label class="res-label">Description (optional)</label>
+                        <input type="text" class="admin-input" id="extra-description" placeholder="Short description of this resource">
+                    </div>
+                    <div>
+                        <label class="res-label">File (PDF, Image, etc.)</label>
+                        <div class="upload-row">
+                            <input type="text" class="admin-input" id="extra-file-url" placeholder="filename.pdf" style="margin:0">
+                            <button class="upload-btn" style="background:#4D96FF; color:white" onclick="extraTriggerUpload('file')">📤 Upload</button>
+                            <input type="file" id="extra-file-input" style="display:none" accept=".pdf,image/*" onchange="extraHandleUpload(this,'file')">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="res-label">Thumbnail (optional, shown as card cover)</label>
+                        <div class="upload-row">
+                            <input type="text" class="admin-input" id="extra-thumbnail-url" placeholder="thumb.jpg" style="margin:0">
+                            <button class="upload-btn" style="background:#6BCB77; color:white" onclick="extraTriggerUpload('thumbnail')">🖼️ Upload</button>
+                            <input type="file" id="extra-thumbnail-input" style="display:none" accept="image/*" onchange="extraHandleUpload(this,'thumbnail')">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="admin-btn" style="background:#22c55e; margin-bottom:24px" onclick="addExtra()">➕ ADD RESOURCE</button>
+
+                <div id="extras-list" style="display:flex; flex-direction:column; gap:12px"></div>
+                <button class="admin-btn" style="width:100%; margin-top:20px" onclick="saveExtras()">☁️ SAVE EXTRAS TO CLOUD</button>
+            </div>
+
             <div class="admin-card" style="margin-top: 30px; border-color: #ef4444;">
                 <h2 style="color: #ef4444;">DANGER ZONE ⚠️</h2>
                 <p style="margin: 15px 0; color: #94a3b8;">Revert all content, navigation, and settings to original defaults. This action cannot be undone.</p>
@@ -368,7 +415,131 @@
             await fetchNavTable();
             await fetchResources();
             await fetchMascotTips();
+            await fetchExtras();
         }
+
+        // ─── EXTRAS MANAGER ───────────────────────────────────────────────
+        window.adminExtras = [];
+
+        async function fetchExtras() {
+            if (!window.supabaseClient) return;
+            const { data } = await window.supabaseClient.from('app_extras').select('*').order('order_index');
+            window.adminExtras = data || [];
+            renderExtrasList();
+        }
+
+        function renderExtrasList() {
+            const list = document.getElementById('extras-list');
+            if (!list) return;
+            if (!window.adminExtras.length) {
+                list.innerHTML = '<div style="color:#64748b; font-size:0.9rem; padding:20px 0">No extras added yet. Use the form above to add one.</div>';
+                return;
+            }
+            list.innerHTML = window.adminExtras.map((e, i) => `
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:16px; display:flex; justify-content:space-between; align-items:center; gap:15px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:200px">
+                        <div style="font-weight:900; font-size:1rem; color:white">${e.title || 'Untitled'}</div>
+                        <div style="font-size:0.8rem; color:#64748b; margin-top:4px">${e.category === 'all' ? 'All Languages' : (e.category || '')} · ${e.file_url || 'No file'}</div>
+                        ${e.description ? `<div style="font-size:0.82rem; color:#94a3b8; margin-top:4px">${e.description}</div>` : ''}
+                    </div>
+                    <div style="display:flex; gap:8px; flex-shrink:0">
+                        <button class="admin-btn" style="background:#334155; padding:8px 14px;" onclick="editExtra(${i})">✏️ Edit</button>
+                        <button class="admin-btn" style="background:#ef4444; padding:8px 14px;" onclick="deleteExtra(${i})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addExtra() {
+            const title = document.getElementById('extra-title').value.trim();
+            const category = document.getElementById('extra-category').value;
+            const description = document.getElementById('extra-description').value.trim();
+            const file_url = document.getElementById('extra-file-url').value.trim();
+            const thumbnail_url = document.getElementById('extra-thumbnail-url').value.trim();
+
+            if (!title) return alert('Please enter a title for this resource.');
+
+            window.adminExtras.push({ title, category, description, file_url, thumbnail_url });
+            renderExtrasList();
+
+            // Clear form
+            document.getElementById('extra-title').value = '';
+            document.getElementById('extra-description').value = '';
+            document.getElementById('extra-file-url').value = '';
+            document.getElementById('extra-thumbnail-url').value = '';
+            document.getElementById('extra-category').value = 'all';
+        }
+
+        function editExtra(i) {
+            const e = window.adminExtras[i];
+            document.getElementById('extra-title').value = e.title || '';
+            document.getElementById('extra-description').value = e.description || '';
+            document.getElementById('extra-file-url').value = e.file_url || '';
+            document.getElementById('extra-thumbnail-url').value = e.thumbnail_url || '';
+            document.getElementById('extra-category').value = e.category || 'all';
+            window.adminExtras.splice(i, 1);
+            renderExtrasList();
+        }
+
+        function deleteExtra(i) {
+            if (!confirm('Delete this resource?')) return;
+            window.adminExtras.splice(i, 1);
+            renderExtrasList();
+        }
+
+        function extraTriggerUpload(type) {
+            document.getElementById(type === 'file' ? 'extra-file-input' : 'extra-thumbnail-input').click();
+        }
+
+        async function extraHandleUpload(input, type) {
+            const file = input.files[0];
+            if (!file || !window.supabaseClient) return;
+            const filename = 'extras/' + file.name.replace(/\s+/g, '_').toLowerCase();
+            const btn = input.previousElementSibling;
+            const origText = btn.textContent;
+            btn.textContent = '⏳';
+            try {
+                const { error } = await window.supabaseClient.storage.from('extras').upload(filename, file, { upsert: true });
+                if (error) throw error;
+                const fieldId = type === 'file' ? 'extra-file-url' : 'extra-thumbnail-url';
+                document.getElementById(fieldId).value = filename;
+                btn.textContent = '✅';
+                setTimeout(() => btn.textContent = origText, 2000);
+            } catch (err) {
+                btn.textContent = origText;
+                alert('Upload failed: ' + err.message);
+            }
+        }
+
+        async function saveExtras() {
+            if (!window.supabaseClient) return alert('Supabase not connected');
+            const btn = event.target; btn.innerText = 'SAVING...';
+            try {
+                // Delete all existing and re-insert to handle ordering/deletions cleanly
+                await window.supabaseClient.from('app_extras').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                if (window.adminExtras.length > 0) {
+                    const toSave = window.adminExtras.map((e, i) => ({
+                        ...(e.id ? { id: e.id } : {}),
+                        title:         e.title || '',
+                        category:      e.category || 'all',
+                        description:   e.description || '',
+                        file_url:      e.file_url || '',
+                        thumbnail_url: e.thumbnail_url || '',
+                        order_index:   i
+                    }));
+                    const { error } = await window.supabaseClient.from('app_extras').upsert(toSave);
+                    if (error) throw error;
+                }
+                btn.innerText = '☁️ SAVE EXTRAS TO CLOUD';
+                alert('Extra resources saved to cloud!');
+                await fetchExtras();
+            } catch (err) {
+                btn.innerText = '☁️ SAVE EXTRAS TO CLOUD';
+                alert('Failed to save: ' + err.message);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
 
         async function fetchPayments() {
             if (window.supabaseClient) {
