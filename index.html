@@ -788,12 +788,18 @@
             renderNav() {
                 if (!this.state.isLoggedIn || this.state.view === 'landing') { this.mainNav.innerHTML = ''; return; }
 
-                // Always enforce correct nav: remove engdhi, ensure extra exists
+                // Always enforce correct nav: remove engdhi, ensure extra and videos exist
                 let nav = (this.state.customNav || []).filter(item => item.id !== 'engdhi');
-                if (!nav.find(item => item.id === 'extra')) {
+                if (!nav.find(item => item.id === 'videos')) {
                     const quizIdx = nav.findIndex(item => item.id === 'quiz');
+                    const videosItem = { id: 'videos', icon: '🎬', label: 'Videos', premium: false };
+                    if (quizIdx >= 0) nav.splice(quizIdx + 1, 0, videosItem);
+                    else nav.push(videosItem);
+                }
+                if (!nav.find(item => item.id === 'extra')) {
+                    const vidIdx = nav.findIndex(item => item.id === 'videos');
                     const extraItem = { id: 'extra', icon: '📄', label: 'Extra', premium: false };
-                    if (quizIdx >= 0) nav.splice(quizIdx + 1, 0, extraItem);
+                    if (vidIdx >= 0) nav.splice(vidIdx + 1, 0, extraItem);
                     else nav.push(extraItem);
                 }
 

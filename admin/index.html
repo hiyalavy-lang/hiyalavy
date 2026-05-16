@@ -757,6 +757,19 @@
                     ];
                 }
             }
+            // Enforce videos tab existence in admin view as well
+            if (!window.adminNav.find(item => item.id === 'videos')) {
+                const quizIdx = window.adminNav.findIndex(item => item.id === 'quiz');
+                const videosItem = { id: 'videos', icon: '🎬', label: 'Videos', premium: false, order_index: quizIdx >= 0 ? quizIdx + 1 : 10 };
+                if (quizIdx >= 0) window.adminNav.splice(quizIdx + 1, 0, videosItem);
+                else window.adminNav.push(videosItem);
+            }
+            if (!window.adminNav.find(item => item.id === 'extra')) {
+                const vidIdx = window.adminNav.findIndex(item => item.id === 'videos');
+                const extraItem = { id: 'extra', icon: '📄', label: 'Extra', premium: false, order_index: vidIdx >= 0 ? vidIdx + 1 : 11 };
+                if (vidIdx >= 0) window.adminNav.splice(vidIdx + 1, 0, extraItem);
+                else window.adminNav.push(extraItem);
+            }
             renderNavTable();
         }
 
