@@ -1474,6 +1474,12 @@
             renderTracing() {
                 const items = this.state.customContent[this.state.language] || [];
                 if (!items.length) return;
+                let fontFamily = "'Fredoka', Arial, sans-serif";
+                if (this.state.language === 'dhivehi') {
+                    fontFamily = "'Faruma', 'MV Boli', sans-serif";
+                } else if (this.state.language === 'arabic') {
+                    fontFamily = "Arial, sans-serif";
+                }
                 this.viewContainer.innerHTML = `
                     <div class="tracing-container" style="padding:2rem; text-align:center">
                         <div class="letter-selector" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px">
@@ -1481,7 +1487,7 @@
                                 const isEnglish = this.state.language === 'english' || item.category === 'english';
                                 const display = (isEnglish && item.letter.length === 1) ? item.letter.toUpperCase() + item.letter.toLowerCase() : item.letter;
                                 const isDual = display.length > 1;
-                                return `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')" style="min-width:60px; font-size:${isDual ? '1.2rem' : '1.5rem'}">${display}</button>`;
+                                return `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')" style="min-width:60px; font-size:${isDual ? '1.2rem' : '1.5rem'}; font-family:${fontFamily}">${display}</button>`;
                             }).join('')}
                         </div>
                         <div id="canvas-area"></div>
@@ -1553,10 +1559,17 @@
                 
                 const ghostSpacing = isDual ? '0.22em' : 'normal';
 
+                let fontFamily = "'Fredoka', Arial, sans-serif";
+                if (this.state.language === 'dhivehi') {
+                    fontFamily = "'Faruma', 'MV Boli', sans-serif";
+                } else if (this.state.language === 'arabic') {
+                    fontFamily = "Arial, sans-serif";
+                }
+
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
-                    <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden">
-                        <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:${ghostFontSize}; letter-spacing:${ghostSpacing}; opacity:0.13; pointer-events:none; z-index:1; font-family:'Fredoka',sans-serif; line-height:1; white-space:nowrap">${displayLetter}</div>
+                    <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s">
+                        <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:${ghostFontSize}; letter-spacing:${ghostSpacing}; opacity:0.13; pointer-events:none; z-index:1; font-family:${fontFamily}; line-height:1; white-space:nowrap">${displayLetter}</div>
                         <canvas id="tracing-canvas" width="400" height="400" style="position:absolute; top:0; left:0; z-index:2; width:100%; height:100%; cursor:crosshair; touch-action:none"></canvas>
                     </div>
                     <div style="margin:12px auto; max-width:400px">
@@ -1649,7 +1662,13 @@
                             if (ghostEl) ghostEl.innerHTML = `<img src="${img.src}" style="width:70%; height:70%; object-fit:contain; opacity:0.3">`;
                         };
                     } else {
-                        rCtx.font = `bold ${displaySize}px Fredoka, Arial, sans-serif`;
+                        let fontFamily = "'Fredoka', Arial, sans-serif";
+                        if (this.state.language === 'dhivehi') {
+                            fontFamily = "'Faruma', 'MV Boli', sans-serif";
+                        } else if (this.state.language === 'arabic') {
+                            fontFamily = "Arial, sans-serif";
+                        }
+                        rCtx.font = `bold ${displaySize}px ${fontFamily}`;
                         rCtx.textAlign = 'center';
                         rCtx.textBaseline = 'middle';
                         if (rCtx.letterSpacing !== undefined) {
@@ -1720,27 +1739,106 @@
                     return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
                 };
 
+                const isCursorInsideLetter = (cx, cy, tolerance = 14) => {
+                    if (!this.referencePixels) return true; // fallback if reference pixels not loaded yet
+                    const cxRound = Math.round(cx);
+                    const cyRound = Math.round(cy);
+                    
+                    // Direct hit
+                    if (this.referencePixels.has(cyRound * 400 + cxRound)) return true;
+                    
+                    // Neighborhood check
+                    const tolSq = tolerance * tolerance;
+                    for (let dx = -tolerance; dx <= tolerance; dx += 2) {
+                        for (let dy = -tolerance; dy <= tolerance; dy += 2) {
+                            if (dx * dx + dy * dy <= tolSq) {
+                                const px = cxRound + dx;
+                                const py = cyRound + dy;
+                                if (px >= 0 && px < 400 && py >= 0 && py < 400) {
+                                    if (this.referencePixels.has(py * 400 + px)) {
+                                        return true; // Found a letter pixel nearby
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return false; // No letter pixels nearby, definitely outside
+                };
+
+                const triggerOutsideWarning = (msgType) => {
+                    this.playSound('wrong');
+                    
+                    // Flash the tracing box border/shadow red
+                    const box = document.getElementById('tracing-box');
+                    if (box) {
+                        box.style.borderColor = '#ef4444';
+                        box.style.boxShadow = '15px 15px 0 #ef4444';
+                        setTimeout(() => {
+                            box.style.borderColor = 'var(--border-dark)';
+                            box.style.boxShadow = '15px 15px 0 var(--border-dark)';
+                        }, 500);
+                    }
+                    
+                    // Set feedback message
+                    const fb = document.getElementById('tracing-feedback');
+                    let msg = "";
+                    if (msgType === 'start') {
+                        msg = "Start inside the letter! ✏️";
+                        if (this.state.language === 'dhivehi') msg = "އަކުރުގެ އެތެރެއިން ފަށާ! ✏️";
+                        else if (this.state.language === 'arabic') msg = "ابدأ من داخل الحرف! ✏️";
+                    } else {
+                        msg = "Oops! Stay inside the lines! ✏️";
+                        if (this.state.language === 'dhivehi') msg = "އައުޗް! ރޮނގުން ބޭރަށް ނުދޭ! ✏️";
+                        else if (this.state.language === 'arabic') msg = "عذراً! ابقَ داخل الخطوط! ✏️";
+                    }
+                    if (fb) fb.innerHTML = `<span style="color:#ef4444">${msg}</span>`;
+                };
+
                 const start = (e) => {
                     e.preventDefault(); 
                     rect = canvas.getBoundingClientRect(); 
                     scaleX = 400 / rect.width; scaleY = 400 / rect.height;
+                    const p = pos(e);
+                    
+                    if (!isCursorInsideLetter(p.x, p.y)) {
+                        triggerOutsideWarning('start');
+                        return;
+                    }
+                    
                     drawing = true;
-                    const p = pos(e); lx = p.x; ly = p.y;
+                    lx = p.x; ly = p.y;
                     ctx.beginPath(); ctx.moveTo(lx, ly);
                     this.trackBadgeMetric('colorsUsed', this.tracingColor);
+                    
+                    // Clear any previous error message on successful start
+                    const fb = document.getElementById('tracing-feedback');
+                    if (fb) fb.innerHTML = '';
                 };
 
                 const move = (e) => {
                     if (!drawing) return; e.preventDefault();
                     const p = pos(e);
-                    ctx.lineTo(p.x, p.y); ctx.stroke();
+                    
                     const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 8)); 
                     const br = Math.ceil(this.tracingBrushSize / 2);
                     const brSq = br * br;
                     
+                    let wentOutside = false;
+                    let lastBx = lx;
+                    let lastBy = ly;
+                    
                     for (let s = 0; s <= steps; s++) {
                         const bx = Math.round(lx + (p.x - lx) * s / steps);
                         const by = Math.round(ly + (p.y - ly) * s / steps);
+                        
+                        if (!isCursorInsideLetter(bx, by)) {
+                            wentOutside = true;
+                            break;
+                        }
+                        
+                        lastBx = bx;
+                        lastBy = by;
+                        
                         for (let dx = -br; dx <= br; dx += 2) { 
                             for (let dy = -br; dy <= br; dy += 2) {
                                 if (dx*dx + dy*dy <= brSq) {
@@ -1758,6 +1856,16 @@
                             }
                         }
                     }
+                    
+                    if (wentOutside) {
+                        ctx.lineTo(lastBx, lastBy);
+                        ctx.stroke();
+                        drawing = false;
+                        triggerOutsideWarning('move');
+                        return;
+                    }
+                    
+                    ctx.lineTo(p.x, p.y); ctx.stroke();
                     lx = p.x; ly = p.y;
                     
                     const now = Date.now();
