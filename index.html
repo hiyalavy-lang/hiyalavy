@@ -130,7 +130,7 @@
                     { id: 'vocabulary', icon: '🖼️', label: 'Words', premium: true },
                     { id: 'numbers', icon: '🔢', label: 'Numbers', premium: true },
                     { id: 'quiz', icon: '⭐', label: 'Quiz', premium: true },
-                    { id: 'extra', icon: '📄', label: 'Extra', premium: false },
+                    { id: 'extra', icon: '📄', label: 'Extra', premium: true },
                     { id: 'hall', icon: '🏆', label: 'Hall', premium: true },
                     { id: 'badges', icon: '🏅', label: 'Badges', premium: true }
                 ];
@@ -542,7 +542,7 @@
             }
 
             switchView(view) {
-                const premiumViews = ['fili', 'tracing', 'vocabulary', 'quiz', 'hall', 'badges', 'mystery-game'];
+                const premiumViews = ['fili', 'tracing', 'vocabulary', 'quiz', 'hall', 'badges', 'mystery-game', 'extra', 'videos'];
                 if (premiumViews.includes(view) && !this.state.isPremium) {
                     this.showUpgradePopup();
                     return;
@@ -806,15 +806,23 @@
 
                 // Always enforce correct nav: remove engdhi, ensure extra and videos exist
                 let nav = (this.state.customNav || []).filter(item => item.id !== 'engdhi');
+                
+                // Enforce premium state for extra and videos
+                nav.forEach(item => {
+                    if (item.id === 'extra' || item.id === 'videos') {
+                        item.premium = true;
+                    }
+                });
+
                 if (!nav.find(item => item.id === 'videos')) {
                     const quizIdx = nav.findIndex(item => item.id === 'quiz');
-                    const videosItem = { id: 'videos', icon: '🎬', label: 'Videos', premium: false };
+                    const videosItem = { id: 'videos', icon: '🎬', label: 'Videos', premium: true };
                     if (quizIdx >= 0) nav.splice(quizIdx + 1, 0, videosItem);
                     else nav.push(videosItem);
                 }
                 if (!nav.find(item => item.id === 'extra')) {
                     const vidIdx = nav.findIndex(item => item.id === 'videos');
-                    const extraItem = { id: 'extra', icon: '📄', label: 'Extra', premium: false };
+                    const extraItem = { id: 'extra', icon: '📄', label: 'Extra', premium: true };
                     if (vidIdx >= 0) nav.splice(vidIdx + 1, 0, extraItem);
                     else nav.push(extraItem);
                 }
@@ -1252,7 +1260,7 @@
                         <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; background:#0f172a; pointer-events:none;">
                             <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#64748b; font-weight:800; font-size:1.2rem;">⏳ Loading Video Player...</div>
                             <iframe id="yt-player-iframe" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; z-index:1; pointer-events:none;" 
-                                src="https://www.youtube-nocookie.com/embed/${activeVid.youtube_id}?enablejsapi=1&autoplay=1&modestbranding=1&rel=0&showinfo=0&fs=0&controls=0&disablekb=1&iv_load_policy=3&playsinline=1" 
+                                src="https://www.youtube-nocookie.com/embed/${activeVid.youtube_id}?enablejsapi=1&autoplay=1&modestbranding=1&rel=0&showinfo=0&fs=0&controls=0&disablekb=1&iv_load_policy=3&playsinline=1&cc_load_policy=1" 
                                 sandbox="allow-scripts allow-same-origin allow-presentation"
                                 title="${activeVid.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
                             </iframe>
@@ -1613,15 +1621,19 @@
                 const rCtx = ref.getContext('2d');
 
                 const draw = () => {
-                    const ghostEl = document.querySelector('#canvas-area [style*="opacity:0.13"]');
-                    const wrapperEl = document.querySelector('#canvas-area .canvas-wrapper');
+                    const ghostEl = document.getElementById('ghost-letter');
+                    const wrapperEl = document.getElementById('tracing-box');
 
                     let fontSize = 230; 
                     if (ghostEl && wrapperEl) {
                         const wrapperRect = wrapperEl.getBoundingClientRect();
-                        const scale = 400 / wrapperRect.width; 
-                        const cssFont = parseFloat(getComputedStyle(ghostEl).fontSize);
-                        fontSize = cssFont * scale;
+                        if (wrapperRect.width > 0) {
+                            const scale = 400 / wrapperRect.width; 
+                            const cssFont = parseFloat(getComputedStyle(ghostEl).fontSize);
+                            if (!isNaN(cssFont) && cssFont > 0) {
+                                fontSize = cssFont * scale;
+                            }
+                        }
                     }
 
                     rCtx.clearRect(0, 0, 400, 400);
@@ -1739,7 +1751,7 @@
                     return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
                 };
 
-                const isCursorInsideLetter = (cx, cy, tolerance = 14) => {
+                const isCursorInsideLetter = (cx, cy, tolerance = 24) => {
                     if (!this.referencePixels) return true; // fallback if reference pixels not loaded yet
                     const cxRound = Math.round(cx);
                     const cyRound = Math.round(cy);
