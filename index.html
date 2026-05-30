@@ -16,6 +16,57 @@
         .hall-container, .fame-list { touch-action: pan-y; }
 
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* === Tracing Enhancement Animations === */
+        @keyframes guidePulse {
+            0%   { transform: translate(-50%,-50%) scale(1);   opacity: 0.9; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+            50%  { transform: translate(-50%,-50%) scale(1.35); opacity: 1;   box-shadow: 0 0 0 14px rgba(34,197,94,0); }
+            100% { transform: translate(-50%,-50%) scale(1);   opacity: 0.9; box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        }
+        @keyframes hintDraw {
+            0%   { stroke-dashoffset: var(--path-len); opacity: 0.7; }
+            80%  { stroke-dashoffset: 0;               opacity: 0.5; }
+            100% { stroke-dashoffset: 0;               opacity: 0;   }
+        }
+        @keyframes borderFlash {
+            0%   { border-color: #ef4444; box-shadow: 15px 15px 0 #ef4444, 0 0 20px rgba(239,68,68,0.35); }
+            100% { border-color: var(--border-dark); box-shadow: 15px 15px 0 var(--border-dark); }
+        }
+        @keyframes progressPop {
+            0%   { transform: scaleY(1);   }
+            40%  { transform: scaleY(1.35); }
+            100% { transform: scaleY(1);   }
+        }
+        @keyframes hintFadeIn  { from { opacity:0; } to { opacity:1; } }
+        @keyframes hintFadeOut { from { opacity:1; } to { opacity:0; } }
+
+        .tracing-guide-dot {
+            position: absolute; width: 22px; height: 22px;
+            border-radius: 50%; background: #22c55e;
+            border: 3px solid white;
+            pointer-events: none; z-index: 10;
+            animation: guidePulse 1.2s ease-in-out infinite;
+            filter: drop-shadow(0 0 6px rgba(34,197,94,0.6));
+            transition: left 0.15s ease, top 0.15s ease;
+        }
+        .tracing-hint-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            z-index: 5; pointer-events: none;
+            animation: hintFadeIn 0.4s ease;
+        }
+        .tracing-hint-overlay.fade-out {
+            animation: hintFadeOut 0.6s ease forwards;
+        }
+        #tracing-box.border-flash {
+            animation: borderFlash 0.5s ease forwards;
+        }
+        #accuracy-fill.pop {
+            animation: progressPop 0.3s ease;
+        }
+        .tracing-feedback-msg {
+            animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
         .profile-hub-pill { display: flex; align-items: center; gap: 12px; background: white; border: 3px solid var(--border-dark); border-radius: 50px; padding: 6px 16px 6px 8px; cursor: pointer; transition: all 0.2s; position: relative; box-shadow: 0 4px 0 var(--border-dark); }
         .profile-hub-pill:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--border-dark); }
         .hub-avatar { width: 42px; height: 42px; background: var(--warning); border-radius: 50%; border: 3px solid var(--border-dark); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
@@ -187,7 +238,123 @@
                 this.initSeasonAndResets();
                 this.render();
                 this.initSupabase();
+                // Active time tracker & screen-time manager loop
+                setInterval(() => this.tick(), 1000);
             }
+
+            tick() {
+                if (!this.state.isLoggedIn || !this.state.kids) return;
+                const activeKid = this.state.kids[this.state.activeKidIndex];
+                if (!activeKid) return;
+
+                // 1. Screen Time Manager Countdown
+                // Reset daily screen time if day changed
+                const todayStr = new Date().toDateString();
+                const lastDaily = localStorage.getItem('thaana_lastDailyReset') || '';
+                if (lastDaily !== todayStr) {
+                    this.state.kids.forEach(k => {
+                        if (k.stats && k.stats.screenTimeLimit) {
+                            k.stats.screenTimeRemaining = k.stats.screenTimeLimit * 60;
+                        }
+                    });
+                }
+
+                if (activeKid.stats && activeKid.stats.screenTimeLimit) {
+                    if (activeKid.stats.screenTimeRemaining === undefined || activeKid.stats.screenTimeRemaining === null) {
+                        activeKid.stats.screenTimeRemaining = activeKid.stats.screenTimeLimit * 60;
+                    }
+                    if (activeKid.stats.screenTimeRemaining > 0) {
+                        if (document.visibilityState === 'visible' && !['landing', 'login'].includes(this.state.view) && !this.state.screenTimeLocked) {
+                            activeKid.stats.screenTimeRemaining--;
+                        }
+                    } else {
+                        this.lockScreen();
+                    }
+                }
+
+                // 2. Active Time Spent Tracking per language
+                if (document.visibilityState === 'visible' && !['landing', 'login'].includes(this.state.view) && !this.state.screenTimeLocked) {
+                    if (!activeKid.stats) activeKid.stats = {};
+                    if (!activeKid.stats.timeSpent) activeKid.stats.timeSpent = { dhivehi: 0, english: 0, arabic: 0, numbers: 0 };
+                    
+                    const curLang = this.state.language || 'dhivehi';
+                    if (activeKid.stats.timeSpent[curLang] === undefined) {
+                        activeKid.stats.timeSpent[curLang] = 0;
+                    }
+                    activeKid.stats.timeSpent[curLang]++;
+
+                    // Periodically sync progress
+                    this.state.syncCounter = (this.state.syncCounter || 0) + 1;
+                    if (this.state.syncCounter >= 20) {
+                        this.syncKidProgress(this.state.activeKidIndex);
+                        this.state.syncCounter = 0;
+                    }
+                }
+            }
+
+            lockScreen() {
+                this.state.screenTimeLocked = true;
+                if (document.getElementById('screen-time-lock-overlay')) return;
+
+                const overlay = document.createElement('div');
+                overlay.id = 'screen-time-lock-overlay';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0; left: 0; width: 100vw; height: 100vh;
+                    background: radial-gradient(circle, #1e1b4b, #030712);
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    z-index: 100000; color: white; text-align: center; padding: 20px;
+                    font-family: 'Fredoka', 'Faruma', sans-serif;
+                `;
+
+                overlay.innerHTML = `
+                    <div style="max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 24px; animation: slideDown 0.5s ease-out;">
+                        <div class="lock-mascot-container" style="animation: mascot-float 5s ease-in-out infinite;">
+                            <img src="assets/mascot_hug.png" style="width: 180px; filter: drop-shadow(0 10px 25px rgba(0,0,0,0.5));" onerror="this.src='https://placehold.co/180x180?text=😴'">
+                        </div>
+                        <div style="font-size: 4.5rem; line-height: 1; margin: 10px 0;">😴💤</div>
+                        <h2 style="font-size: 2.5rem; font-weight: 900; color: var(--warning); text-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                            Time to Sleep!
+                        </h2>
+                        <p style="font-size: 1.5rem; font-weight: 800; line-height: 1.5; color: #cbd5e1; direction: ltr; margin: 0;">
+                            "Our friend is getting tired! Let's play again tomorrow!"
+                        </p>
+                        <p style="font-size: 1.2rem; font-weight: 700; color: #818cf8; margin-top: -10px; margin-bottom: 20px;">
+                            އަހަރެމެންގެ އެކުވެރިޔާ ވަރުބަލިވެއްޖެ! މާދަމާ އަލުން ކުޅެލަމާ!
+                        </p>
+                        <button onclick="app.showUnlockPasscode()" style="background: rgba(255,255,255,0.08); border: 3px dashed rgba(255,255,255,0.25); color: #cbd5e1; padding: 12px 24px; border-radius: 18px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                            🔑 Parents: Unlock Screen
+                        </button>
+                    </div>
+                `;
+
+                document.body.appendChild(overlay);
+                this.playSound('wrong');
+            }
+
+            showUnlockPasscode() {
+                const pin = prompt("Enter Parent PIN to unlock screen:");
+                if (pin === this.state.parentPin) {
+                    this.unlockScreen();
+                } else if (pin !== null) {
+                    alert("Incorrect PIN!");
+                }
+            }
+
+            unlockScreen() {
+                this.state.screenTimeLocked = false;
+                const overlay = document.getElementById('screen-time-lock-overlay');
+                if (overlay) overlay.remove();
+
+                const activeKid = this.state.kids[this.state.activeKidIndex];
+                if (activeKid && activeKid.stats) {
+                    // Reset or extend to another 15 mins
+                    activeKid.stats.screenTimeRemaining = 15 * 60;
+                    this.syncKidProgress(this.state.activeKidIndex);
+                    this.mascotSay("🔓 Screen unlocked! 15 more minutes granted.", 5000);
+                }
+            }
+
 
             initMascotTracking() {
                 const today = new Date().toDateString();
@@ -542,7 +709,7 @@
             }
 
             switchView(view) {
-                const premiumViews = ['fili', 'tracing', 'vocabulary', 'quiz', 'hall', 'badges', 'mystery-game', 'extra', 'videos'];
+                const premiumViews = ['fili', 'tracing', 'vocabulary', 'quiz', 'hall', 'badges', 'mystery-game', 'extra', 'videos', 'coloring'];
                 if (premiumViews.includes(view) && !this.state.isPremium) {
                     this.showUpgradePopup();
                     return;
@@ -605,6 +772,7 @@
                     case 'badges': this.renderBadges(); break;
                     case 'mystery-game': this.renderMysteryGame(); break;
                     case 'extra': this.renderExtra(); break;
+                    case 'coloring': this.renderColoring(); break;
                 }
             }
 
@@ -804,12 +972,12 @@
             renderNav() {
                 if (!this.state.isLoggedIn || this.state.view === 'landing') { this.mainNav.innerHTML = ''; return; }
 
-                // Always enforce correct nav: remove engdhi, ensure extra and videos exist
+                // Always enforce correct nav: remove engdhi, ensure extra, videos and coloring exist
                 let nav = (this.state.customNav || []).filter(item => item.id !== 'engdhi');
                 
-                // Enforce premium state for extra and videos
+                // Enforce premium state
                 nav.forEach(item => {
-                    if (item.id === 'extra' || item.id === 'videos') {
+                    if (item.id === 'extra' || item.id === 'videos' || item.id === 'coloring') {
                         item.premium = true;
                     }
                 });
@@ -825,6 +993,12 @@
                     const extraItem = { id: 'extra', icon: '📄', label: 'Extra', premium: true };
                     if (vidIdx >= 0) nav.splice(vidIdx + 1, 0, extraItem);
                     else nav.push(extraItem);
+                }
+                if (!nav.find(item => item.id === 'coloring')) {
+                    const extraIdx = nav.findIndex(item => item.id === 'extra');
+                    const coloringItem = { id: 'coloring', icon: '🎨', label: 'Coloring', premium: true };
+                    if (extraIdx >= 0) nav.splice(extraIdx + 1, 0, coloringItem);
+                    else nav.push(coloringItem);
                 }
 
                 const navItems = nav.map(item => {
@@ -858,6 +1032,7 @@
                     'Words': { dhivehi: 'ބަސްތައް', english: 'Words' },
                     'Extra': { dhivehi: 'އިތުރު', english: 'Extra' },
                     'Videos': { dhivehi: 'ވީޑިއޯ', english: 'Videos' },
+                    'Coloring': { dhivehi: 'ކުލަޖެއްސުން', english: 'Coloring' },
                     'Quiz': { dhivehi: 'ކުއިޒް', english: 'Quiz' },
                     'Hall': { dhivehi: 'ޝަރަފް', english: 'Hall' },
                     'Badges': { dhivehi: 'ބެޖް', english: 'Badges' },
@@ -937,34 +1112,260 @@
 
                 const dropdown = document.createElement('div');
                 dropdown.id = 'settings-dropdown';
-                dropdown.style.cssText = `position:absolute; top:80px; right:20px; width:min(400px, 95vw); background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 15px 40px rgba(0,0,0,0.15); z-index:5000; padding:25px; overflow-y:auto; max-height:80vh`;
-                
-                dropdown.innerHTML = `
-                        <h2 style="font-size:1.8rem; margin-bottom:20px; display:flex; align-items:center; gap:12px; color:var(--teal)"><span style="font-size:2rem">⚙️</span> ${this.t('Settings')}</h2>
-                        <div class="settings-group"><label class="settings-label">${this.t('Security (Parent PIN)')}</label><div style="display:flex; gap:10px"><input type="password" class="settings-input" id="new-pin" placeholder="New 4-digit PIN" style="margin-bottom:0"><button class="start-btn" style="padding:10px 20px; font-size:1rem; background:var(--teal)" onclick="app.updatePin()">${this.t('Save')}</button></div></div>
-                        <div class="settings-group"><label class="settings-label">App Language</label>
-                            <div class="lang-select-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-                                <button class="lang-opt ${this.state.language === 'dhivehi' ? 'active' : ''}" onclick="app.updateLanguage('dhivehi')">ދިވެހި</button>
-                                <button class="lang-opt ${this.state.language === 'english' ? 'active' : ''}" onclick="app.updateLanguage('english')">English ${!this.state.isPremium ? '🔒' : ''}</button>
-                                <button class="lang-opt ${this.state.language === 'arabic' ? 'active' : ''}" onclick="app.updateLanguage('arabic')">العربية ${!this.state.isPremium ? '🔒' : ''}</button>
-                                <button class="lang-opt ${this.state.language === 'numbers' ? 'active' : ''}" onclick="app.updateLanguage('numbers')" style="grid-column: span 2">Numbers ${!this.state.isPremium ? '🔒' : ''}</button>
-                            </div>
-                        </div>
-                        <div class="settings-group"><label class="settings-label">Profiles</label><div id="profile-edit-list"></div><button class="nav-btn" style="width:100%; justify-content:center; margin-top:10px" onclick="app.addNewKid()">➕ Add Kid</button></div>
+                dropdown.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: min(600px, 95vw);
+                    background: white;
+                    border: 6px solid var(--border-dark);
+                    border-radius: 40px;
+                    box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+                    z-index: 9000;
+                    padding: 30px;
+                    overflow-y: auto;
+                    max-height: 85vh;
+                    animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
                 `;
+
+                this.state.activeSettingsTab = this.state.activeSettingsTab || 'general';
+                this.state.editingKidIndex = this.state.editingKidIndex || 0;
+
+                this.renderSettingsContent(dropdown);
                 document.body.appendChild(dropdown);
-                this.renderProfileEdits();
-                
-                // Close when clicking outside
+
+                // Close when clicking outside modal container
                 setTimeout(() => {
                     const closer = (e) => {
-                        if (!dropdown.contains(e.target) && !e.target.closest('#profile-hub-container')) {
-                            dropdown.remove();
+                        const dd = document.getElementById('settings-dropdown');
+                        if (dd && !dd.contains(e.target) && !e.target.closest('#profile-hub-container') && !e.target.closest('.modal-close')) {
+                            dd.remove();
                             document.removeEventListener('click', closer);
                         }
                     };
                     document.addEventListener('click', closer);
                 }, 100);
+            }
+
+            renderSettingsContent(dropdown) {
+                const activeTab = this.state.activeSettingsTab || 'general';
+                
+                // Ensure timeSpent structure is ready for all kids
+                this.state.kids.forEach(k => {
+                    if (!k.stats) k.stats = {};
+                    if (!k.stats.timeSpent) k.stats.timeSpent = { dhivehi: 0, english: 0, arabic: 0, numbers: 0 };
+                });
+
+                dropdown.innerHTML = `
+                    <button class="modal-close" onclick="document.getElementById('settings-dropdown').remove()" style="top:15px; right:15px; width:40px; height:40px; border-radius:12px;">✖</button>
+                    <h2 style="font-size:2rem; margin-bottom:20px; display:flex; align-items:center; gap:12px; color:var(--teal)">
+                        <span>⚙️</span> ${this.t('Settings')}
+                    </h2>
+                    
+                    <!-- Tabs Header -->
+                    <div style="display:flex; border-bottom:4px solid var(--border-dark); margin-bottom:25px; gap:8px; flex-wrap:wrap;">
+                        <button class="settings-tab-btn" onclick="app.setSettingsTab('general')" style="flex:1; padding:10px; font-weight:800; font-size:1rem; border:3px solid var(--border-dark); border-bottom:none; border-top-left-radius:15px; border-top-right-radius:15px; background:${activeTab === 'general' ? 'var(--teal)' : '#f1f5f9'}; color:${activeTab === 'general' ? 'white' : 'var(--text-main)'}; cursor:pointer; transition:all 0.2s;">
+                            ⚙️ General
+                        </button>
+                        <button class="settings-tab-btn" onclick="app.setSettingsTab('profiles')" style="flex:1; padding:10px; font-weight:800; font-size:1rem; border:3px solid var(--border-dark); border-bottom:none; border-top-left-radius:15px; border-top-right-radius:15px; background:${activeTab === 'profiles' ? 'var(--teal)' : '#f1f5f9'}; color:${activeTab === 'profiles' ? 'white' : 'var(--text-main)'}; cursor:pointer; transition:all 0.2s;">
+                            👶 Profiles
+                        </button>
+                        <button class="settings-tab-btn" onclick="app.setSettingsTab('dashboard')" style="flex:1; padding:10px; font-weight:800; font-size:1rem; border:3px solid var(--border-dark); border-bottom:none; border-top-left-radius:15px; border-top-right-radius:15px; background:${activeTab === 'dashboard' ? 'var(--teal)' : '#f1f5f9'}; color:${activeTab === 'dashboard' ? 'white' : 'var(--text-main)'}; cursor:pointer; transition:all 0.2s;">
+                            📊 Parent Dashboard
+                        </button>
+                    </div>
+                    
+                    <!-- Tab Content Area -->
+                    <div id="settings-tab-content">
+                        ${this.getSettingsTabHtml(activeTab)}
+                    </div>
+                `;
+            }
+
+            setSettingsTab(tab) {
+                this.state.activeSettingsTab = tab;
+                const dropdown = document.getElementById('settings-dropdown');
+                if (dropdown) this.renderSettingsContent(dropdown);
+            }
+
+            setEditingKidIndex(index) {
+                this.state.editingKidIndex = parseInt(index);
+                const dropdown = document.getElementById('settings-dropdown');
+                if (dropdown) this.renderSettingsContent(dropdown);
+            }
+
+            getSettingsTabHtml(tab) {
+                if (tab === 'general') {
+                    return `
+                        <div class="settings-group">
+                            <label class="settings-label">App Language</label>
+                            <select class="settings-select" onchange="app.updateLanguage(this.value)" style="margin-bottom:20px;">
+                                <option value="dhivehi" ${this.state.language === 'dhivehi' ? 'selected' : ''}>ދިވެހި (Dhivehi)</option>
+                                <option value="english" ${this.state.language === 'english' ? 'selected' : ''}>English ${!this.state.isPremium ? '🔒' : ''}</option>
+                                <option value="arabic" ${this.state.language === 'arabic' ? 'selected' : ''}>العربية (Arabic) ${!this.state.isPremium ? '🔒' : ''}</option>
+                                <option value="numbers" ${this.state.language === 'numbers' ? 'selected' : ''}>Numbers ${!this.state.isPremium ? '🔒' : ''}</option>
+                            </select>
+                        </div>
+                        <div class="settings-group">
+                            <label class="settings-label">${this.t('Security (Parent PIN)')}</label>
+                            <div style="display:flex; gap:10px">
+                                <input type="password" class="settings-input" id="new-pin" placeholder="New 4-digit PIN" style="margin-bottom:0; flex:1;" maxlength="4">
+                                <button class="start-btn" style="padding:10px 20px; font-size:1.1rem; background:var(--teal); color:white; border-width:3px; box-shadow:3px 3px 0 var(--border-dark);" onclick="app.updatePin()">${this.t('Save')}</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (tab === 'profiles') {
+                    const editIndex = this.state.editingKidIndex >= this.state.kids.length ? 0 : this.state.editingKidIndex;
+                    return `
+                        <div class="settings-group">
+                            <label class="settings-label">Select Profile to Edit</label>
+                            <select class="settings-select" id="settings-kid-selector" onchange="app.setEditingKidIndex(this.value)" style="margin-bottom:15px;">
+                                ${this.state.kids.map((k, i) => `<option value="${i}" ${i === editIndex ? 'selected' : ''}>${k.avatar} ${k.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div id="settings-profile-editor">
+                            ${this.getProfileEditorHtml(editIndex)}
+                        </div>
+                        <button class="nav-btn" style="width:100%; justify-content:center; margin-top:20px; box-shadow:4px 4px 0 var(--border-dark);" onclick="app.addNewKid()">➕ Add New Profile</button>
+                    `;
+                } else if (tab === 'dashboard') {
+                    const activeKid = this.state.kids[this.state.activeKidIndex];
+                    const stats = activeKid.stats || {};
+                    const ts = stats.timeSpent || { dhivehi: 0, english: 0, arabic: 0, numbers: 0 };
+                    
+                    const formatTime = (sec) => {
+                        if (!sec) return '0m';
+                        const m = Math.floor(sec / 60);
+                        const s = sec % 60;
+                        return m > 0 ? `${m}m ${s}s` : `${s}s`;
+                    };
+
+                    const totalTime = (ts.dhivehi || 0) + (ts.english || 0) + (ts.arabic || 0) + (ts.numbers || 0);
+                    const dhivehiPct = totalTime ? Math.round(((ts.dhivehi || 0) / totalTime) * 100) : 0;
+                    const englishPct = totalTime ? Math.round(((ts.english || 0) / totalTime) * 100) : 0;
+                    const arabicPct = totalTime ? Math.round(((ts.arabic || 0) / totalTime) * 100) : 0;
+                    const numbersPct = totalTime ? Math.round(((ts.numbers || 0) / totalTime) * 100) : 0;
+
+                    const limit = stats.screenTimeLimit || 0;
+
+                    return `
+                        <!-- Screen-Time Manager Section -->
+                        <div class="settings-group" style="background:#f0fdf4; border:3px solid var(--secondary); padding:20px; border-radius:25px; margin-bottom:25px;">
+                            <h3 style="margin-bottom:10px; font-size:1.2rem; display:flex; align-items:center; gap:8px; color:#15803d;">
+                                ⏱️ Screen-Time Manager
+                            </h3>
+                            <p style="font-size:0.9rem; font-weight:700; color:#166534; margin-bottom:15px; line-height:1.4;">
+                                Set a timer to manage daily usage. Screen locks automatically when the time is up.
+                            </p>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <label style="font-weight:800; font-size:1rem; color:#166534;">Limit:</label>
+                                <select class="settings-select" onchange="app.updateScreenTimeLimit(this.value)" style="margin-bottom:0; flex:1; border-color:var(--secondary); background:white;">
+                                    <option value="0" ${limit === 0 ? 'selected' : ''}>No Limit</option>
+                                    <option value="5" ${limit === 5 ? 'selected' : ''}>5 Minutes</option>
+                                    <option value="10" ${limit === 10 ? 'selected' : ''}>10 Minutes</option>
+                                    <option value="15" ${limit === 15 ? 'selected' : ''}>15 Minutes</option>
+                                    <option value="30" ${limit === 30 ? 'selected' : ''}>30 Minutes</option>
+                                    <option value="45" ${limit === 45 ? 'selected' : ''}>45 Minutes</option>
+                                    <option value="60" ${limit === 60 ? 'selected' : ''}>60 Minutes</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Language Progress Matrix Section -->
+                        <div class="settings-group" style="background:#f8fafc; border:3px solid var(--border-dark); padding:20px; border-radius:25px;">
+                            <h3 style="margin-bottom:15px; font-size:1.2rem; display:flex; align-items:center; gap:8px; color:var(--text-main);">
+                                📊 Language Progress Matrix
+                            </h3>
+                            <p style="font-size:0.85rem; font-weight:700; color:#64748b; margin-bottom:20px; line-height:1.4;">
+                                Active time spent by <b>${activeKid.name}</b> in each learning category:
+                            </p>
+                            
+                            <div style="display:flex; flex-direction:column; gap:15px;">
+                                <!-- Dhivehi Bar -->
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-weight:800; font-size:0.9rem; margin-bottom:5px;">
+                                        <span style="color:#a855f7;">🇲🇻 ދިވެހި (Dhivehi)</span>
+                                        <span>${formatTime(ts.dhivehi)} (${dhivehiPct}%)</span>
+                                    </div>
+                                    <div style="background:#e2e8f0; height:18px; border-radius:9px; border:2px solid var(--border-dark); overflow:hidden;">
+                                        <div style="background:#c084fc; width:${dhivehiPct}%; height:100%; border-radius:7px; transition:width 0.5s ease-out;"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- English Bar -->
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-weight:800; font-size:0.9rem; margin-bottom:5px;">
+                                        <span style="color:#3b82f6;">🇬🇧 English</span>
+                                        <span>${formatTime(ts.english)} (${englishPct}%)</span>
+                                    </div>
+                                    <div style="background:#e2e8f0; height:18px; border-radius:9px; border:2px solid var(--border-dark); overflow:hidden;">
+                                        <div style="background:#60a5fa; width:${englishPct}%; height:100%; border-radius:7px; transition:width 0.5s ease-out;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Arabic Bar -->
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-weight:800; font-size:0.9rem; margin-bottom:5px;">
+                                        <span style="color:#22c55e;">🇸🇦 العربية (Arabic)</span>
+                                        <span>${formatTime(ts.arabic)} (${arabicPct}%)</span>
+                                    </div>
+                                    <div style="background:#e2e8f0; height:18px; border-radius:9px; border:2px solid var(--border-dark); overflow:hidden;">
+                                        <div style="background:#4ade80; width:${arabicPct}%; height:100%; border-radius:7px; transition:width 0.5s ease-out;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Numbers Bar -->
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-weight:800; font-size:0.9rem; margin-bottom:5px;">
+                                        <span style="color:#eab308;">🔢 Numbers</span>
+                                        <span>${formatTime(ts.numbers)} (${numbersPct}%)</span>
+                                    </div>
+                                    <div style="background:#e2e8f0; height:18px; border-radius:9px; border:2px solid var(--border-dark); overflow:hidden;">
+                                        <div style="background:#facc15; width:${numbersPct}%; height:100%; border-radius:7px; transition:width 0.5s ease-out;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top:20px; font-size:0.85rem; font-weight:800; text-align:center; color:#64748b; background:#f1f5f9; padding:10px; border-radius:12px; border:2px dashed #cbd5e1;">
+                                Total Learning Session Time: ${formatTime(totalTime)}
+                            </div>
+                        </div>
+                    `;
+                }
+                return '';
+            }
+
+            getProfileEditorHtml(i) {
+                const k = this.state.kids[i];
+                if (!k) return '';
+                return `
+                    <div class="profile-item" style="padding:20px; border-radius:25px; border:4px solid var(--border-dark); background:#f8fafc; position:relative;">
+                        <div style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:180px;">
+                                <label style="font-weight:800; font-size:0.9rem; color:#64748b; display:block; margin-bottom:5px;">Profile Name</label>
+                                <input type="text" class="settings-input" value="${k.name}" placeholder="Name" onchange="app.updateKidProp(${i}, 'name', this.value)" style="margin-bottom:0; width:100%;">
+                            </div>
+                            <div style="width:120px;">
+                                <label style="font-weight:800; font-size:0.9rem; color:#64748b; display:block; margin-bottom:5px;">Age Group</label>
+                                <select class="settings-select" onchange="app.updateKidProp(${i}, 'ageGroup', this.value)" style="margin-bottom:0; width:100%;">
+                                    <option value="toddler" ${k.ageGroup === 'toddler' ? 'selected' : ''}>2-3</option>
+                                    <option value="preschool" ${k.ageGroup === 'preschool' ? 'selected' : ''}>4-5</option>
+                                    <option value="junior" ${k.ageGroup === 'junior' ? 'selected' : ''}>6+</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-weight:800; font-size:0.9rem; color:#64748b; display:block; margin-bottom:8px;">Choose Avatar</label>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                ${(k.unlockedAvatars || ['👶', '👧', '👦']).map(a => `
+                                    <div onclick="app.updateKidProp(${i}, 'avatar', '${a}')" style="font-size:1.8rem; cursor:pointer; width:45px; height:45px; display:flex; align-items:center; justify-content:center; border-radius:12px; border:3px solid var(--border-dark); background:${k.avatar === a ? 'var(--warning)' : 'white'}; transition:all 0.1s;">${a}</div>
+                                `).join('')}
+                                <button onclick="app.removeKid(${i})" style="margin-left:auto; border:none; background:#fee2e2; width:45px; height:45px; border-radius:12px; cursor:pointer; font-size:1.4rem; border:3px solid #ef4444; display:flex; align-items:center; justify-content:center;">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
 
             updatePin() {
@@ -976,23 +1377,24 @@
                 } else alert("Please enter a valid 4-digit PIN!");
             }
 
-            renderProfileEdits() {
-                const list = document.getElementById('profile-edit-list');
-                list.innerHTML = this.state.kids.map((k, i) => `
-                    <div class="profile-item" style="padding:25px; border-radius:25px; border:4px solid var(--border-dark); background:white; margin-bottom:20px">
-                        <div style="display:flex; gap:15px; margin-bottom:15px">
-                            <input type="text" class="settings-input" value="${k.name}" placeholder="Name" onchange="app.updateKidProp(${i}, 'name', this.value)" style="flex:1; margin-bottom:0">
-                            <select class="settings-select" onchange="app.updateKidProp(${i}, 'ageGroup', this.value)" style="width:120px; margin-bottom:0">
-                                <option value="toddler" ${k.ageGroup === 'toddler' ? 'selected' : ''}>2-3</option>
-                                <option value="preschool" ${k.ageGroup === 'preschool' ? 'selected' : ''}>4-5</option>
-                                <option value="junior" ${k.ageGroup === 'junior' ? 'selected' : ''}>6+</option>
-                            </select>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
-                            ${k.unlockedAvatars.map(a => `<div onclick="app.updateKidProp(${i}, 'avatar', '${a}')" style="font-size:1.8rem; cursor:pointer; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:15px; border:3px solid var(--border-dark); background:${k.avatar === a ? 'var(--warning)' : '#f8f9fa'}">${a}</div>`).join('')}
-                            <button onclick="app.removeKid(${i})" style="margin-right:auto; border:none; background:#fee2e2; width:50px; height:50px; border-radius:15px; cursor:pointer; font-size:1.5rem; border:3px solid #ef4444">🗑️</button>
-                        </div>
-                    </div>`).join('');
+            updateScreenTimeLimit(minutes) {
+                const min = parseInt(minutes);
+                const activeKid = this.state.kids[this.state.activeKidIndex];
+                if (activeKid) {
+                    if (!activeKid.stats) activeKid.stats = {};
+                    activeKid.stats.screenTimeLimit = min;
+                    activeKid.stats.screenTimeRemaining = min ? min * 60 : null;
+                    this.syncKidProgress(this.state.activeKidIndex);
+                    
+                    const dropdown = document.getElementById('settings-dropdown');
+                    if (dropdown) this.renderSettingsContent(dropdown);
+
+                    if (min > 0) {
+                        this.mascotSay(`⏱️ Screen time set to ${min} minutes!`, 5000);
+                    } else {
+                        this.mascotSay(`⏱️ Screen time limit disabled.`, 5000);
+                    }
+                }
             }
 
             async addNewKid() { 
@@ -1014,13 +1416,27 @@
                         points: data.points, badges: [], 
                         unlockedAvatars: data.unlocked_avatars 
                     });
-                    this.renderProfileEdits();
+                    this.state.editingKidIndex = this.state.kids.length - 1;
+                    const dropdown = document.getElementById('settings-dropdown');
+                    if (dropdown) this.renderSettingsContent(dropdown);
                 }
             }
-            removeKid(i) { if (this.state.kids.length > 1) { this.state.kids.splice(i, 1); if (this.state.activeKidIndex >= i) this.state.activeKidIndex = 0; this.renderProfileEdits(); } else alert("At least one profile needed!"); }
+
+            removeKid(i) { 
+                if (this.state.kids.length > 1) { 
+                    this.state.kids.splice(i, 1); 
+                    if (this.state.activeKidIndex >= this.state.kids.length) this.state.activeKidIndex = 0; 
+                    this.state.editingKidIndex = 0;
+                    const dropdown = document.getElementById('settings-dropdown');
+                    if (dropdown) this.renderSettingsContent(dropdown);
+                    this.renderProfileHub();
+                } else alert("At least one profile needed!"); 
+            }
+
             updateKidProp(i, prop, val) {
                 this.state.kids[i][prop] = val;
-                this.renderProfileEdits();
+                const dropdown = document.getElementById('settings-dropdown');
+                if (dropdown) this.renderSettingsContent(dropdown);
                 this.renderProfileHub();
                 this.syncKidProgress(i);
             }
@@ -1032,9 +1448,9 @@
                 // Immediately switch to the relevant view for the new language
                 if (lang === 'numbers') this.state.view = 'soundboard';
                 
-                // Collapse settings after change
-                const existing = document.getElementById('settings-dropdown');
-                if (existing) existing.remove();
+                // Keep settings open but re-render content
+                const dropdown = document.getElementById('settings-dropdown');
+                if (dropdown) this.renderSettingsContent(dropdown);
                 
                 this.render();
             }
@@ -1187,6 +1603,319 @@
 
                 container.appendChild(grid);
                 this.viewContainer.appendChild(container);
+            }
+
+            renderColoring() {
+                const activeKid = this.state.kids[this.state.activeKidIndex];
+                
+                // Initialize default game state if needed
+                if (!this.state.coloringGame) {
+                    this.state.coloringGame = {
+                        selectedTemplate: 0,
+                        selectedColor: null,
+                        coloredRegions: {}, // regionId -> colorHex
+                        isCompleted: false
+                    };
+                }
+                const game = this.state.coloringGame;
+
+                const templates = [
+                    {
+                        name: "Cute Flower 🌸",
+                        legend: [
+                            { code: "ހ", name: "Yellow", hex: "#eab308" },
+                            { code: "ށ", name: "Red", hex: "#ef4444" },
+                            { code: "3", name: "Green", hex: "#22c55e" },
+                            { code: "5", name: "Brown", hex: "#78350f" }
+                        ],
+                        svg: `
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 400px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                                <!-- Stem -->
+                                <path id="stem" class="coloring-region" data-code="5" data-correct="#78350f" d="M190,240 L210,240 L210,340 L190,340 Z" fill="${game.coloredRegions['stem'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="200" y="295" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">5</text>
+                                
+                                <!-- Leaf Left -->
+                                <path id="leaf-l" class="coloring-region" data-code="3" data-correct="#22c55e" d="M190,290 C140,290 120,240 190,260 Z" fill="${game.coloredRegions['leaf-l'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="160" y="275" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
+                                
+                                <!-- Leaf Right -->
+                                <path id="leaf-r" class="coloring-region" data-code="3" data-correct="#22c55e" d="M210,290 C260,290 280,240 210,260 Z" fill="${game.coloredRegions['leaf-r'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="240" y="275" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
+                                
+                                <!-- Petal Top -->
+                                <path id="petal-t" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C200,60 150,80 200,140 C250,80 200,60 200,140 Z" fill="${game.coloredRegions['petal-t'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="200" y="100" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+
+                                <!-- Petal Right -->
+                                <path id="petal-r" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C280,140 260,90 200,140 C260,190 280,140 200,140 Z" fill="${game.coloredRegions['petal-r'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="245" y="145" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+
+                                <!-- Petal Bottom Right -->
+                                <path id="petal-br" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C260,220 220,240 200,140 C180,240 140,220 200,140 Z" fill="${game.coloredRegions['petal-br'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="200" y="195" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+
+                                <!-- Petal Bottom Left -->
+                                <path id="petal-bl" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C120,220 90,170 200,140 C90,110 120,220 200,140 Z" fill="${game.coloredRegions['petal-bl'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="145" y="170" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+
+                                <!-- Petal Left -->
+                                <path id="petal-l" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C120,140 140,90 200,140 C140,190 120,140 200,140 Z" fill="${game.coloredRegions['petal-l'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="155" y="125" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                
+                                <!-- Flower Center -->
+                                <circle id="center" class="coloring-region" data-code="ހ" data-correct="#eab308" cx="200" cy="140" r="30" fill="${game.coloredRegions['center'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></circle>
+                                <text x="200" y="147" font-family="'Faruma', 'Fredoka', sans-serif" font-size="24" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
+                            </svg>
+                        `
+                    },
+                    {
+                        name: "Happy Fish 🐟",
+                        legend: [
+                            { code: "ހ", name: "Orange", hex: "#f97316" },
+                            { code: "ށ", name: "Pink", hex: "#ec4899" },
+                            { code: "ނ", name: "Blue", hex: "#3b82f6" },
+                            { code: "3", name: "Yellow", hex: "#eab308" },
+                            { code: "5", name: "Purple", hex: "#a855f7" }
+                        ],
+                        svg: `
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 400px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                                <!-- Tail Fin -->
+                                <path id="tail" class="coloring-region" data-code="3" data-correct="#eab308" d="M300,200 L360,140 L340,200 L360,260 Z" fill="${game.coloredRegions['tail'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="335" y="205" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
+                                
+                                <!-- Top Fin -->
+                                <path id="top-fin" class="coloring-region" data-code="5" data-correct="#a855f7" d="M180,120 C180,60 260,80 250,135 Z" fill="${game.coloredRegions['top-fin'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="215" y="105" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">5</text>
+                                
+                                <!-- Body Main Face -->
+                                <path id="body-face" class="coloring-region" data-code="ހ" data-correct="#f97316" d="M80,200 C110,120 220,120 220,200 C220,280 110,280 80,200 Z" fill="${game.coloredRegions['body-face'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="140" y="208" font-family="'Faruma', 'Fredoka', sans-serif" font-size="24" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
+                                
+                                <!-- Scale 1 -->
+                                <path id="scale-1" class="coloring-region" data-code="ށ" data-correct="#ec4899" d="M220,200 C220,140 260,140 260,200 C260,260 220,260 220,200 Z" fill="${game.coloredRegions['scale-1'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="240" y="208" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                
+                                <!-- Scale 2 -->
+                                <path id="scale-2" class="coloring-region" data-code="ނ" data-correct="#3b82f6" d="M260,200 C260,150 300,150 300,200 C300,250 260,250 260,200 Z" fill="${game.coloredRegions['scale-2'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="280" y="208" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
+                                
+                                <!-- Eye -->
+                                <circle cx="110" cy="180" r="10" fill="white" stroke="#1e293b" stroke-width="3"></circle>
+                                <circle cx="107" cy="180" r="5" fill="black"></circle>
+                            </svg>
+                        `
+                    },
+                    {
+                        name: "Magic Butterfly 🦋",
+                        legend: [
+                            { code: "ހ", name: "Purple", hex: "#a855f7" },
+                            { code: "ށ", name: "Blue", hex: "#3b82f6" },
+                            { code: "ނ", name: "Pink", hex: "#ec4899" },
+                            { code: "3", name: "Yellow", hex: "#eab308" }
+                        ],
+                        svg: `
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 400px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                                <!-- Antenna Left -->
+                                <path id="ant-l" class="coloring-region" data-code="3" data-correct="#eab308" d="M190,140 Q160,80 140,90 Q170,70 190,140 Z" fill="${game.coloredRegions['ant-l'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="160" y="75" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
+                                
+                                <!-- Antenna Right -->
+                                <path id="ant-r" class="coloring-region" data-code="3" data-correct="#eab308" d="M210,140 Q240,80 260,90 Q230,70 210,140 Z" fill="${game.coloredRegions['ant-r'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="240" y="75" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
+
+                                <!-- Wing Top Left -->
+                                <path id="wing-tl" class="coloring-region" data-code="ށ" data-correct="#3b82f6" d="M180,180 C110,80 30,120 180,200 Z" fill="${game.coloredRegions['wing-tl'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="110" y="140" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                
+                                <!-- Wing Top Right -->
+                                <path id="wing-tr" class="coloring-region" data-code="ށ" data-correct="#3b82f6" d="M220,180 C290,80 370,120 220,200 Z" fill="${game.coloredRegions['wing-tr'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="290" y="140" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                
+                                <!-- Wing Bottom Left -->
+                                <path id="wing-bl" class="coloring-region" data-code="ނ" data-correct="#ec4899" d="M180,210 C100,280 60,330 180,250 Z" fill="${game.coloredRegions['wing-bl'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="120" y="260" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
+                                
+                                <!-- Wing Bottom Right -->
+                                <path id="wing-br" class="coloring-region" data-code="ނ" data-correct="#ec4899" d="M220,210 C300,280 340,330 220,250 Z" fill="${game.coloredRegions['wing-br'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
+                                <text x="280" y="260" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
+                                
+                                <!-- Body -->
+                                <rect id="body-mid" class="coloring-region" data-code="ހ" data-correct="#a855f7" x="185" y="130" width="30" height="150" rx="15" fill="${game.coloredRegions['body-mid'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></rect>
+                                <text x="200" y="210" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
+                            </svg>
+                        `
+                    }
+                ];
+
+                const currentT = templates[game.selectedTemplate];
+                
+                const container = document.createElement('div');
+                container.style.cssText = 'padding:2rem; max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:20px;';
+
+                const heading = document.createElement('div');
+                heading.style.cssText = 'text-align:center;';
+                heading.innerHTML = `
+                    <div style="font-size:2.8rem; font-weight:900; color:var(--purple); text-shadow:3px 3px 0 var(--border-dark);">🎨 ${this.t('Coloring')}</div>
+                    <div style="color:#64748b; font-weight:700; font-size:1.1rem; margin-top:8px;">Match the letter codes with colors to finish the painting! 🌟</div>
+                `;
+                container.appendChild(heading);
+
+                const mainArea = document.createElement('div');
+                mainArea.style.cssText = 'display:flex; gap:30px; flex-wrap:wrap; justify-content:center; align-items:flex-start;';
+
+                const panel = document.createElement('div');
+                panel.style.cssText = 'flex:1; min-width:300px; display:flex; flex-direction:column; gap:20px;';
+
+                const tempSelect = document.createElement('div');
+                tempSelect.style.cssText = 'background:white; border:4px solid var(--border-dark); border-radius:25px; padding:15px; box-shadow:6px 6px 0 var(--border-dark);';
+                tempSelect.innerHTML = `
+                    <label style="font-weight:900; display:block; margin-bottom:10px; font-size:1.1rem; color:var(--text-main);">1. Choose Drawing:</label>
+                    <div style="display:flex; gap:10px;">
+                        ${templates.map((t, idx) => `
+                            <button onclick="app.selectColoringTemplate(${idx})" style="flex:1; padding:10px; font-weight:900; border-radius:15px; border:3px solid var(--border-dark); background:${game.selectedTemplate === idx ? 'var(--purple)' : 'white'}; color:${game.selectedTemplate === idx ? 'white' : 'var(--text-main)'}; cursor:pointer; transition:all 0.2s; box-shadow:${game.selectedTemplate === idx ? 'none' : '3px 3px 0 var(--border-dark)'}; transform:${game.selectedTemplate === idx ? 'translateY(3px)' : 'none'}">
+                                ${t.name.split(' ')[0]}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+                panel.appendChild(tempSelect);
+
+                const legendPanel = document.createElement('div');
+                legendPanel.style.cssText = 'background:white; border:4px solid var(--border-dark); border-radius:25px; padding:20px; box-shadow:6px 6px 0 var(--border-dark);';
+                
+                let legendItemsHtml = currentT.legend.map(l => {
+                    const isSelected = game.selectedColor === l.hex;
+                    return `
+                        <div onclick="app.selectColoringColor('${l.hex}')" style="display:flex; align-items:center; gap:12px; padding:10px 15px; border-radius:15px; border:3px solid ${isSelected ? 'var(--purple)' : '#cbd5e1'}; background:${isSelected ? '#faf5ff' : 'white'}; cursor:pointer; transition:all 0.2s; font-weight:800; font-size:1.1rem;">
+                            <span style="display:inline-block; width:30px; height:30px; border-radius:50%; background:${l.hex}; border:3px solid var(--border-dark); box-shadow:2px 2px 0 rgba(0,0,0,0.15)"></span>
+                            <span style="font-family:'Faruma', sans-serif; font-size:1.3rem; margin:0 5px;">${l.code}</span> = ${l.name}
+                            ${isSelected ? '<span style="margin-left:auto; color:var(--purple); font-size:1.2rem;">✏️ Active</span>' : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                legendPanel.innerHTML = `
+                    <label style="font-weight:900; display:block; margin-bottom:15px; font-size:1.1rem; color:var(--text-main);">2. Select Color Brush & Code:</label>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${legendItemsHtml}
+                    </div>
+                `;
+                panel.appendChild(legendPanel);
+                mainArea.appendChild(panel);
+
+                const canvasContainer = document.createElement('div');
+                canvasContainer.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:15px; position:relative;';
+                canvasContainer.innerHTML = currentT.svg;
+                
+                setTimeout(() => {
+                    const regions = canvasContainer.querySelectorAll('.coloring-region');
+                    regions.forEach(r => {
+                        r.onclick = (e) => {
+                            this.colorRegionClick(r.id, r.getAttribute('data-code'), r.getAttribute('data-correct'), e);
+                        };
+                    });
+                }, 50);
+
+                const resetBtn = document.createElement('button');
+                resetBtn.style.cssText = 'padding:12px 25px; font-weight:900; font-size:1rem; border:3px solid var(--border-dark); border-radius:15px; background:#fee2e2; color:#ef4444; cursor:pointer; box-shadow:4px 4px 0 var(--border-dark); transition:all 0.2s;';
+                resetBtn.innerText = "🔄 Reset Drawing";
+                resetBtn.onclick = () => {
+                    this.playSound('click');
+                    if (confirm("Reset current coloring page progress?")) {
+                        game.coloredRegions = {};
+                        game.isCompleted = false;
+                        this.render();
+                    }
+                };
+                canvasContainer.appendChild(resetBtn);
+
+                mainArea.appendChild(canvasContainer);
+                container.appendChild(mainArea);
+                this.viewContainer.appendChild(container);
+            }
+
+            selectColoringTemplate(idx) {
+                this.playSound('click');
+                this.state.coloringGame = {
+                    selectedTemplate: idx,
+                    selectedColor: null,
+                    coloredRegions: {},
+                    isCompleted: false
+                };
+                this.render();
+            }
+
+            selectColoringColor(hex) {
+                this.playSound('click');
+                this.state.coloringGame.selectedColor = hex;
+                this.render();
+            }
+
+            colorRegionClick(regionId, code, correctHex, e) {
+                const game = this.state.coloringGame;
+                if (!game) return;
+                
+                if (!game.selectedColor) {
+                    this.playSound('wrong');
+                    this.mascotSay("🎨 Choose a color brush from the legend first!");
+                    return;
+                }
+
+                if (game.selectedColor.toLowerCase() === correctHex.toLowerCase()) {
+                    game.coloredRegions[regionId] = game.selectedColor;
+                    this.playSound('pop');
+                    this.createPop(e.pageX, e.pageY);
+
+                    const el = document.getElementById(regionId);
+                    if (el) el.setAttribute('fill', game.selectedColor);
+
+                    const regions = document.querySelectorAll('.coloring-region');
+                    let allDone = true;
+                    regions.forEach(r => {
+                        if (!game.coloredRegions[r.id]) {
+                            allDone = false;
+                        }
+                    });
+
+                    if (allDone && !game.isCompleted) {
+                        game.isCompleted = true;
+                        this.completeColoringGame();
+                    }
+                } else {
+                    this.playSound('wrong');
+                    this.mascotSay(`Oops! The code '${code}' matches a different color. Check the guide! 🧐`, 5000);
+                }
+            }
+
+            completeColoringGame() {
+                this.playSound('fanfare');
+                this.triggerExplosion();
+
+                const activeKid = this.state.kids[this.state.activeKidIndex];
+                if (activeKid) {
+                    activeKid.points += 20;
+                    activeKid.seasonPoints += 20;
+                    activeKid.monthlyPoints += 20;
+                    activeKid.weeklyPoints += 20;
+                    activeKid.dailyPoints += 20;
+                    this.syncKidProgress(this.state.activeKidIndex);
+                }
+
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.id = 'coloring-complete-modal';
+                modal.innerHTML = `
+                    <div class="parent-modal" style="text-align:center; max-width:450px; border-color:var(--primary);">
+                        <h2 style="color:var(--primary); font-size:2.2rem; margin-bottom:15px;">🌟 Fantastic! 🌟</h2>
+                        <div style="font-size: 5rem; margin-bottom:15px;">🎨🏆</div>
+                        <p style="font-weight:900; font-size:1.3rem; margin-bottom:10px;">You colored the entire picture correctly!</p>
+                        <p style="font-weight:800; color:var(--secondary); font-size:1.4rem; margin-bottom:25px;">+20 Points Earned! 🚀</p>
+                        <button onclick="document.getElementById('coloring-complete-modal').remove(); app.render();" class="start-btn" style="background:var(--primary); color:white; width:100%; border-color:var(--primary-dark)">
+                            Play Again! 🎨
+                        </button>
+                    </div>
+                `;
+                document.getElementById('modal-container').appendChild(modal);
             }
 
             renderVideos() {
@@ -1557,6 +2286,15 @@
                 localStorage.setItem('last_tracing_letter', letter);
                 localStorage.setItem('last_tracing_lang', this.state.language);
 
+                const items = this.state.customContent[this.state.language] || [];
+                const item = items.find(i => i.letter === letter);
+
+                this.tracingStrokes = (item && item.ghost_path) ? this.parseSvgPath(item.ghost_path) : [];
+                this.currentStrokeIndex = 0;
+                this.currentPointIndex = 0;
+                this.userCompletedStrokes = [];
+                this.userCurrentStroke = [];
+
                 const isEnglish = this.state.language === 'english';
                 const displayLetter = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                 const isDual = displayLetter.length > 1;
@@ -1731,6 +2469,170 @@
                 if (sel) sel.style.border = '3px solid #000';
             }
 
+            parseSvgPath(pathStr) {
+                if (!pathStr) return [];
+                const strokes = [];
+                let currentStroke = [];
+                const regex = /([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+                let match;
+                while ((match = regex.exec(pathStr)) !== null) {
+                    const cmd = match[1];
+                    const x = parseFloat(match[2]);
+                    const y = parseFloat(match[3]);
+                    if (cmd === 'M') {
+                        if (currentStroke.length > 0) strokes.push(currentStroke);
+                        currentStroke = [{ x, y }];
+                    } else if (cmd === 'L') {
+                        currentStroke.push({ x, y });
+                    }
+                }
+                if (currentStroke.length > 0) strokes.push(currentStroke);
+                return strokes;
+            }
+
+            // === Catmull-Rom spline smoothing ===
+            smoothStroke(points, segments = 8) {
+                if (points.length < 3) return points;
+                const result = [];
+                for (let i = 0; i < points.length - 1; i++) {
+                    const p0 = points[Math.max(i - 1, 0)];
+                    const p1 = points[i];
+                    const p2 = points[Math.min(i + 1, points.length - 1)];
+                    const p3 = points[Math.min(i + 2, points.length - 1)];
+                    for (let t = 0; t < segments; t++) {
+                        const f = t / segments;
+                        const f2 = f * f, f3 = f2 * f;
+                        result.push({
+                            x: 0.5 * ((2*p1.x) + (-p0.x+p2.x)*f + (2*p0.x-5*p1.x+4*p2.x-p3.x)*f2 + (-p0.x+3*p1.x-3*p2.x+p3.x)*f3),
+                            y: 0.5 * ((2*p1.y) + (-p0.y+p2.y)*f + (2*p0.y-5*p1.y+4*p2.y-p3.y)*f2 + (-p0.y+3*p1.y-3*p2.y+p3.y)*f3)
+                        });
+                    }
+                }
+                result.push(points[points.length - 1]);
+                return result;
+            }
+
+            // === Haptic feedback for boundary errors (mobile) ===
+            vibrateError() {
+                try { if (navigator.vibrate) navigator.vibrate([30, 20, 30]); } catch(e) {}
+            }
+
+            // === Animated SVG hint that shows the path once before tracing ===
+            showTraceHint() {
+                const box = document.getElementById('tracing-box');
+                if (!box || !this.tracingStrokes || this.tracingStrokes.length === 0) return;
+
+                // Remove any previous hint
+                const prev = box.querySelector('.tracing-hint-overlay');
+                if (prev) prev.remove();
+
+                // Build SVG path string from tracingStrokes
+                let d = '';
+                this.tracingStrokes.forEach(stroke => {
+                    if (stroke.length === 0) return;
+                    d += `M ${stroke[0].x} ${stroke[0].y} `;
+                    for (let i = 1; i < stroke.length; i++) {
+                        d += `L ${stroke[i].x} ${stroke[i].y} `;
+                    }
+                });
+                if (!d) return;
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 400 400');
+                svg.classList.add('tracing-hint-overlay');
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', d);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', '#22c55e');
+                path.setAttribute('stroke-width', '6');
+                path.setAttribute('stroke-linecap', 'round');
+                path.setAttribute('stroke-linejoin', 'round');
+                path.setAttribute('stroke-dasharray', '12 8');
+                svg.appendChild(path);
+                box.appendChild(svg);
+
+                // Animate: trace the dashed path then fade out
+                requestAnimationFrame(() => {
+                    const len = path.getTotalLength();
+                    path.style.strokeDasharray = len;
+                    path.style.strokeDashoffset = len;
+                    path.style.setProperty('--path-len', len);
+                    path.style.animation = `hintDraw 2.5s ease forwards`;
+                });
+
+                // Remove after animation
+                setTimeout(() => {
+                    svg.classList.add('fade-out');
+                    setTimeout(() => svg.remove(), 600);
+                }, 2800);
+            }
+
+            // === Position the DOM-based pulsating guide dot ===
+            updateGuideDot() {
+                const box = document.getElementById('tracing-box');
+                if (!box) return;
+                let dot = box.querySelector('.tracing-guide-dot');
+
+                if (!this.tracingStrokes || this.tracingStrokes.length === 0 ||
+                    this.currentStrokeIndex >= this.tracingStrokes.length) {
+                    if (dot) dot.style.display = 'none';
+                    return;
+                }
+
+                const stroke = this.tracingStrokes[this.currentStrokeIndex];
+                const target = stroke[Math.min(this.currentPointIndex, stroke.length - 1)];
+                const rect = box.getBoundingClientRect();
+                const scaleX = rect.width / 400;
+                const scaleY = rect.height / 400;
+
+                if (!dot) {
+                    dot = document.createElement('div');
+                    dot.className = 'tracing-guide-dot';
+                    box.appendChild(dot);
+                }
+                dot.style.display = 'block';
+                dot.style.left = (target.x * scaleX) + 'px';
+                dot.style.top  = (target.y * scaleY) + 'px';
+            }
+
+            drawTracingGuides() {
+                const canvas = document.getElementById('tracing-canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, 400, 400);
+
+                ctx.lineWidth = this.tracingBrushSize || 32;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                // Helper: draw a smoothed stroke array
+                const drawSmoothed = (points) => {
+                    if (!points || points.length === 0) return;
+                    const smooth = points.length >= 3 ? this.smoothStroke(points, 6) : points;
+                    ctx.beginPath();
+                    ctx.moveTo(smooth[0].x, smooth[0].y);
+                    for (let i = 1; i < smooth.length; i++) {
+                        ctx.lineTo(smooth[i].x, smooth[i].y);
+                    }
+                    ctx.stroke();
+                };
+
+                // 1. Draw completed strokes (smoothed)
+                ctx.strokeStyle = this.tracingColor;
+                if (this.userCompletedStrokes) {
+                    this.userCompletedStrokes.forEach(drawSmoothed);
+                }
+
+                // 2. Draw current active stroke (smoothed)
+                if (this.userCurrentStroke && this.userCurrentStroke.length > 0) {
+                    drawSmoothed(this.userCurrentStroke);
+                }
+
+                // 3. Update DOM guide dot position
+                this.updateGuideDot();
+            }
+
 
             setupTracingCanvas() {
                 const canvas = document.getElementById('tracing-canvas');
@@ -1743,8 +2645,14 @@
                 ctx.strokeStyle = this.tracingColor;
                 let drawing = false, lx = 0, ly = 0;
                 let lastUpdate = 0;
+                let lastAccuracyPct = 0;
                 let rect = canvas.getBoundingClientRect(); 
                 let scaleX = 400 / rect.width, scaleY = 400 / rect.height;
+
+                // Show animated hint path on first load
+                setTimeout(() => this.showTraceHint(), 400);
+                // Initialize guide dot
+                setTimeout(() => this.updateGuideDot(), 500);
 
                 const pos = (e) => {
                     const src = e.touches ? e.touches[0] : e;
@@ -1752,14 +2660,12 @@
                 };
 
                 const isCursorInsideLetter = (cx, cy, tolerance = 24) => {
-                    if (!this.referencePixels) return true; // fallback if reference pixels not loaded yet
+                    if (!this.referencePixels) return true;
                     const cxRound = Math.round(cx);
                     const cyRound = Math.round(cy);
                     
-                    // Direct hit
                     if (this.referencePixels.has(cyRound * 400 + cxRound)) return true;
                     
-                    // Neighborhood check
                     const tolSq = tolerance * tolerance;
                     for (let dx = -tolerance; dx <= tolerance; dx += 2) {
                         for (let dy = -tolerance; dy <= tolerance; dy += 2) {
@@ -1768,30 +2674,29 @@
                                 const py = cyRound + dy;
                                 if (px >= 0 && px < 400 && py >= 0 && py < 400) {
                                     if (this.referencePixels.has(py * 400 + px)) {
-                                        return true; // Found a letter pixel nearby
+                                        return true;
                                     }
                                 }
                             }
                         }
                     }
-                    return false; // No letter pixels nearby, definitely outside
+                    return false;
                 };
 
                 const triggerOutsideWarning = (msgType) => {
                     this.playSound('wrong');
+                    this.vibrateError(); // Haptic feedback on mobile
                     
-                    // Flash the tracing box border/shadow red
+                    // CSS-animated border flash
                     const box = document.getElementById('tracing-box');
                     if (box) {
-                        box.style.borderColor = '#ef4444';
-                        box.style.boxShadow = '15px 15px 0 #ef4444';
-                        setTimeout(() => {
-                            box.style.borderColor = 'var(--border-dark)';
-                            box.style.boxShadow = '15px 15px 0 var(--border-dark)';
-                        }, 500);
+                        box.classList.remove('border-flash');
+                        void box.offsetWidth; // force reflow
+                        box.classList.add('border-flash');
+                        box.addEventListener('animationend', () => box.classList.remove('border-flash'), { once: true });
                     }
                     
-                    // Set feedback message
+                    // Animated feedback message
                     const fb = document.getElementById('tracing-feedback');
                     let msg = "";
                     if (msgType === 'start') {
@@ -1803,7 +2708,7 @@
                         if (this.state.language === 'dhivehi') msg = "އައުޗް! ރޮނގުން ބޭރަށް ނުދޭ! ✏️";
                         else if (this.state.language === 'arabic') msg = "عذراً! ابقَ داخل الخطوط! ✏️";
                     }
-                    if (fb) fb.innerHTML = `<span style="color:#ef4444">${msg}</span>`;
+                    if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:#ef4444">${msg}</span>`;
                 };
 
                 const start = (e) => {
@@ -1819,12 +2724,22 @@
                     
                     drawing = true;
                     lx = p.x; ly = p.y;
-                    ctx.beginPath(); ctx.moveTo(lx, ly);
+
+                    // Initialize new stroke
+                    this.userCurrentStroke = [{ x: lx, y: ly }];
+
                     this.trackBadgeMetric('colorsUsed', this.tracingColor);
                     
-                    // Clear any previous error message on successful start
+                    // Remove hint overlay when user starts drawing
+                    const hint = document.querySelector('.tracing-hint-overlay');
+                    if (hint) { hint.classList.add('fade-out'); setTimeout(() => hint.remove(), 600); }
+                    
+                    // Clear error message
                     const fb = document.getElementById('tracing-feedback');
                     if (fb) fb.innerHTML = '';
+
+                    // Redraw with smoothing
+                    this.drawTracingGuides();
                 };
 
                 const move = (e) => {
@@ -1870,26 +2785,39 @@
                     }
                     
                     if (wentOutside) {
-                        ctx.lineTo(lastBx, lastBy);
-                        ctx.stroke();
+                        // Add last valid point to stroke
+                        this.userCurrentStroke.push({ x: lastBx, y: lastBy });
+                        this.userCompletedStrokes.push([...this.userCurrentStroke]);
+                        this.userCurrentStroke = [];
                         drawing = false;
                         triggerOutsideWarning('move');
+                        this.drawTracingGuides();
                         return;
                     }
                     
-                    ctx.lineTo(p.x, p.y); ctx.stroke();
+                    // Add point to current stroke
+                    this.userCurrentStroke.push({ x: p.x, y: p.y });
                     lx = p.x; ly = p.y;
+
+                    // Redraw everything with smooth strokes
+                    this.drawTracingGuides();
                     
                     const now = Date.now();
                     if (now - lastUpdate > 100) {
-                        this.updateAccuracyBar();
+                        this.updateAccuracyBar(lastAccuracyPct);
                         lastUpdate = now;
                     }
                 };
 
                 const stop = () => { 
                     if (drawing) {
-                        drawing = false; 
+                        drawing = false;
+                        // Complete the stroke
+                        if (this.userCurrentStroke && this.userCurrentStroke.length > 0) {
+                            this.userCompletedStrokes.push([...this.userCurrentStroke]);
+                            this.userCurrentStroke = [];
+                        }
+                        this.drawTracingGuides();
                         this.checkTracingAccuracy();
                     }
                 };
@@ -1902,13 +2830,22 @@
                 canvas.addEventListener('touchend', stop);
             }
 
-            updateAccuracyBar() {
+            updateAccuracyBar(prevPct) {
                 if (!this.referencePixels || !this.referencePixels.size) return;
                 const pct = Math.min(100, Math.round(this.coveredCount / this.referencePixels.size * 100));
                 const fill = document.getElementById('accuracy-fill');
                 const pctEl = document.getElementById('accuracy-pct');
-                if (fill) fill.style.width = pct + '%';
+                if (fill) {
+                    fill.style.width = pct + '%';
+                    // Pop animation at milestones (every 25%)
+                    if (prevPct !== undefined && Math.floor(pct / 25) > Math.floor(prevPct / 25)) {
+                        fill.classList.remove('pop');
+                        void fill.offsetWidth;
+                        fill.classList.add('pop');
+                    }
+                }
                 if (pctEl) pctEl.textContent = pct + '%';
+                return pct;
             }
 
             clearTracingCanvas() {
@@ -1916,12 +2853,19 @@
                 if (canvas) canvas.getContext('2d').clearRect(0, 0, 400, 400);
                 this.drawnPixels = new Set();
                 this.coveredCount = 0;
+                this.userCompletedStrokes = [];
+                this.userCurrentStroke = [];
+                this.currentStrokeIndex = 0;
+                this.currentPointIndex = 0;
                 const fill = document.getElementById('accuracy-fill');
                 const pctEl = document.getElementById('accuracy-pct');
                 if (fill) fill.style.width = '0%';
                 if (pctEl) pctEl.textContent = '0%';
                 const fb = document.getElementById('tracing-feedback');
                 if (fb) fb.innerHTML = '';
+                // Re-show guide dot and hint
+                this.updateGuideDot();
+                setTimeout(() => this.showTraceHint(), 200);
             }
 
             checkTracingAccuracy() {
@@ -1929,18 +2873,19 @@
                     this.triggerExplosion(); this.addTaskProgress(); return;
                 }
                 const pct = Math.min(100, Math.round(this.coveredCount / this.referencePixels.size * 100));
+                this.updateAccuracyBar(0);
                 const fb = document.getElementById('tracing-feedback');
                 if (pct >= 50) {
-                    if (fb) fb.innerHTML = `<span style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! ${pct}% traced correctly!</span>`;
+                    if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! ${pct}% traced correctly!</span>`;
                     this.triggerExplosion();
                     this.addTaskProgress();
                     const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
                     const next = items[items.findIndex(i => i.letter === this.currentTracingLetter) + 1] || items[0];
                     setTimeout(() => { if (this.state.view === 'tracing') this.initTracingCanvas(next.letter); }, 2000);
                 } else if (pct >= 35) {
-                    if (fb) fb.innerHTML = `<span style="color:var(--orange)">👍 Almost! ${pct}% — Try to cover more of the letter!</span>`;
+                    if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:var(--orange)">👍 Almost! ${pct}% — Try to cover more of the letter!</span>`;
                 } else {
-                    if (fb) fb.innerHTML = `<span style="color:#ef4444">✏️ Keep practicing! Only ${pct}% — Follow the ghost letter outline!</span>`;
+                    if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:#ef4444">✏️ Keep practicing! Only ${pct}% — Follow the ghost letter outline!</span>`;
                 }
             }
 
@@ -2244,6 +3189,7 @@
                 this.syncKidProgress();
                 this.state.dailyTasksCompleted++;
                 if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) document.getElementById('mystery-box').innerHTML = '🎁✨';
+                this.renderProfileHub();
             }
 
             checkBadges(kid) {
