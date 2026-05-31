@@ -16,6 +16,9 @@
         .hall-container, .fame-list { touch-action: pan-y; }
 
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes pinShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-8px)} 80%{transform:translateX(8px)} }
+        .pin-shake { animation: pinShake 0.4s ease; }
 
         /* === Tracing Enhancement Animations === */
         @keyframes guidePulse {
@@ -41,13 +44,15 @@
         @keyframes hintFadeOut { from { opacity:1; } to { opacity:0; } }
 
         .tracing-guide-dot {
-            position: absolute; width: 22px; height: 22px;
-            border-radius: 50%; background: #22c55e;
+            position: absolute; width: 44px; height: 44px;
+            border-radius: 50%; background: #ff7675;
             border: 3px solid white;
             pointer-events: none; z-index: 10;
             animation: guidePulse 1.2s ease-in-out infinite;
-            filter: drop-shadow(0 0 6px rgba(34,197,94,0.6));
-            transition: left 0.15s ease, top 0.15s ease;
+            filter: drop-shadow(0 0 8px rgba(255,118,117,0.7));
+            transition: left 0.12s ease, top 0.12s ease;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem;
         }
         .tracing-hint-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
@@ -192,7 +197,9 @@
                     isPremium: isPremium,
                     isLoggedIn: false,
                     parentEmail: 'parent@example.com',
-                    parentPin: localStorage.getItem('thaana_parentPin') || '2345',
+                    parentPin: localStorage.getItem('thaana_parentPin') || '',
+                    pinAttempts: parseInt(localStorage.getItem('thaana_pinAttempts') || '0'),
+                    pinBuffer: '',
                     hallFilter: 'monthly',
                     seasonName: localStorage.getItem('thaana_seasonName') || 'Season 1',
                     seasonEnd: localStorage.getItem('thaana_seasonEnd') || '',
@@ -333,11 +340,50 @@
             }
 
             showUnlockPasscode() {
-                const pin = prompt("Enter Parent PIN to unlock screen:");
-                if (pin === this.state.parentPin) {
-                    this.unlockScreen();
-                } else if (pin !== null) {
-                    alert("Incorrect PIN!");
+                const existing = document.getElementById('unlock-pin-modal');
+                if (existing) { existing.remove(); return; }
+                const modal = document.createElement('div');
+                modal.id = 'unlock-pin-modal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200000;display:flex;align-items:center;justify-content:center;';
+                this._unlockBuffer = '';
+                modal.innerHTML = `
+                    <div style="background:white;border:5px solid var(--border-dark);border-radius:35px;padding:35px 28px;text-align:center;max-width:320px;width:90%;box-shadow:0 25px 60px rgba(0,0,0,0.4);direction:ltr;font-family:'Fredoka',sans-serif;animation:slideDown 0.3s ease;">
+                        <div style="font-size:2.5rem;margin-bottom:8px;">🔑</div>
+                        <h3 style="font-size:1.3rem;font-weight:900;margin-bottom:4px;color:#1e293b;">Parent Unlock</h3>
+                        <p style="font-size:0.78rem;color:#64748b;font-weight:700;margin-bottom:18px;">Enter your PIN to unlock the screen</p>
+                        <div style="display:flex;justify-content:center;gap:14px;margin-bottom:20px;" id="unlock-dots-row">
+                            ${[0,1,2,3].map(i=>`<div id="unlock-dot-${i}" style="width:17px;height:17px;border-radius:50%;background:#e2e8f0;border:2px solid #cbd5e1;transition:all 0.2s;"></div>`).join('')}
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;max-width:220px;margin:0 auto 16px;">
+                            ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(n=>n===''?'<div></div>':`<button onclick="app.unlockPinInput('${n}')" style="padding:14px 10px;font-size:1.35rem;font-weight:900;border:3px solid #e2e8f0;border-radius:15px;background:white;cursor:pointer;box-shadow:3px 3px 0 #e2e8f0;font-family:inherit;">${n}</button>`).join('')}
+                        </div>
+                        <button onclick="document.getElementById('unlock-pin-modal').remove()" style="background:#f1f5f9;border:2px solid #e2e8f0;border-radius:15px;padding:10px 30px;font-weight:800;cursor:pointer;color:#64748b;font-family:inherit;">Cancel</button>
+                    </div>`;
+                document.body.appendChild(modal);
+            }
+
+            unlockPinInput(val) {
+                if (val === '⌫') {
+                    this._unlockBuffer = (this._unlockBuffer || '').slice(0, -1);
+                } else {
+                    if ((this._unlockBuffer || '').length >= 4) return;
+                    this._unlockBuffer = (this._unlockBuffer || '') + val;
+                }
+                for (let i = 0; i < 4; i++) {
+                    const d = document.getElementById(`unlock-dot-${i}`);
+                    if (d) { d.style.background = i < this._unlockBuffer.length ? 'var(--primary)' : '#e2e8f0'; d.style.transform = i < this._unlockBuffer.length ? 'scale(1.2)' : 'scale(1)'; }
+                }
+                if (this._unlockBuffer.length === 4) {
+                    if (this._unlockBuffer === this.state.parentPin) {
+                        document.getElementById('unlock-pin-modal')?.remove();
+                        this.unlockScreen();
+                    } else {
+                        const row = document.getElementById('unlock-dots-row');
+                        if (row) { row.classList.remove('pin-shake'); void row.offsetWidth; row.classList.add('pin-shake'); }
+                        setTimeout(() => { for(let i=0;i<4;i++){const d=document.getElementById(`unlock-dot-${i}`);if(d){d.style.background='#fca5a5';}} }, 50);
+                        setTimeout(() => { this._unlockBuffer = ''; for(let i=0;i<4;i++){const d=document.getElementById(`unlock-dot-${i}`);if(d){d.style.background='#e2e8f0';d.style.transform='scale(1)';}} }, 600);
+                        this.mascotSay('❌ Wrong PIN! Try again.', 2500);
+                    }
                 }
             }
 
@@ -497,6 +543,12 @@
                 const { data: vData } = await this.supabase.from('app_videos').select('*').order('order_index');
                 if (vData) this.state.customVideos = vData;
 
+                const { data: colData } = await this.supabase.from('app_coloring').select('*').order('order_index');
+                if (colData) {
+                    this.state.customColoring = colData;
+                    localStorage.setItem('thaana_customColoring', JSON.stringify(colData));
+                }
+
                 const { data: cData } = await this.supabase.from('app_content').select('*').order('order_index');
                 if (cData && cData.length > 0) {
                     const dbContent = { dhivehi: [], english: [], arabic: [], engdhi: [], numbers: [] };
@@ -547,6 +599,14 @@
                 if (session) {
                     this.state.isLoggedIn = true;
                     this.state.parentEmail = session.user.email;
+                    // Load parentPin from Supabase user metadata if not already in localStorage
+                    if (!this.state.parentPin) {
+                        const metaPin = session.user.user_metadata && session.user.user_metadata.parent_pin;
+                        if (metaPin) {
+                            this.state.parentPin = metaPin;
+                            localStorage.setItem('thaana_parentPin', metaPin);
+                        }
+                    }
 
                     // Fetch kids profiles
                     const { data: kidsData } = await this.supabase.from('kids').select('*').eq('user_id', session.user.id);
@@ -572,12 +632,12 @@
                                 badges: k.badges || [],
                                 stats: stats,
                                 unlockedAvatars: k.unlocked_avatars || ['👶', '👧', '👦'],
-                                pin: k.pin || '1234'
+                                pin: k.pin || null
                             };
                         });
                     } else {
                         // Create default kid if none exists
-                        const defaultKid = { user_id: session.user.id, name: 'ކުޑަކުއްޖާ', age_group: 'preschool', avatar: '👶', points: 0, pin: '1234' };
+                        const defaultKid = { user_id: session.user.id, name: 'ކުޑަކުއްޖާ', age_group: 'preschool', avatar: '👶', points: 0, pin: null };
                         const { data: newKid } = await this.supabase.from('kids').insert(defaultKid).select().single();
                         if (newKid) {
                             this.state.kids = [{ dbId: newKid.id, name: newKid.name, ageGroup: newKid.age_group, avatar: newKid.avatar, points: newKid.points, seasonPoints: 0, monthlyPoints: 0, weeklyPoints: 0, dailyPoints: 0, badges: [], stats: {}, unlockedAvatars: ['👶', '👧', '👦'] }];
@@ -594,9 +654,9 @@
                     if (this.state.view === 'landing' || this.state.view === 'login') {
                         this.switchView('soundboard');
                         // PIN Setup prompt for first timers
-                        if (this.state.parentPin === '2345' || this.state.parentPin === '1234') {
+                        if (!this.state.parentPin) {
                             setTimeout(() => {
-                                this.mascotSay("Welcome! Please set a unique PIN in Settings to keep your account safe! 🔒", 6000);
+                                this.mascotSay("Welcome! 👋 Tap the lock icon to set a Parent PIN and protect your settings!", 6000);
                                 this.handleParentAuth();
                             }, 3000);
                         }
@@ -656,55 +716,131 @@
                 const existing = document.getElementById('passcode-dropdown');
                 if (existing) { existing.remove(); return; }
 
+                const noPin = !this.state.parentPin;
+
                 const dropdown = document.createElement('div');
                 dropdown.id = 'passcode-dropdown';
-                dropdown.className = 'hub-dropdown-menu';
-                dropdown.style.cssText = `position:fixed; top:80px; right:20px; width:340px; background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 15px 45px rgba(0,0,0,0.2); z-index:9000; padding:30px; animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); text-align:center`;
+                dropdown.style.cssText = `position:fixed; top:80px; right:20px; width:min(320px,92vw); background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 20px 50px rgba(0,0,0,0.25); z-index:9000; padding:28px 24px; animation:slideDown 0.3s cubic-bezier(0.18,0.89,0.32,1.28); text-align:center; direction:ltr;`;
 
                 dropdown.innerHTML = `
-                    <h2 style="margin-bottom:20px; font-size:1.6rem; color:var(--primary)">${this.t('Parent Code')} 🔒</h2>
-                    <div class="settings-group">
-                        <input type="password" class="settings-input" id="parent-pin-input" placeholder="****" style="text-align:center; font-size:2.5rem; letter-spacing: 12px; margin-bottom:10px; width:100%">
-                        <div class="forgot-link" onclick="app.forgotPin()" style="cursor:pointer; font-size:0.85rem; font-weight:800; color:#64748b; text-decoration:underline">${this.t('Forgot PIN?')}</div>
+                    <div style="font-size:2rem; margin-bottom:6px;">${noPin ? '🔐' : '🔒'}</div>
+                    <h3 style="font-size:1.25rem; font-weight:900; color:var(--primary); margin-bottom:4px;">${noPin ? 'Set Your PIN' : this.t('Parent Code')}</h3>
+                    <p style="font-size:0.78rem; color:#64748b; font-weight:700; margin-bottom:18px;">${noPin ? 'Choose a 4-digit PIN to protect Settings' : 'Enter your 4-digit PIN'}</p>
+                    <div style="display:flex; justify-content:center; gap:14px; margin-bottom:20px;" id="pin-dots-row">
+                        ${[0,1,2,3].map(i => `<div id="pin-dot-${i}" style="width:17px; height:17px; border-radius:50%; background:#e2e8f0; border:2px solid #cbd5e1; transition:all 0.2s;"></div>`).join('')}
                     </div>
-                    <button class="hub-action-btn" style="margin-top:20px; background:var(--primary); color:white; border-color:var(--primary-dark)" onclick="app.verifyPasscode()">${this.t('Unlock')} 🔓</button>
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:9px; max-width:220px; margin:0 auto 14px;">
+                        ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(n => n==='' ? '<div></div>' : `<button onclick="app.pinInput('${n}')" style="padding:14px 10px; font-size:1.35rem; font-weight:900; border:3px solid #e2e8f0; border-radius:15px; background:white; cursor:pointer; transition:all 0.15s; box-shadow:3px 3px 0 #e2e8f0; font-family:inherit;" onmousedown="this.style.cssText+='transform:translateY(3px);box-shadow:none!important'" onmouseup="this.style.transform='';this.style.boxShadow='3px 3px 0 #e2e8f0'">${n}</button>`).join('')}
+                    </div>
+                    ${!noPin ? `<div onclick="app.forgotPin()" style="cursor:pointer;font-size:0.8rem;font-weight:800;color:#94a3b8;text-decoration:underline;margin-top:4px;">Forgot PIN?</div>` : ''}
                 `;
+                this.state.pinBuffer = '';
                 document.body.appendChild(dropdown);
-                document.getElementById('parent-pin-input').focus();
 
                 setTimeout(() => {
                     const closer = (e) => {
-                        if (!dropdown.contains(e.target) && !e.target.closest('.hub-action-btn')) {
-                            dropdown.remove();
+                        const dd = document.getElementById('passcode-dropdown');
+                        if (dd && !dd.contains(e.target) && document.contains(e.target) && !e.target.closest('#profile-hub-container')) {
+                            dd.remove();
+                            this.state.pinBuffer = '';
                             document.removeEventListener('click', closer);
                         }
                     };
                     document.addEventListener('click', closer);
-                }, 100);
+                }, 150);
+            }
+
+            pinInput(val) {
+                const noPin = !this.state.parentPin;
+                if (val === '⌫') {
+                    this.state.pinBuffer = (this.state.pinBuffer || '').slice(0, -1);
+                } else {
+                    if ((this.state.pinBuffer || '').length >= 4) return;
+                    this.state.pinBuffer = (this.state.pinBuffer || '') + val;
+                }
+                // Update visual dots
+                const buf = this.state.pinBuffer || '';
+                for (let i = 0; i < 4; i++) {
+                    const dot = document.getElementById(`pin-dot-${i}`);
+                    if (dot) { dot.style.background = i < buf.length ? 'var(--primary)' : '#e2e8f0'; dot.style.transform = i < buf.length ? 'scale(1.2)' : 'scale(1)'; }
+                }
+                if (buf.length === 4) {
+                    if (noPin) {
+                        // Setting a new PIN
+                        this.state.parentPin = buf;
+                        localStorage.setItem('thaana_parentPin', buf);
+                        this.state.pinBuffer = '';
+                        this.saveParentPinToDb(buf);
+                        document.getElementById('passcode-dropdown')?.remove();
+                        this.mascotSay('🔒 PIN set! Your settings are now protected. 🎉', 5000);
+                        setTimeout(() => this.showSettings(), 400);
+                    } else {
+                        this.verifyPasscode();
+                    }
+                }
             }
 
             verifyPasscode() {
-                if (document.getElementById('parent-pin-input').value === this.state.parentPin) {
-                    const dropdown = document.getElementById('passcode-dropdown');
-                    if (dropdown) dropdown.remove();
-                    this.showSettings();
+                const entered = this.state.pinBuffer || '';
+                if (entered === this.state.parentPin) {
+                    this.state.pinAttempts = 0;
+                    localStorage.setItem('thaana_pinAttempts', '0');
+                    this.state.pinBuffer = '';
+                    document.getElementById('passcode-dropdown')?.remove();
+                    setTimeout(() => this.showSettings(), 200);
                 } else {
-                    this.mascotSay("Oops! Wrong PIN! 🧐");
-                    document.getElementById('parent-pin-input').value = '';
+                    this.state.pinAttempts = (this.state.pinAttempts || 0) + 1;
+                    localStorage.setItem('thaana_pinAttempts', String(this.state.pinAttempts));
+                    this.state.pinBuffer = '';
+                    // Shake animation
+                    const row = document.getElementById('pin-dots-row');
+                    if (row) { row.classList.remove('pin-shake'); void row.offsetWidth; row.classList.add('pin-shake'); }
+                    setTimeout(() => { for (let i=0;i<4;i++) { const d=document.getElementById(`pin-dot-${i}`); if(d){d.style.background='#fca5a5';d.style.transform='scale(1)';} } }, 50);
+                    setTimeout(() => { for (let i=0;i<4;i++) { const d=document.getElementById(`pin-dot-${i}`); if(d){d.style.background='#e2e8f0';} } }, 600);
+                    const rem = 5 - this.state.pinAttempts;
+                    if (this.state.pinAttempts >= 5) {
+                        this.state.pinAttempts = 0;
+                        localStorage.setItem('thaana_pinAttempts', '0');
+                        document.getElementById('passcode-dropdown')?.remove();
+                        this.mascotSay('⚠️ Too many wrong attempts! Sending security alert to your email…', 7000);
+                        this.sendSecurityAlertEmail();
+                    } else {
+                        this.mascotSay(`❌ Wrong PIN! ${rem} attempt${rem!==1?'s':''} left.`, 3000);
+                    }
+                }
+            }
+
+            async saveParentPinToDb(pin) {
+                if (!this.supabase) return;
+                try { await this.supabase.auth.updateUser({ data: { parent_pin: pin } }); }
+                catch(e) { console.log('PIN DB save:', e); }
+            }
+
+            async sendSecurityAlertEmail() {
+                if (!this.supabase || !this.state.parentEmail) return;
+                try {
+                    await this.supabase.auth.resetPasswordForEmail(this.state.parentEmail, { redirectTo: window.location.origin });
+                    this.mascotSay('📧 Security alert sent to ' + this.state.parentEmail, 8000);
+                } catch(e) {
+                    this.mascotSay('⚠️ Could not send alert. Please check your account.', 5000);
                 }
             }
 
             forgotPin() {
-                const isEng = this.state.language === 'english';
-                const msg = isEng
-                    ? "For security, resetting your PIN requires you to log out and sign back in with your Google account. Do you want to proceed?"
-                    : "ސެކިއުރިޓީއަށްޓަކައި، ޕިން ރީސެޓް ކުރުމަށް ލޮގައުޓްކޮށް އަލުން ގޫގުލް އިން ލޮގިން ކުރަން ޖެހޭނެއެވެ. ކުރިއަށް ގެންދަން ބޭނުންތަ؟";
-
-                if (confirm(msg)) {
+                document.getElementById('passcode-dropdown')?.remove();
+                this.state.pinBuffer = '';
+                if (!this.supabase || !this.state.parentEmail) {
+                    alert('Could not find your email. Please log out and sign in again.');
+                    return;
+                }
+                if (confirm(`Send a PIN reset link to ${this.state.parentEmail}?`)) {
+                    this.supabase.auth.resetPasswordForEmail(this.state.parentEmail, { redirectTo: window.location.origin })
+                        .then(() => this.mascotSay('📧 Reset link sent! Check your email inbox.', 7000))
+                        .catch(() => this.mascotSay('❌ Could not send reset email. Try logging out and back in.', 5000));
+                    // Clear stored PIN so next login prompts setup
                     localStorage.removeItem('thaana_parentPin');
-                    this.state.parentPin = '1234';
-                    if (document.getElementById('passcode-modal')) document.getElementById('passcode-modal').remove();
-                    this.logout();
+                    this.state.parentPin = '';
+                    this.saveParentPinToDb('');
                 }
             }
 
@@ -1114,19 +1250,18 @@
                 dropdown.id = 'settings-dropdown';
                 dropdown.style.cssText = `
                     position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: min(600px, 95vw);
+                    top: 0;
+                    right: 0;
+                    width: min(520px, 100vw);
+                    height: 100vh;
                     background: white;
-                    border: 6px solid var(--border-dark);
-                    border-radius: 40px;
-                    box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+                    border-left: 6px solid var(--border-dark);
+                    border-radius: 40px 0 0 40px;
+                    box-shadow: -15px 0 60px rgba(0,0,0,0.2);
                     z-index: 9000;
                     padding: 30px;
                     overflow-y: auto;
-                    max-height: 85vh;
-                    animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+                    animation: slideInRight 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28);
                 `;
 
                 this.state.activeSettingsTab = this.state.activeSettingsTab || 'general';
@@ -1135,17 +1270,17 @@
                 this.renderSettingsContent(dropdown);
                 document.body.appendChild(dropdown);
 
-                // Close when clicking outside modal container
+                // Close when clicking outside — use document.contains to handle innerHTML rebuilds
                 setTimeout(() => {
                     const closer = (e) => {
                         const dd = document.getElementById('settings-dropdown');
-                        if (dd && !dd.contains(e.target) && !e.target.closest('#profile-hub-container') && !e.target.closest('.modal-close')) {
+                        if (dd && !dd.contains(e.target) && !e.target.closest('#profile-hub-container') && document.contains(e.target)) {
                             dd.remove();
                             document.removeEventListener('click', closer);
                         }
                     };
                     document.addEventListener('click', closer);
-                }, 100);
+                }, 150);
             }
 
             renderSettingsContent(dropdown) {
@@ -1369,12 +1504,20 @@
             }
 
             updatePin() {
-                const pin = document.getElementById('new-pin').value;
-                if (pin.length === 4 && !isNaN(pin)) {
+                const pin = document.getElementById('new-pin').value.trim();
+                if (pin.length === 4 && /^\d{4}$/.test(pin)) {
                     this.state.parentPin = pin;
                     localStorage.setItem('thaana_parentPin', pin);
-                    alert("PIN updated successfully!");
-                } else alert("Please enter a valid 4-digit PIN!");
+                    this.state.pinAttempts = 0;
+                    localStorage.setItem('thaana_pinAttempts', '0');
+                    this.saveParentPinToDb(pin);
+                    this.mascotSay('🔒 PIN updated! Keep it safe.', 4000);
+                    document.getElementById('new-pin').value = '';
+                    const dropdown = document.getElementById('settings-dropdown');
+                    if (dropdown) this.renderSettingsContent(dropdown);
+                } else {
+                    this.mascotSay('⚠️ Please enter a valid 4-digit PIN (numbers only)!', 3500);
+                }
             }
 
             updateScreenTimeLimit(minutes) {
@@ -1747,6 +1890,25 @@
                     }
                 ];
 
+                // Merge with admin-managed templates from localStorage or state
+                try {
+                    const customTemplates = this.state.customColoring || JSON.parse(localStorage.getItem('thaana_customColoring') || '[]');
+                    customTemplates.forEach(t => {
+                        if (t && t.name && t.svg && t.legend) {
+                            let leg = t.legend;
+                            if (typeof leg === 'string') {
+                                try { leg = JSON.parse(leg); } catch(e) {}
+                            }
+                            if (Array.isArray(leg)) {
+                                templates.push({ name: t.name, svg: t.svg, legend: leg });
+                            }
+                        }
+                    });
+                } catch(e) { /* ignore */ }
+
+                // Guard selected index
+                if (game.selectedTemplate >= templates.length) game.selectedTemplate = 0;
+
                 const currentT = templates[game.selectedTemplate];
                 
                 const container = document.createElement('div');
@@ -1810,6 +1972,9 @@
                 setTimeout(() => {
                     const regions = canvasContainer.querySelectorAll('.coloring-region');
                     regions.forEach(r => {
+                        if (game.coloredRegions[r.id]) {
+                            r.setAttribute('fill', game.coloredRegions[r.id]);
+                        }
                         r.onclick = (e) => {
                             this.colorRegionClick(r.id, r.getAttribute('data-code'), r.getAttribute('data-correct'), e);
                         };
@@ -2589,11 +2754,24 @@
                 if (!dot) {
                     dot = document.createElement('div');
                     dot.className = 'tracing-guide-dot';
+                    dot.innerHTML = '🦀<div class="guide-arrow" style="position:absolute; bottom:-12px; font-size:1.1rem; color:#22c55e; text-shadow:0 0 3px white; transition:transform 0.15s">➔</div>';
                     box.appendChild(dot);
                 }
                 dot.style.display = 'block';
                 dot.style.left = (target.x * scaleX) + 'px';
                 dot.style.top  = (target.y * scaleY) + 'px';
+
+                // Directional Guide Arrow
+                const nextTarget = stroke[Math.min(this.currentPointIndex + 5, stroke.length - 1)];
+                const arrow = dot.querySelector('.guide-arrow');
+                if (arrow && nextTarget && (nextTarget.x !== target.x || nextTarget.y !== target.y)) {
+                    const angle = Math.atan2(nextTarget.y - target.y, nextTarget.x - target.x);
+                    const deg = angle * (180 / Math.PI);
+                    arrow.style.transform = `rotate(${deg}deg)`;
+                    arrow.style.display = 'block';
+                } else if (arrow) {
+                    arrow.style.display = 'none';
+                }
             }
 
             drawTracingGuides() {
@@ -2953,17 +3131,51 @@
                 
                 const titleEl = document.getElementById('quiz-title');
                 if (titleEl) titleEl.textContent = target.quiz_question || this.t('What is this letter?');
-                
+
+                // Auto-play question audio, then answer audios sequentially
+                const playQuizAudio = () => {
+                    const qAudio = target.quiz_audio || target.audio_dhivehi || target.audio;
+                    if (qAudio) this.playAudio(qAudio);
+                    // Play answer option audios after question
+                    let delay = qAudio ? 1800 : 200;
+                    options.forEach(opt => {
+                        const optItem = (this.state.customContent[this.state.language] || []).find(i =>
+                            (i.letter || '').trim() === opt.label.trim()
+                        );
+                        if (optItem) {
+                            const optAudio = optItem.quiz_audio || optItem.audio_dhivehi || optItem.audio;
+                            if (optAudio) {
+                                setTimeout(() => this.playAudio(optAudio), delay);
+                                delay += 1200;
+                            }
+                        }
+                    });
+                };
+                setTimeout(playQuizAudio, 400);
+
                 const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
                 options.forEach(opt => {
                     const btn = document.createElement('button'); btn.className = 'start-btn'; btn.innerText = opt.label; btn.style.background = 'var(--pink)';
+                    // Play option audio on hover for reference
+                    btn.onmouseenter = () => {
+                        const optItem = (this.state.customContent[this.state.language] || []).find(i =>
+                            (i.letter || '').trim() === opt.label.trim()
+                        );
+                        if (optItem) {
+                            const optAudio = optItem.quiz_audio || optItem.audio_dhivehi || optItem.audio;
+                            if (optAudio) this.playAudio(optAudio);
+                        }
+                    };
                     btn.onclick = () => { 
                         this.playSound('click'); 
                         if (opt.isCorrect) { 
                             this.triggerExplosion(); 
                             this.addTaskProgress(); 
                             setTimeout(() => this.nextQuizQuestion(), 1500); 
-                        } else btn.style.background = '#94a3b8'; 
+                        } else {
+                            btn.style.background = '#fca5a5';
+                            this.playSound('wrong');
+                        }
                     };
                     grid.appendChild(btn);
                 });

@@ -201,6 +201,14 @@
                     <input type="text" class="admin-input" id="ed-quiz-opts" style="margin:0" placeholder="e.g. އ, ބ, ނ, ރ">
                     <span class="res-label">Correct Answer (must match one of the options above)</span>
                     <input type="text" class="admin-input" id="ed-quiz-ans" style="margin:0" placeholder="e.g. އ">
+                    
+                    <span class="res-label">Quiz Question Audio (Optional voiceover)</span>
+                    <div class="upload-row">
+                        <input type="text" class="admin-input" id="ed-quiz-audio" placeholder="quiz_audio.mp3" style="margin:0">
+                        <button class="upload-btn" style="background:#e879f9; color:white" onclick="edTriggerUpload('quiz_audio')">📤 Upload</button>
+                        <input type="file" id="ed-file-quiz_audio" style="display:none" accept="audio/*" onchange="edHandleUpload(this,'quiz_audio')">
+                        <button class="upload-btn" style="background:#334155; color:#94a3b8" onclick="edPlayPreview('quiz_audio')" title="Preview">▶</button>
+                    </div>
                 </div>
 
                 <div class="res-section">
@@ -363,6 +371,32 @@
                 <button class="admin-btn" style="width:100%; margin-top:20px" onclick="saveVideos()">☁️ SAVE VIDEOS TO CLOUD</button>
             </div>
 
+            <!-- COLORING MANAGER -->
+            <div class="admin-card">
+                <h2>COLORING TEMPLATES MANAGER 🎨</h2>
+                <p style="color:#94a3b8; margin-bottom:20px; font-size:0.9rem">Add or manage custom coloring templates. Copy SVG files with paths matching legend codes (e.g. <code>class="coloring-region" id="petal" data-code="ހ" data-correct="#eab308"</code>).</p>
+
+                <div style="display:grid; grid-template-columns:1fr; gap:15px; margin-bottom:20px; background:#0f172a; padding:20px; border-radius:16px; border:1px solid #334155">
+                    <div>
+                        <label class="res-label">Drawing Name</label>
+                        <input type="text" class="admin-input" id="col-name" placeholder="e.g. Magic Castle 🏰">
+                    </div>
+                    <div>
+                        <label class="res-label">Legend Configuration (JSON format)</label>
+                        <textarea class="admin-input" id="col-legend" style="height:100px; font-family:monospace; font-size:0.85rem;" placeholder='e.g. [{"code": "ހ", "name": "Yellow", "hex": "#eab308"}]'></textarea>
+                    </div>
+                    <div>
+                        <label class="res-label">SVG Markup</label>
+                        <textarea class="admin-input" id="col-svg" style="height:150px; font-family:monospace; font-size:0.85rem;" placeholder='e.g. <svg viewBox="0 0 400 400"> <path id="stem" class="coloring-region" data-code="ހ" data-correct="#eab308" ...></path> </svg>'></textarea>
+                    </div>
+                </div>
+
+                <button class="admin-btn" style="background:#22c55e; margin-bottom:24px" onclick="addColoringTemplate()">➕ ADD TEMPLATE</button>
+
+                <div id="coloring-list" style="display:flex; flex-direction:column; gap:12px"></div>
+                <button class="admin-btn" style="width:100%; margin-top:20px" onclick="saveColoringTemplates()">☁️ SAVE TEMPLATES TO CLOUD</button>
+            </div>
+
             <div class="admin-card" style="margin-top: 30px; border-color: #ef4444;">
                 <h2 style="color: #ef4444;">DANGER ZONE ⚠️</h2>
                 <p style="margin: 15px 0; color: #94a3b8;">Revert all content, navigation, and settings to original defaults. This action cannot be undone.</p>
@@ -463,6 +497,7 @@
             await fetchMascotTips();
             await fetchExtras();
             await fetchVideos();
+            await fetchColoringTemplates();
         }
 
         // ─── EXTRAS MANAGER ───────────────────────────────────────────────
@@ -729,6 +764,135 @@
                 await fetchVideos();
             }
         }
+        // ─── COLORING MANAGER ─────────────────────────────────────────────
+        window.adminColoring = [];
+
+        async function fetchColoringTemplates() {
+            if (!window.supabaseClient) {
+                // Fallback to local storage
+                try {
+                    window.adminColoring = JSON.parse(localStorage.getItem('thaana_coloringTemplates') || '[]');
+                } catch(e) { window.adminColoring = []; }
+                renderColoringList();
+                return;
+            }
+            try {
+                const { data } = await window.supabaseClient.from('app_coloring').select('*').order('order_index');
+                window.adminColoring = data || [];
+                // Save to local storage for local fallbacks
+                localStorage.setItem('thaana_coloringTemplates', JSON.stringify(window.adminColoring));
+                renderColoringList();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function renderColoringList() {
+            const list = document.getElementById('coloring-list');
+            if (!list) return;
+            if (!window.adminColoring.length) {
+                list.innerHTML = '<div style="color:#64748b; font-size:0.9rem; padding:20px 0">No custom coloring pages added yet.</div>';
+                return;
+            }
+            list.innerHTML = window.adminColoring.map((t, i) => {
+                let legendDesc = '';
+                try {
+                    const parsed = typeof t.legend === 'string' ? JSON.parse(t.legend) : t.legend;
+                    legendDesc = parsed.map(l => `${l.code}=${l.name}(${l.hex})`).join(', ');
+                } catch(e) {
+                    legendDesc = typeof t.legend === 'string' ? t.legend : JSON.stringify(t.legend);
+                }
+                return `
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:14px; padding:16px; display:flex; justify-content:space-between; align-items:center; gap:15px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:200px">
+                            <div style="font-weight:900; font-size:1rem; color:white">${t.name || 'Untitled'}</div>
+                            <div style="font-size:0.8rem; color:#64748b; margin-top:4px">Legend: ${legendDesc}</div>
+                            <div style="font-size:0.75rem; color:#94a3b8; font-family:monospace; margin-top:4px; max-width:500px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">SVG: ${t.svg.substring(0, 100)}...</div>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-shrink:0">
+                            <button class="admin-btn" style="background:#334155; padding:8px 14px;" onclick="editColoringTemplate(${i})">✏️ Edit</button>
+                            <button class="admin-btn" style="background:#ef4444; padding:8px 14px;" onclick="deleteColoringTemplate(${i})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addColoringTemplate() {
+            const name = document.getElementById('col-name').value.trim();
+            const legendStr = document.getElementById('col-legend').value.trim();
+            const svg = document.getElementById('col-svg').value.trim();
+
+            if (!name) return alert('Please enter template name.');
+            if (!legendStr) return alert('Please enter legend JSON configuration.');
+            if (!svg) return alert('Please paste raw SVG markup.');
+
+            let legend;
+            try {
+                legend = JSON.parse(legendStr);
+            } catch(e) {
+                return alert('Invalid JSON in Legend Configuration: ' + e.message);
+            }
+
+            window.adminColoring.push({ name, legend, svg });
+            renderColoringList();
+
+            // Clear form
+            document.getElementById('col-name').value = '';
+            document.getElementById('col-legend').value = '';
+            document.getElementById('col-svg').value = '';
+        }
+
+        function editColoringTemplate(i) {
+            const t = window.adminColoring[i];
+            document.getElementById('col-name').value = t.name || '';
+            document.getElementById('col-legend').value = typeof t.legend === 'string' ? t.legend : JSON.stringify(t.legend, null, 2);
+            document.getElementById('col-svg').value = t.svg || '';
+            window.adminColoring.splice(i, 1);
+            renderColoringList();
+        }
+
+        function deleteColoringTemplate(i) {
+            if (!confirm('Delete this template?')) return;
+            window.adminColoring.splice(i, 1);
+            renderColoringList();
+        }
+
+        async function saveColoringTemplates() {
+            // Save locally first
+            localStorage.setItem('thaana_coloringTemplates', JSON.stringify(window.adminColoring));
+            if (!window.supabaseClient) {
+                alert('Saved locally! (Supabase not connected)');
+                return;
+            }
+            const btn = event.target; btn.innerText = 'SAVING...';
+            try {
+                const toInsert = window.adminColoring.map((t, i) => ({
+                    name:        t.name || '',
+                    legend:      typeof t.legend === 'string' ? JSON.parse(t.legend) : t.legend,
+                    svg:         t.svg || '',
+                    order_index: i
+                }));
+
+                if (toInsert.length === 0) {
+                    await window.supabaseClient.from('app_coloring').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                } else {
+                    const { error: delErr } = await window.supabaseClient.from('app_coloring').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                    if (delErr) throw delErr;
+
+                    const { error: insErr } = await window.supabaseClient.from('app_coloring').insert(toInsert);
+                    if (insErr) throw insErr;
+                }
+
+                btn.innerText = '☁️ SAVE TEMPLATES TO CLOUD';
+                alert('Coloring templates saved to cloud!');
+                await fetchColoringTemplates();
+            } catch (err) {
+                btn.innerText = '☁️ SAVE TEMPLATES TO CLOUD';
+                alert('Failed to save templates: ' + err.message);
+                await fetchColoringTemplates();
+            }
+        }
         // ─────────────────────────────────────────────────────────────────
 
 
@@ -897,6 +1061,7 @@
             document.getElementById('ed-quiz-q').value  = item.quiz_question || '';
             document.getElementById('ed-quiz-opts').value = item.quiz_options || '';
             document.getElementById('ed-quiz-ans').value = item.quiz_answer || '';
+            document.getElementById('ed-quiz-audio').value = item.quiz_audio || '';
             document.getElementById('ed-audio-dhivehi').value = item.audio_dhivehi || item.audio || '';
             document.getElementById('ed-audio-english').value = item.audio_english || '';
             document.getElementById('ed-word-audio').value = item.word_audio || '';
@@ -971,7 +1136,7 @@
         }
 
         function edPlayPreview(field) {
-            const fn = document.getElementById(`ed-${field === 'word_audio' ? 'word-audio' : field}`).value;
+            const fn = document.getElementById(`ed-${field.replace('_', '-')}`).value;
             if (!fn || !window.supabaseClient) return;
             const url = window.supabaseClient.storage.from('audio').getPublicUrl(fn).data.publicUrl;
             new Audio(url).play().catch(() => alert('Could not play: ' + fn));
@@ -1102,6 +1267,7 @@
                 quiz_question: document.getElementById('ed-quiz-q').value,
                 quiz_options:  document.getElementById('ed-quiz-opts').value,
                 quiz_answer:   document.getElementById('ed-quiz-ans').value,
+                quiz_audio:    document.getElementById('ed-quiz-audio').value,
                 audio_dhivehi: document.getElementById('ed-audio-dhivehi').value,
                 audio_english: document.getElementById('ed-audio-english').value,
                 word_audio:    document.getElementById('ed-word-audio').value,

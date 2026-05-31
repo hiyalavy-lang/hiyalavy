@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS public.app_content (
     quiz_question TEXT,
     quiz_options TEXT,
     quiz_answer TEXT,
+    quiz_audio TEXT,
     ghost_image TEXT,
     ghost_path TEXT,
     order_index INTEGER DEFAULT 0
@@ -183,3 +184,19 @@ DROP POLICY IF EXISTS "Public Read Access Videos" ON public.app_videos;
 DROP POLICY IF EXISTS "Admin Write Access Videos" ON public.app_videos;
 CREATE POLICY "Public Read Access Videos" ON public.app_videos FOR SELECT USING (true);
 CREATE POLICY "Admin Write Access Videos" ON public.app_videos FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
+
+-- 9. Coloring Templates
+CREATE TABLE IF NOT EXISTS public.app_coloring (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    svg TEXT NOT NULL,
+    legend JSONB NOT NULL,
+    order_index INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.app_coloring ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Read Access Coloring" ON public.app_coloring;
+DROP POLICY IF EXISTS "Admin Write Access Coloring" ON public.app_coloring;
+CREATE POLICY "Public Read Access Coloring" ON public.app_coloring FOR SELECT USING (true);
+CREATE POLICY "Admin Write Access Coloring" ON public.app_coloring FOR ALL USING ((auth.jwt() ->> 'email') = 'alippalhey@gmail.com');
