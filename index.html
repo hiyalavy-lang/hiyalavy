@@ -90,6 +90,15 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script>
+        (function() {
+            const key = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_KEY) ? CONFIG.SUPABASE_KEY : 'API_KEY';
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = `https://bgkjrnfadzmcbgqncgpy.supabase.co/functions/v1/css?key=${key}&family=mv-waheed`;
+            document.head.appendChild(link);
+        })();
+    </script>
 </head>
 
 <body data-lang="dhivehi">
@@ -311,7 +320,7 @@
                     background: radial-gradient(circle, #1e1b4b, #030712);
                     display: flex; flex-direction: column; align-items: center; justify-content: center;
                     z-index: 100000; color: white; text-align: center; padding: 20px;
-                    font-family: 'Fredoka', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', sans-serif;
+                    font-family: 'Fredoka', 'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', sans-serif;
                 `;
 
                 overlay.innerHTML = `
@@ -2378,7 +2387,7 @@
                 if (!items.length) return;
                 let fontFamily = "'Quicksand', sans-serif";
                 if (this.state.language === 'dhivehi') {
-                    fontFamily = "'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
+                    fontFamily = "'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                 } else if (this.state.language === 'arabic') {
                     fontFamily = "'Noto Sans Arabic', sans-serif";
                 } else if (this.state.language === 'numbers') {
@@ -2474,7 +2483,7 @@
 
                 let fontFamily = "'Quicksand', sans-serif";
                 if (this.state.language === 'dhivehi') {
-                    fontFamily = "'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
+                    fontFamily = "'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                 } else if (this.state.language === 'arabic') {
                     fontFamily = "'Noto Sans Arabic', sans-serif";
                 } else if (this.state.language === 'numbers') {
@@ -2583,7 +2592,7 @@
                     } else {
                         let fontFamily = "'Quicksand', sans-serif";
                         if (this.state.language === 'dhivehi') {
-                            fontFamily = "'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
+                            fontFamily = "'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                         } else if (this.state.language === 'arabic') {
                             fontFamily = "'Noto Sans Arabic', sans-serif";
                         } else if (this.state.language === 'numbers') {
