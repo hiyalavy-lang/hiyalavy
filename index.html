@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Noto+Sans+Thaana:wght@400;700;900&family=Noto+Sans+Arabic:wght@400;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
     <style>
         /* Prevent zooming on mobile */
@@ -311,7 +311,7 @@
                     background: radial-gradient(circle, #1e1b4b, #030712);
                     display: flex; flex-direction: column; align-items: center; justify-content: center;
                     z-index: 100000; color: white; text-align: center; padding: 20px;
-                    font-family: 'Fredoka', 'Faruma', sans-serif;
+                    font-family: 'Fredoka', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', sans-serif;
                 `;
 
                 overlay.innerHTML = `
@@ -625,9 +625,9 @@
                                 ageGroup: k.age_group,
                                 avatar: k.avatar,
                                 points: k.points,
-                                seasonPoints: (stats.seasonPoints !== undefined) ? stats.seasonPoints : k.points,
-                                monthlyPoints: (isThisMonth && stats.monthlyPoints !== undefined) ? stats.monthlyPoints : k.points,
-                                weeklyPoints: (isThisWeek && stats.weeklyPoints !== undefined) ? stats.weeklyPoints : k.points,
+                                seasonPoints: (stats.seasonPoints !== undefined) ? stats.seasonPoints : 0,
+                                monthlyPoints: (isThisMonth && stats.monthlyPoints !== undefined) ? stats.monthlyPoints : 0,
+                                weeklyPoints: (isThisWeek && stats.weeklyPoints !== undefined) ? stats.weeklyPoints : 0,
                                 dailyPoints: (isToday && stats.dailyPoints !== undefined) ? stats.dailyPoints : 0,
                                 badges: k.badges || [],
                                 stats: stats,
@@ -1787,27 +1787,27 @@
                                 
                                 <!-- Petal Top -->
                                 <path id="petal-t" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C200,60 150,80 200,140 C250,80 200,60 200,140 Z" fill="${game.coloredRegions['petal-t'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="200" y="100" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                <text x="200" y="100" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
 
                                 <!-- Petal Right -->
                                 <path id="petal-r" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C280,140 260,90 200,140 C260,190 280,140 200,140 Z" fill="${game.coloredRegions['petal-r'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="245" y="145" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                <text x="245" y="145" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
 
                                 <!-- Petal Bottom Right -->
                                 <path id="petal-br" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C260,220 220,240 200,140 C180,240 140,220 200,140 Z" fill="${game.coloredRegions['petal-br'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="200" y="195" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                <text x="200" y="195" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
 
                                 <!-- Petal Bottom Left -->
                                 <path id="petal-bl" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C120,220 90,170 200,140 C90,110 120,220 200,140 Z" fill="${game.coloredRegions['petal-bl'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="145" y="170" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                <text x="145" y="170" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
 
                                 <!-- Petal Left -->
                                 <path id="petal-l" class="coloring-region" data-code="ށ" data-correct="#ef4444" d="M200,140 C120,140 140,90 200,140 C140,190 120,140 200,140 Z" fill="${game.coloredRegions['petal-l'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="155" y="125" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                <text x="155" y="125" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
                                 
                                 <!-- Flower Center -->
                                 <circle id="center" class="coloring-region" data-code="ހ" data-correct="#eab308" cx="200" cy="140" r="30" fill="${game.coloredRegions['center'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></circle>
-                                <text x="200" y="147" font-family="'Faruma', 'Fredoka', sans-serif" font-size="24" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
+                                <text x="200" y="147" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="24" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
                             </svg>
                         `
                     },
@@ -1832,15 +1832,15 @@
                                 
                                 <!-- Body Main Face -->
                                 <path id="body-face" class="coloring-region" data-code="ހ" data-correct="#f97316" d="M80,200 C110,120 220,120 220,200 C220,280 110,280 80,200 Z" fill="${game.coloredRegions['body-face'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="140" y="208" font-family="'Faruma', 'Fredoka', sans-serif" font-size="24" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
+                                <text x="140" y="208" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="24" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
                                 
                                 <!-- Scale 1 -->
                                 <path id="scale-1" class="coloring-region" data-code="ށ" data-correct="#ec4899" d="M220,200 C220,140 260,140 260,200 C260,260 220,260 220,200 Z" fill="${game.coloredRegions['scale-1'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="240" y="208" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                <text x="240" y="208" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
                                 
                                 <!-- Scale 2 -->
                                 <path id="scale-2" class="coloring-region" data-code="ނ" data-correct="#3b82f6" d="M260,200 C260,150 300,150 300,200 C300,250 260,250 260,200 Z" fill="${game.coloredRegions['scale-2'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="280" y="208" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
+                                <text x="280" y="208" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
                                 
                                 <!-- Eye -->
                                 <circle cx="110" cy="180" r="10" fill="white" stroke="#1e293b" stroke-width="3"></circle>
@@ -1868,23 +1868,23 @@
 
                                 <!-- Wing Top Left -->
                                 <path id="wing-tl" class="coloring-region" data-code="ށ" data-correct="#3b82f6" d="M180,180 C110,80 30,120 180,200 Z" fill="${game.coloredRegions['wing-tl'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="110" y="140" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                <text x="110" y="140" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
                                 
                                 <!-- Wing Top Right -->
                                 <path id="wing-tr" class="coloring-region" data-code="ށ" data-correct="#3b82f6" d="M220,180 C290,80 370,120 220,200 Z" fill="${game.coloredRegions['wing-tr'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="290" y="140" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
+                                <text x="290" y="140" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ށ</text>
                                 
                                 <!-- Wing Bottom Left -->
                                 <path id="wing-bl" class="coloring-region" data-code="ނ" data-correct="#ec4899" d="M180,210 C100,280 60,330 180,250 Z" fill="${game.coloredRegions['wing-bl'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="120" y="260" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
+                                <text x="120" y="260" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
                                 
                                 <!-- Wing Bottom Right -->
                                 <path id="wing-br" class="coloring-region" data-code="ނ" data-correct="#ec4899" d="M220,210 C300,280 340,330 220,250 Z" fill="${game.coloredRegions['wing-br'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
-                                <text x="280" y="260" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
+                                <text x="280" y="260" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ނ</text>
                                 
                                 <!-- Body -->
                                 <rect id="body-mid" class="coloring-region" data-code="ހ" data-correct="#a855f7" x="185" y="130" width="30" height="150" rx="15" fill="${game.coloredRegions['body-mid'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></rect>
-                                <text x="200" y="210" font-family="'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
+                                <text x="200" y="210" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">ހ</text>
                             </svg>
                         `
                     }
@@ -2376,11 +2376,13 @@
             renderTracing() {
                 const items = this.state.customContent[this.state.language] || [];
                 if (!items.length) return;
-                let fontFamily = "'Fredoka', Arial, sans-serif";
+                let fontFamily = "'Quicksand', sans-serif";
                 if (this.state.language === 'dhivehi') {
-                    fontFamily = "'Faruma', 'MV Boli', sans-serif";
+                    fontFamily = "'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                 } else if (this.state.language === 'arabic') {
-                    fontFamily = "Arial, sans-serif";
+                    fontFamily = "'Noto Sans Arabic', sans-serif";
+                } else if (this.state.language === 'numbers') {
+                    fontFamily = "'Quicksand', sans-serif";
                 }
                 this.viewContainer.innerHTML = `
                     <div class="tracing-container" style="padding:2rem; text-align:center">
@@ -2470,17 +2472,19 @@
                 
                 const ghostSpacing = isDual ? '0.22em' : 'normal';
 
-                let fontFamily = "'Fredoka', Arial, sans-serif";
+                let fontFamily = "'Quicksand', sans-serif";
                 if (this.state.language === 'dhivehi') {
-                    fontFamily = "'Faruma', 'MV Boli', sans-serif";
+                    fontFamily = "'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                 } else if (this.state.language === 'arabic') {
-                    fontFamily = "Arial, sans-serif";
+                    fontFamily = "'Noto Sans Arabic', sans-serif";
+                } else if (this.state.language === 'numbers') {
+                    fontFamily = "'Quicksand', sans-serif";
                 }
 
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
-                    <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s">
-                        <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:${ghostFontSize}; letter-spacing:${ghostSpacing}; opacity:0.13; pointer-events:none; z-index:1; font-family:${fontFamily}; line-height:1; white-space:nowrap">${displayLetter}</div>
+                    <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s; direction:ltr">
+                        <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:${ghostFontSize}; letter-spacing:${ghostSpacing}; opacity:0.13; pointer-events:none; z-index:1; font-family:${fontFamily}; line-height:1; white-space:nowrap; direction:ltr">${displayLetter}</div>
                         <canvas id="tracing-canvas" width="400" height="400" style="position:absolute; top:0; left:0; z-index:2; width:100%; height:100%; cursor:crosshair; touch-action:none"></canvas>
                     </div>
                     <div style="margin:12px auto; max-width:400px">
@@ -2577,12 +2581,15 @@
                             if (ghostEl) ghostEl.innerHTML = `<img src="${img.src}" style="width:70%; height:70%; object-fit:contain; opacity:0.3">`;
                         };
                     } else {
-                        let fontFamily = "'Fredoka', Arial, sans-serif";
+                        let fontFamily = "'Quicksand', sans-serif";
                         if (this.state.language === 'dhivehi') {
-                            fontFamily = "'Faruma', 'MV Boli', sans-serif";
+                            fontFamily = "'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                         } else if (this.state.language === 'arabic') {
-                            fontFamily = "Arial, sans-serif";
+                            fontFamily = "'Noto Sans Arabic', sans-serif";
+                        } else if (this.state.language === 'numbers') {
+                            fontFamily = "'Quicksand', sans-serif";
                         }
+                        rCtx.direction = 'ltr';
                         rCtx.font = `bold ${displaySize}px ${fontFamily}`;
                         rCtx.textAlign = 'center';
                         rCtx.textBaseline = 'middle';
@@ -3224,12 +3231,30 @@
                 const filters = ['daily', 'weekly', 'monthly', 'season'];
                 const seasonInfo = this.state.hallFilter === 'season' ? `<div style="background:#fef3c7; border:2px solid #f59e0b; border-radius:15px; padding:12px 20px; margin-bottom:25px; text-align:center; font-weight:800; color:#b45309; font-size:0.95rem">✨ ${this.state.seasonName} — ${this.state.seasonDaysLeft} days left until reset (Ends ${this.state.seasonEnd})</div>` : '';
 
+                let refreshMsg = '';
+                const isEng = this.state.language === 'english';
+                if (this.state.hallFilter === 'daily') {
+                    refreshMsg = isEng 
+                        ? '🔄 Resets daily at 00:00 (Midnight)' 
+                        : '🔄 ކޮންމެ ރެއެއްގެ 00:00 (މެންދަމު) ގައި އާވާނެ';
+                } else if (this.state.hallFilter === 'weekly') {
+                    refreshMsg = isEng 
+                        ? '🔄 Resets every Friday at 00:00' 
+                        : '🔄 ކޮންމެ ހުކުރު ދުވަހެއްގެ 00:00 ގައި އާވާނެ';
+                } else if (this.state.hallFilter === 'monthly') {
+                    refreshMsg = isEng 
+                        ? '🔄 Resets on the 1st of every month at 00:00' 
+                        : '🔄 ކޮންމެ މަހެއްގެ 1 ވަނަ ދުވަހުގެ 00:00 ގައި އާވާނެ';
+                }
+                const refreshInfo = refreshMsg ? `<div class="hall-refresh-info" style="background:#f1f5f9; border:3px solid var(--border-dark); border-radius:20px; padding:12px 20px; margin-bottom:25px; text-align:center; font-weight:800; color:#475569; font-size:0.95rem; box-shadow:4px 4px 0 var(--border-dark)">${refreshMsg}</div>` : '';
+
                 this.viewContainer.innerHTML = `
                     <div class="hall-container" style="max-width:900px; margin:4rem auto; padding:40px; border-color:var(--orange); position:relative">
                         <img src="assets/mascot_think.png" class="app-mascot" style="position:absolute; top:-100px; left:-50px; width:180px; transform:rotate(-15deg); filter:drop-shadow(0 10px 20px rgba(0,0,0,0.1))">
                         <h2 style="text-align:center; font-size:3rem; margin-bottom:40px; color:var(--orange)">🏆 ${this.t('Hall of Fame')}</h2>
                         <div class="hall-filter-bar">${filters.map(f => `<button class="filter-btn ${this.state.hallFilter === f ? 'active' : ''}" style="${this.state.hallFilter === f ? 'background:var(--orange)' : ''}" onclick="app.setHallFilter('${f}')">${this.tHallFilter(f)}</button>`).join('')}</div>
                         ${seasonInfo}
+                        ${refreshInfo}
                         <div class="fame-list" id="fame-list-body" style="max-height:600px; overflow-y:auto; padding:20px; border:4px solid var(--border-dark); border-radius:30px; background:white">
                             <div style="text-align:center; padding:40px; color:#94a3b8">⏳ Loading leaderboard...</div>
                         </div>
@@ -3247,12 +3272,18 @@
                         const currentMonthStr = localStorage.getItem('thaana_lastMonthlyReset') || '';
                         // Map points according to active filter
                         kids = data.map(k => {
-                            let pts = k.points || 0;
-                            if (k.stats) {
-                                if (this.state.hallFilter === 'daily') pts = (k.stats.lastActiveDate === todayStr && k.stats.dailyPoints !== undefined) ? k.stats.dailyPoints : 0;
-                                else if (this.state.hallFilter === 'weekly') pts = (k.stats.lastWeeklyDate === fridayStr && k.stats.weeklyPoints !== undefined) ? k.stats.weeklyPoints : (k.points || 0);
-                                else if (this.state.hallFilter === 'monthly') pts = (k.stats.lastMonthlyDate === currentMonthStr && k.stats.monthlyPoints !== undefined) ? k.stats.monthlyPoints : (k.points || 0);
-                                else if (this.state.hallFilter === 'season') pts = (k.stats.seasonPoints !== undefined) ? k.stats.seasonPoints : (k.points || 0);
+                            const stats = k.stats || {};
+                            let pts = 0;
+                            if (this.state.hallFilter === 'daily') {
+                                pts = (stats.lastActiveDate === todayStr && stats.dailyPoints !== undefined) ? stats.dailyPoints : 0;
+                            } else if (this.state.hallFilter === 'weekly') {
+                                pts = (stats.lastWeeklyDate === fridayStr && stats.weeklyPoints !== undefined) ? stats.weeklyPoints : 0;
+                            } else if (this.state.hallFilter === 'monthly') {
+                                pts = (stats.lastMonthlyDate === currentMonthStr && stats.monthlyPoints !== undefined) ? stats.monthlyPoints : 0;
+                            } else if (this.state.hallFilter === 'season') {
+                                pts = (stats.seasonPoints !== undefined) ? stats.seasonPoints : 0;
+                            } else {
+                                pts = k.points || 0;
                             }
                             return { name: k.name, avatar: k.avatar, points: pts };
                         });
