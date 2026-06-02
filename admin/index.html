@@ -810,7 +810,11 @@
                 let legendDesc = '';
                 try {
                     const parsed = typeof t.legend === 'string' ? JSON.parse(t.legend) : t.legend;
-                    legendDesc = parsed.map(l => `${l.code}=${l.name}(${l.hex})`).join(', ');
+                    if (Array.isArray(parsed)) {
+                        legendDesc = parsed.map(l => `${l.code}=${l.name}(${l.hex})`).join(', ');
+                    } else {
+                        legendDesc = JSON.stringify(parsed);
+                    }
                 } catch(e) {
                     legendDesc = typeof t.legend === 'string' ? t.legend : JSON.stringify(t.legend);
                 }

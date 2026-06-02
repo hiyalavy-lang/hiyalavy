@@ -421,6 +421,20 @@
                 }
             }
 
+            getWeeklyResetStr() {
+                const now = new Date();
+                let lastFriday = new Date(now);
+                const dayOfWeek = now.getDay();
+                const diffToFriday = (dayOfWeek < 5) ? (dayOfWeek + 2) : (dayOfWeek - 5);
+                lastFriday.setDate(now.getDate() - diffToFriday);
+                return lastFriday.toDateString();
+            }
+
+            getMonthlyResetStr() {
+                const now = new Date();
+                return `${now.getFullYear()}-${now.getMonth()}`;
+            }
+
             initSeasonAndResets() {
                 const now = new Date();
                 const todayStr = now.toDateString();
@@ -433,13 +447,7 @@
                 }
 
                 // 2. Weekly Reset (Every Friday)
-                // getDay() === 5 is Friday. We store the date string of the most recent Friday.
-                let lastFriday = new Date(now);
-                const dayOfWeek = now.getDay();
-                const diffToFriday = (dayOfWeek < 5) ? (dayOfWeek + 2) : (dayOfWeek - 5);
-                lastFriday.setDate(now.getDate() - diffToFriday);
-                const fridayStr = lastFriday.toDateString();
-
+                const fridayStr = this.getWeeklyResetStr();
                 const lastWeekly = localStorage.getItem('thaana_lastWeeklyReset') || '';
                 if (lastWeekly !== fridayStr) {
                     localStorage.setItem('thaana_lastWeeklyReset', fridayStr);
@@ -447,7 +455,7 @@
                 }
 
                 // 3. Monthly Reset
-                const currentMonthStr = `${now.getFullYear()}-${now.getMonth()}`;
+                const currentMonthStr = this.getMonthlyResetStr();
                 const lastMonthly = localStorage.getItem('thaana_lastMonthlyReset') || '';
                 if (lastMonthly !== currentMonthStr) {
                     localStorage.setItem('thaana_lastMonthlyReset', currentMonthStr);
@@ -621,8 +629,8 @@
                     const { data: kidsData } = await this.supabase.from('kids').select('*').eq('user_id', session.user.id);
                     if (kidsData && kidsData.length > 0) {
                         const todayStr = new Date().toDateString();
-                        const fridayStr = localStorage.getItem('thaana_lastWeeklyReset') || '';
-                        const currentMonthStr = localStorage.getItem('thaana_lastMonthlyReset') || '';
+                        const fridayStr = this.getWeeklyResetStr();
+                        const currentMonthStr = this.getMonthlyResetStr();
                         this.state.kids = kidsData.map(k => {
                             const stats = k.stats || {};
                             const isToday = stats.lastActiveDate === todayStr;
@@ -686,8 +694,8 @@
                     kid.stats.weeklyPoints = kid.weeklyPoints;
                     kid.stats.dailyPoints = kid.dailyPoints;
                     kid.stats.lastActiveDate = new Date().toDateString();
-                    kid.stats.lastWeeklyDate = localStorage.getItem('thaana_lastWeeklyReset') || '';
-                    kid.stats.lastMonthlyDate = localStorage.getItem('thaana_lastMonthlyReset') || '';
+                    kid.stats.lastWeeklyDate = this.getWeeklyResetStr();
+                    kid.stats.lastMonthlyDate = this.getMonthlyResetStr();
 
                     await this.supabase.from('kids').update({
                         points: kid.points,
@@ -859,6 +867,7 @@
                     this.showUpgradePopup();
                     return;
                 }
+                this.stopAllAudio();
                 this.triggerBubbleTransition(() => {
                     this.state.view = view;
                     if (view !== 'mystery-game') clearInterval(this.state.gameTimer);
@@ -964,7 +973,7 @@
                         <span class="hub-avatar">${activeKid.avatar}</span>
                         <div class="hub-info">
                             <span class="hub-name">${activeKid.name}</span>
-                            <span class="hub-points">⭐ ${activeKid.points}</span>
+                            <span class="hub-points">⭐ ${activeKid.seasonPoints !== undefined ? activeKid.seasonPoints : 0}</span>
                         </div>
                         <span class="hub-chevron">▼</span>
                     </div>
@@ -988,7 +997,7 @@
                                 <span style="font-size:1.8rem">${k.avatar}</span>
                                 <div style="flex:1">
                                     <div style="font-weight:900; font-size:1rem; color:${i === this.state.activeKidIndex ? 'var(--primary)' : '#1e293b'}">${k.name}</div>
-                                    <div style="font-size:0.75rem; font-weight:700; color:#94a3b8">⭐ ${k.points} Points</div>
+                                    <div style="font-size:0.75rem; font-weight:700; color:#94a3b8">⭐ ${k.seasonPoints !== undefined ? k.seasonPoints : 0} Points</div>
                                 </div>
                                 ${i === this.state.activeKidIndex ? '<span style="color:var(--primary); font-size:1.2rem">✓</span>' : ''}
                             </div>
@@ -1904,12 +1913,82 @@
                     const customTemplates = this.state.customColoring || JSON.parse(localStorage.getItem('thaana_customColoring') || '[]');
                     customTemplates.forEach(t => {
                         if (t && t.name && t.svg && t.legend) {
-                            let leg = t.legend;
-                            if (typeof leg === 'string') {
-                                try { leg = JSON.parse(leg); } catch(e) {}
+                            let isJsonSvg = false;
+                            let parsedSvg = null;
+                            if (typeof t.svg === 'string' && t.svg.trim().startsWith('{')) {
+                                try {
+                                    parsedSvg = JSON.parse(t.svg);
+                                    isJsonSvg = true;
+                                } catch(e) {}
                             }
-                            if (Array.isArray(leg)) {
-                                templates.push({ name: t.name, svg: t.svg, legend: leg });
+                            
+                            if (isJsonSvg && parsedSvg) {
+                                // Parse JSON SVG & Legend
+                                try {
+                                    const width = parsedSvg.width || 400;
+                                    const height = parsedSvg.height || 400;
+                                    let svgContent = `<svg viewBox="0 0 ${width} ${height}" style="width: 100%; max-width: 400px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">`;
+                                    
+                                    if (parsedSvg.paths && Array.isArray(parsedSvg.paths)) {
+                                        parsedSvg.paths.forEach(p => {
+                                            svgContent += `<path id="${p.id || ''}" d="${p.d || ''}" fill="${p.fill || 'none'}" stroke="${p.stroke || '#1e293b'}" stroke-width="${p.strokeWidth || 6}" style="pointer-events: none;"></path>`;
+                                        });
+                                    }
+                                    
+                                    const legendObj = typeof t.legend === 'string' ? JSON.parse(t.legend) : t.legend;
+                                    const legendArray = [];
+                                    if (legendObj && typeof legendObj === 'object' && !Array.isArray(legendObj)) {
+                                        const dhivehiCodes = ['ހ', 'ށ', 'ނ', 'ރ', 'ބ', 'ޅ', 'ކ', 'އ', 'ވ', 'މ', 'ފ', 'ދ', 'ތ', 'ލ', 'ގ', 'ޏ', 'ސ', 'ޑ', 'ޒ', 'ޓ', 'ޔ', 'ޕ', 'ޖ', 'ޗ'];
+                                        const hexColors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#ec4899', '#f97316', '#14b8a6', '#6366f1', '#8b5cf6'];
+                                        let idx = 0;
+                                        for (const regionId in legendObj) {
+                                            const pathD = legendObj[regionId];
+                                            if (typeof pathD === 'string') {
+                                                const code = dhivehiCodes[idx % dhivehiCodes.length];
+                                                const hex = hexColors[idx % hexColors.length];
+                                                const name = `Color ${idx + 1}`;
+                                                
+                                                legendArray.push({ code, name, hex });
+                                                
+                                                // Find center of path coordinates
+                                                let minX = width, maxX = 0, minY = height, maxY = 0;
+                                                const coordsRegex = /(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)|(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+                                                let cMatch;
+                                                let hasCoords = false;
+                                                while ((cMatch = coordsRegex.exec(pathD)) !== null) {
+                                                    const x = parseFloat(cMatch[1] || cMatch[3]);
+                                                    const y = parseFloat(cMatch[2] || cMatch[4]);
+                                                    if (!isNaN(x) && !isNaN(y)) {
+                                                        if (x < minX) minX = x;
+                                                        if (x > maxX) maxX = x;
+                                                        if (y < minY) minY = y;
+                                                        if (y > maxY) maxY = y;
+                                                        hasCoords = true;
+                                                    }
+                                                }
+                                                let centerX = hasCoords ? (minX + maxX) / 2 : width / 2;
+                                                let centerY = hasCoords ? (minY + maxY) / 2 : height / 2;
+                                                
+                                                svgContent += `<path id="${regionId}" class="coloring-region" data-code="${code}" data-correct="${hex}" d="${pathD}" fill="${game.coloredRegions[regionId] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>`;
+                                                svgContent += `<text x="${centerX}" y="${centerY + 6}" font-family="'Noto Sans Thaana', 'Faruma', 'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">${code}</text>`;
+                                                idx++;
+                                            }
+                                        }
+                                    }
+                                    svgContent += `</svg>`;
+                                    templates.push({ name: t.name, svg: svgContent, legend: legendArray });
+                                } catch(e) {
+                                    console.error("Error parsing JSON SVG template", e);
+                                }
+                            } else {
+                                // Standard SVG template
+                                let leg = t.legend;
+                                if (typeof leg === 'string') {
+                                    try { leg = JSON.parse(leg); } catch(e) {}
+                                }
+                                if (Array.isArray(leg)) {
+                                    templates.push({ name: t.name, svg: t.svg, legend: leg });
+                                }
                             }
                         }
                     });
@@ -2397,7 +2476,7 @@
                     <div class="tracing-container" style="padding:2rem; text-align:center">
                         <div class="letter-selector" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px">
                             ${items.map(item => {
-                                const isEnglish = this.state.language === 'english' || item.category === 'english';
+                                const isEnglish = this.state.language === 'english' || this.state.language === 'engdhi' || item.category === 'english';
                                 const display = (isEnglish && item.letter.length === 1) ? item.letter.toUpperCase() + item.letter.toLowerCase() : item.letter;
                                 const isDual = display.length > 1;
                                 return `<button class="nav-btn" onclick="app.playSound('click'); app.initTracingCanvas('${item.letter}')" style="min-width:60px; font-size:${isDual ? '1.2rem' : '1.5rem'}; font-family:${fontFamily}">${display}</button>`;
@@ -2471,7 +2550,7 @@
                 this.userCompletedStrokes = [];
                 this.userCurrentStroke = [];
 
-                const isEnglish = this.state.language === 'english';
+                const isEnglish = this.state.language === 'english' || this.state.language === 'engdhi' || (item && item.category === 'english');
                 const displayLetter = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                 const isDual = displayLetter.length > 1;
                 const isWide = isEnglish && (letter.toUpperCase() === 'M' || letter.toUpperCase() === 'W');
@@ -2554,7 +2633,7 @@
 
                     rCtx.clearRect(0, 0, 400, 400);
                     rCtx.fillStyle = '#000';
-                    const isEnglish = this.state.language === 'english';
+                    const isEnglish = this.state.language === 'english' || this.state.language === 'engdhi' || (item && item.category === 'english');
                     const displayLetterForCanvas = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                     const isDual = displayLetterForCanvas.length > 1;
                     const isWide = isEnglish && (letter.toUpperCase() === 'M' || letter.toUpperCase() === 'W');
@@ -3073,7 +3152,7 @@
                     if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! ${pct}% traced correctly!</span>`;
                     this.triggerExplosion();
                     this.addTaskProgress();
-                    const items = this.state.customContent[this.state.language === 'engdhi' ? 'english' : this.state.language] || [];
+                    const items = this.state.customContent[this.state.language] || [];
                     const next = items[items.findIndex(i => i.letter === this.currentTracingLetter) + 1] || items[0];
                     setTimeout(() => { if (this.state.view === 'tracing') this.initTracingCanvas(next.letter); }, 2000);
                 } else if (pct >= 35) {
@@ -3109,6 +3188,22 @@
             }
 
             nextQuizQuestion() {
+                // Clear any previous quiz timeouts and stop playing audio
+                if (this.quizAudioTimeouts) {
+                    this.quizAudioTimeouts.forEach(clearTimeout);
+                    this.quizAudioTimeouts = [];
+                } else {
+                    this.quizAudioTimeouts = [];
+                }
+                for (const key in this.audioPool) {
+                    if (this.audioPool[key]) {
+                        try {
+                            this.audioPool[key].pause();
+                            this.audioPool[key].currentTime = 0;
+                        } catch(e) {}
+                    }
+                }
+
                 const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
                 if (!items.length) {
                     document.getElementById('quiz-options').innerHTML = `<p style="grid-column:1/-1; color:#94a3b8; font-size:1rem">Waiting for quiz content...</p>`;
@@ -3161,13 +3256,15 @@
                         if (optItem) {
                             const optAudio = optItem.quiz_audio || optItem.audio_dhivehi || optItem.audio;
                             if (optAudio) {
-                                setTimeout(() => this.playAudio(optAudio), delay);
+                                const t = setTimeout(() => this.playAudio(optAudio), delay);
+                                this.quizAudioTimeouts.push(t);
                                 delay += 1200;
                             }
                         }
                     });
                 };
-                setTimeout(playQuizAudio, 400);
+                const tInit = setTimeout(playQuizAudio, 400);
+                this.quizAudioTimeouts.push(tInit);
 
                 const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
                 options.forEach(opt => {
@@ -3277,8 +3374,8 @@
                         .limit(200);
                     if (data) {
                         const todayStr = new Date().toDateString();
-                        const fridayStr = localStorage.getItem('thaana_lastWeeklyReset') || '';
-                        const currentMonthStr = localStorage.getItem('thaana_lastMonthlyReset') || '';
+                        const fridayStr = this.getWeeklyResetStr();
+                        const currentMonthStr = this.getMonthlyResetStr();
                         // Map points according to active filter
                         kids = data.map(k => {
                             const stats = k.stats || {};
@@ -3296,6 +3393,8 @@
                             }
                             return { name: k.name, avatar: k.avatar, points: pts };
                         });
+                        // Filter out 0 points
+                        kids = kids.filter(k => k.points > 0);
                         // Sort descending
                         kids.sort((a, b) => b.points - a.points);
                         // Take top 100
@@ -3419,6 +3518,7 @@
             }
 
             addTaskProgress(type, customPts) {
+                this.initSeasonAndResets();
                 const kid = this.state.kids[this.state.activeKidIndex];
                 const ptsToAdd = customPts !== undefined ? customPts : 10;
                 kid.points += ptsToAdd;
@@ -3573,6 +3673,21 @@
                 if (!this.audioPool[url]) this.audioPool[url] = new Audio(url);
                 this.audioPool[url].currentTime = 0;
                 this.audioPool[url].play().catch((e) => console.log("Audio play blocked:", e));
+            }
+
+            stopAllAudio() {
+                if (this.quizAudioTimeouts) {
+                    this.quizAudioTimeouts.forEach(clearTimeout);
+                    this.quizAudioTimeouts = [];
+                }
+                for (const key in this.audioPool) {
+                    if (this.audioPool[key]) {
+                        try {
+                            this.audioPool[key].pause();
+                            this.audioPool[key].currentTime = 0;
+                        } catch(e) {}
+                    }
+                }
             }
             createPop(x, y) { const pop = document.createElement('div'); pop.className = 'pop-star'; pop.innerHTML = '⭐'; pop.style.left = (x - 20) + 'px'; pop.style.top = (y - 20) + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 800); }
             triggerExplosion() {
