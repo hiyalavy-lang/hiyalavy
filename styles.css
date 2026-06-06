@@ -94,7 +94,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: 'Fredoka', 'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif;
+    font-family: 'MV Waheed', sans-serif;
     direction: rtl;
     background: var(--bg-main);
     color: var(--text-main);
