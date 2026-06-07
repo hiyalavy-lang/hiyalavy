@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="dv" dir="rtl">
 
 <head>
@@ -1021,24 +1021,26 @@
                 modal.className = 'modal-overlay'; modal.id = 'upgrade-modal';
                 const isEng = this.state.language === 'english';
                 modal.innerHTML = `
-                    <div class="parent-modal" style="text-align:center; max-width:550px">
+                    <div class="parent-modal" style="text-align:center; max-width:550px; width:95%; padding:clamp(15px, 5vw, 30px)">
                         <button class="modal-close" onclick="document.getElementById('upgrade-modal').remove()">✖</button>
-                        <h2 style="color:var(--orange); font-size:2.2rem; margin-bottom:10px">Unlock Premium! ✨</h2>
+                        <h2 style="color:var(--orange); font-size:clamp(1.5rem, 5vw, 2.2rem); margin-bottom:10px">Unlock Premium! ✨</h2>
                         
-                        <div class="price-badge">${this.state.globalSettings.premiumPrice} <span style="font-size:0.9rem; opacity:0.8">/ Year</span></div>
+                        <div class="price-badge" style="padding:10px 20px; font-size:1.5rem; margin-bottom:10px">${this.state.globalSettings.premiumPrice} <span style="font-size:0.8rem; opacity:0.8">/ Year</span></div>
                         
-                        <p style="font-weight:800; color:var(--text-light); margin-bottom:20px">${isEng ? 'Get access to all amazing features' : 'ހުރިހާ ބައިތަކެއް މިހާރު ހުޅުވާލައްވާ!'}</p>
+                        <p style="font-weight:800; color:var(--text-light); margin-bottom:15px; font-size:0.9rem">${isEng ? 'Get access to all amazing features' : 'ހުރިހާ ބައިތަކެއް މިހާރު ހުޅުވާލައްވާ!'}</p>
                         
-                        <div class="feature-visual-grid">
-                            <div class="feature-tile blue"><span class="icon">🌍</span><span class="label">English & Arabic Modules</span></div>
-                            <div class="feature-tile green"><span class="icon">✏️</span><span class="label">Interactive Tracing</span></div>
-                            <div class="feature-tile orange"><span class="icon">⭐</span><span class="label">Quizzes & Games</span></div>
-                            <div class="feature-tile pink"><span class="icon">🏅</span><span class="label">50+ Collectible Badges</span></div>
-                            <div class="feature-tile purple"><span class="icon">🏆</span><span class="label">Hall of Fame Access</span></div>
-                            <div class="feature-tile blue"><span class="icon">🔤</span><span class="label">Engdhi Hybrid Learning</span></div>
+                        <div class="feature-visual-grid" style="gap:10px; margin-bottom:20px; grid-template-columns:repeat(2, 1fr);">
+                            <div class="feature-tile blue" style="padding:10px"><span class="icon" style="font-size:1.5rem">🌍</span><span class="label" style="font-size:0.75rem">English, Arabic & Numbers</span></div>
+                            <div class="feature-tile green" style="padding:10px"><span class="icon" style="font-size:1.5rem">✍️</span><span class="label" style="font-size:0.75rem">Interactive Tracing</span></div>
+                            <div class="feature-tile orange" style="padding:10px"><span class="icon" style="font-size:1.5rem">🎮</span><span class="label" style="font-size:0.75rem">Quizzes & Games</span></div>
+                            <div class="feature-tile pink" style="padding:10px"><span class="icon" style="font-size:1.5rem">🏅</span><span class="label" style="font-size:0.75rem">100 Collectible Badges</span></div>
+                            <div class="feature-tile purple" style="padding:10px"><span class="icon" style="font-size:1.5rem">🏆</span><span class="label" style="font-size:0.75rem">Global Hall of Fame</span></div>
+                            <div class="feature-tile blue" style="padding:10px"><span class="icon" style="font-size:1.5rem">🎨</span><span class="label" style="font-size:0.75rem">Coloring Studio</span></div>
+                            <div class="feature-tile orange" style="padding:10px"><span class="icon" style="font-size:1.5rem">📺</span><span class="label" style="font-size:0.75rem">Learning Video Hub</span></div>
+                            <div class="feature-tile green" style="padding:10px"><span class="icon" style="font-size:1.5rem">🔊</span><span class="label" style="font-size:0.75rem">100+ Vocab Sounds</span></div>
                         </div>
 
-                        <button class="start-btn" style="width:100%; background:var(--orange); font-size:1.4rem" onclick="app.showPaymentDetails()">މިހާރު އަޕްގްރޭޑް ކުރޭ! 🚀</button>
+                        <button class="start-btn" style="width:100%; background:var(--orange); font-size:1.2rem; padding:15px" onclick="app.showPaymentDetails()">މިހާރު އަޕްގްރޭޑް ކުރޭ! 🚀</button>
                     </div>
                 `;
                 document.getElementById('modal-container').appendChild(modal);
