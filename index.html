@@ -3456,7 +3456,7 @@
                     
                     const earnedBadgesHTML = bList.length > 0 ? bList.map(bid => {
                         const b = badges.find(x => x.id === bid);
-                        return b ? `<div style="font-size:2.5rem; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.1)); cursor:pointer; transition:transform 0.2s;" onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform='none'" onclick="app.showBadgeInfo(${bid})" title="${b.name}">${b.icon}</div>` : '';
+                        return b ? `<div style="font-size:2.5rem; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.1)); cursor:pointer; transition:transform 0.2s;" onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform='none'" onclick="app.state.showToast('${b.name.replace(/'/g, "\\'")}')" title="${b.name}">${b.icon}</div>` : '';
                     }).join('') : '<div style="color:#94a3b8; grid-column:1/-1;">No badges yet.</div>';
 
                     modal.innerHTML = `
