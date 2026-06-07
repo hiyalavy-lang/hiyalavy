@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="dv" dir="rtl">
 
 <head>
@@ -84,7 +84,7 @@
         .hub-action-btn:hover { background: #f1f5f9; transform: translateY(-2px); }
         .hub-action-btn.premium { background: var(--orange); color: white; border-color: #d97706; }
         .hub-action-btn.logout { color: #ef4444; border-color: #fca5a5; }
-        .lang-opt { padding: 15px; border-radius: 20px; border: 3px solid #e2e8f0; background: white; font-weight: 900; font-size: 1rem; cursor: pointer; transition: all 0.2s; color: #475569; position: relative; text-align: center; }
+        .lang-opt { padding: 15px; border-radius: 20px; border: 3px solid #e2e8f0; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  font-weight: 900; font-size: 1rem; cursor: pointer; transition: all 0.2s; color: #475569; position: relative; text-align: center; }
         .lang-opt.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); box-shadow: 0 4px 0 var(--primary); transform: translateY(-2px); }
         .lang-opt:hover:not(.active) { border-color: var(--primary-light); background: #f8fafc; }
     </style>
@@ -348,7 +348,7 @@
                 modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200000;display:flex;align-items:center;justify-content:center;';
                 this._unlockBuffer = '';
                 modal.innerHTML = `
-                    <div style="background:white;border:5px solid var(--border-dark);border-radius:35px;padding:35px 28px;text-align:center;max-width:320px;width:90%;box-shadow:0 25px 60px rgba(0,0,0,0.4);direction:ltr;font-family:'Fredoka',sans-serif;animation:slideDown 0.3s ease;">
+                    <div style="background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:5px solid var(--border-dark);border-radius:35px;padding:35px 28px;text-align:center;max-width:320px;width:90%;box-shadow:0 25px 60px rgba(0,0,0,0.4);direction:ltr;font-family:'Fredoka',sans-serif;animation:slideDown 0.3s ease;">
                         <div style="font-size:2.5rem;margin-bottom:8px;">🔑</div>
                         <h3 style="font-size:1.3rem;font-weight:900;margin-bottom:4px;color:#1e293b;">Parent Unlock</h3>
                         <p style="font-size:0.78rem;color:#64748b;font-weight:700;margin-bottom:18px;">Enter your PIN to unlock the screen</p>
@@ -356,7 +356,7 @@
                             ${[0,1,2,3].map(i=>`<div id="unlock-dot-${i}" style="width:17px;height:17px;border-radius:50%;background:#e2e8f0;border:2px solid #cbd5e1;transition:all 0.2s;"></div>`).join('')}
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;max-width:220px;margin:0 auto 16px;">
-                            ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(n=>n===''?'<div></div>':`<button onclick="app.unlockPinInput('${n}')" style="padding:14px 10px;font-size:1.35rem;font-weight:900;border:3px solid #e2e8f0;border-radius:15px;background:white;cursor:pointer;box-shadow:3px 3px 0 #e2e8f0;font-family:inherit;">${n}</button>`).join('')}
+                            ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(n=>n===''?'<div></div>':`<button onclick="app.unlockPinInput('${n}')" style="padding:14px 10px;font-size:1.35rem;font-weight:900;border:3px solid #e2e8f0;border-radius:15px;background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); cursor:pointer;box-shadow:3px 3px 0 #e2e8f0;font-family:inherit;">${n}</button>`).join('')}
                         </div>
                         <button onclick="document.getElementById('unlock-pin-modal').remove()" style="background:#f1f5f9;border:2px solid #e2e8f0;border-radius:15px;padding:10px 30px;font-weight:800;cursor:pointer;color:#64748b;font-family:inherit;">Cancel</button>
                     </div>`;
@@ -730,7 +730,7 @@
 
                 const dropdown = document.createElement('div');
                 dropdown.id = 'passcode-dropdown';
-                dropdown.style.cssText = `position:fixed; top:80px; right:20px; width:min(320px,92vw); background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 20px 50px rgba(0,0,0,0.25); z-index:9000; padding:28px 24px; animation:slideDown 0.3s cubic-bezier(0.18,0.89,0.32,1.28); text-align:center; direction:ltr;`;
+                dropdown.style.cssText = `position:fixed; top:80px; right:20px; width:min(320px,92vw); background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 20px 50px rgba(0,0,0,0.25); z-index:9000; padding:28px 24px; animation:slideDown 0.3s cubic-bezier(0.18,0.89,0.32,1.28); text-align:center; direction:ltr;`;
 
                 dropdown.innerHTML = `
                     <div style="font-size:2rem; margin-bottom:6px;">${noPin ? '🔐' : '🔒'}</div>
@@ -740,7 +740,7 @@
                         ${[0,1,2,3].map(i => `<div id="pin-dot-${i}" style="width:17px; height:17px; border-radius:50%; background:#e2e8f0; border:2px solid #cbd5e1; transition:all 0.2s;"></div>`).join('')}
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:9px; max-width:220px; margin:0 auto 14px;">
-                        ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(n => n==='' ? '<div></div>' : `<button onclick="app.pinInput('${n}')" style="padding:14px 10px; font-size:1.35rem; font-weight:900; border:3px solid #e2e8f0; border-radius:15px; background:white; cursor:pointer; transition:all 0.15s; box-shadow:3px 3px 0 #e2e8f0; font-family:inherit;" onmousedown="this.style.cssText+='transform:translateY(3px);box-shadow:none!important'" onmouseup="this.style.transform='';this.style.boxShadow='3px 3px 0 #e2e8f0'">${n}</button>`).join('')}
+                        ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(n => n==='' ? '<div></div>' : `<button onclick="app.pinInput('${n}')" style="padding:14px 10px; font-size:1.35rem; font-weight:900; border:3px solid #e2e8f0; border-radius:15px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  cursor:pointer; transition:all 0.15s; box-shadow:3px 3px 0 #e2e8f0; font-family:inherit;" onmousedown="this.style.cssText+='transform:translateY(3px);box-shadow:none!important'" onmouseup="this.style.transform='';this.style.boxShadow='3px 3px 0 #e2e8f0'">${n}</button>`).join('')}
                     </div>
                     ${!noPin ? `<div onclick="app.forgotPin()" style="cursor:pointer;font-size:0.8rem;font-weight:800;color:#94a3b8;text-decoration:underline;margin-top:4px;">Forgot PIN?</div>` : ''}
                 `;
@@ -980,7 +980,7 @@
                 const dropdown = document.createElement('div');
                 dropdown.id = 'hub-dropdown';
                 dropdown.className = 'hub-dropdown-menu';
-                dropdown.style.cssText = `position:fixed; top:80px; right:20px; width:320px; background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 15px 45px rgba(0,0,0,0.2); z-index:9000; padding:20px; animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)`;
+                dropdown.style.cssText = `position:fixed; top:80px; right:20px; width:320px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:4px solid var(--border-dark); border-radius:30px; box-shadow:0 15px 45px rgba(0,0,0,0.2); z-index:9000; padding:20px; animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)`;
 
                 dropdown.innerHTML = `
                     <div style="margin-bottom:15px; font-weight:900; color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:1.5px">${this.t('Switch Profile')}</div>
@@ -1055,7 +1055,7 @@
                         <div class="payment-card">
                             <p style="margin-bottom:10px"><b>Account Name:</b> ${this.state.globalSettings.bankName}</p>
                             <p style="margin-bottom:5px"><b>Account Number:</b></p>
-                            <div class="copy-box" style="display:flex; justify-content:space-between; align-items:center; background:white; padding:10px 15px; border-radius:12px; border:2px solid var(--border-dark); margin:10px 0; font-family:monospace; font-size:1.1rem; font-weight:900;">
+                            <div class="copy-box" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  padding:10px 15px; border-radius:12px; border:2px solid var(--border-dark); margin:10px 0; font-family:monospace; font-size:1.1rem; font-weight:900;">
                                 <span>${this.state.globalSettings.bankAccount}</span>
                                 <button onclick="navigator.clipboard.writeText('${this.state.globalSettings.bankAccount}'); alert('Copied!')" style="border:none; background:none; cursor:pointer">📋</button>
                             </div>
@@ -1227,7 +1227,7 @@
                         <div class="hall-container" style="max-width:550px; padding: 60px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(05px); -webkit-backdrop-filter: blur(10px); border: 8px solid rgba(255,255,255,0.5); border-radius: 50px; text-align:center; position:relative; z-index: 10; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
                             <h2 style="font-size:3rem; margin-bottom:20px; color: #000; font-weight: 900; text-shadow: 0 2px 4px rgba(255,255,255,0.5)">${isEng ? 'Welcome Back! 🏠' : 'މަރުހަބާ! 🏠'}</h2>
                             <p style="margin-bottom:40px; font-weight:900; color: #1e293b; font-size: 1.2rem;">${isEng ? 'Sign in with Google to continue your learning journey' : 'ދަސްކުރުން ކުރިއަށް ގެންދިއުމަށް ގޫގުލް އިން ލޮގިން ކުރައްވާ'}</p>
-                            <button class="btn-google" style="width:100%; justify-content:center; background: white; border: 4px solid #000; box-shadow: 6px 6px 0 #000; height: 70px; font-size: 1.4rem;" onclick="app.performGoogleLogin()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="30">Sign in with Google</button>
+                            <button class="btn-google" style="width:100%; justify-content:center; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border: 4px solid #000; box-shadow: 6px 6px 0 #000; height: 70px; font-size: 1.4rem;" onclick="app.performGoogleLogin()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="30">Sign in with Google</button>
                         </div>
                         <div class="login-mascot-container" style="position: absolute; right: -100px; top: 50%; transform: translateY(-50%); width: 840px; pointer-events: none;">
                             <img src="assets/mascot_a.png" class="app-mascot" style="--mascot-size: 840px; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.15));">
@@ -1266,7 +1266,7 @@
                     right: 0;
                     width: min(520px, 100vw);
                     height: 100vh;
-                    background: white;
+                    background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); 
                     border-left: 6px solid var(--border-dark);
                     border-radius: 40px 0 0 40px;
                     box-shadow: -15px 0 60px rgba(0,0,0,0.2);
@@ -1407,7 +1407,7 @@
                             </p>
                             <div style="display:flex; align-items:center; gap:12px;">
                                 <label style="font-weight:800; font-size:1rem; color:#166534;">Limit:</label>
-                                <select class="settings-select" onchange="app.updateScreenTimeLimit(this.value)" style="margin-bottom:0; flex:1; border-color:var(--secondary); background:white;">
+                                <select class="settings-select" onchange="app.updateScreenTimeLimit(this.value)" style="margin-bottom:0; flex:1; border-color:var(--secondary); background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); ">
                                     <option value="0" ${limit === 0 ? 'selected' : ''}>No Limit</option>
                                     <option value="5" ${limit === 5 ? 'selected' : ''}>5 Minutes</option>
                                     <option value="10" ${limit === 10 ? 'selected' : ''}>10 Minutes</option>
@@ -1722,7 +1722,7 @@
 
                 items.forEach(item => {
                     const card = document.createElement('div');
-                    card.style.cssText = 'background:white; border:4px solid var(--border-dark); border-radius:25px; box-shadow:6px 6px 0 var(--border-dark); overflow:hidden; transition:transform 0.2s, box-shadow 0.2s; cursor:pointer;';
+                    card.style.cssText = 'background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:4px solid var(--border-dark); border-radius:25px; box-shadow:6px 6px 0 var(--border-dark); overflow:hidden; transition:transform 0.2s, box-shadow 0.2s; cursor:pointer;';
 
                     const isImg = item.file_url && /\.(png|jpg|jpeg|gif|webp)/i.test(item.file_url);
                     const isPdf = item.file_url && /\.pdf/i.test(item.file_url);
@@ -1785,7 +1785,7 @@
                             { code: "5", name: "Brown", hex: "#78350f" }
                         ],
                         svg: `
-                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  box-shadow: 6px 6px 0 var(--border-dark);">
                                 <!-- Stem -->
                                 <path id="stem" class="coloring-region" data-code="5" data-correct="#78350f" d="M190,240 L210,240 L210,340 L190,340 Z" fill="${game.coloredRegions['stem'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
                                 <text x="200" y="295" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">5</text>
@@ -1834,7 +1834,7 @@
                             { code: "5", name: "Purple", hex: "#a855f7" }
                         ],
                         svg: `
-                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  box-shadow: 6px 6px 0 var(--border-dark);">
                                 <!-- Tail Fin -->
                                 <path id="tail" class="coloring-region" data-code="3" data-correct="#eab308" d="M300,200 L360,140 L340,200 L360,260 Z" fill="${game.coloredRegions['tail'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
                                 <text x="335" y="205" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
@@ -1870,7 +1870,7 @@
                             { code: "3", name: "Yellow", hex: "#eab308" }
                         ],
                         svg: `
-                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  box-shadow: 6px 6px 0 var(--border-dark);">
                                 <!-- Antenna Left -->
                                 <path id="ant-l" class="coloring-region" data-code="3" data-correct="#eab308" d="M190,140 Q160,80 140,90 Q170,70 190,140 Z" fill="${game.coloredRegions['ant-l'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
                                 <text x="160" y="75" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
@@ -1922,7 +1922,7 @@
                                 try {
                                     const width = parsedSvg.width || 400;
                                     const height = parsedSvg.height || 400;
-                                    let svgContent = `<svg viewBox="0 0 ${width} ${height}" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">`;
+                                    let svgContent = `<svg viewBox="0 0 ${width} ${height}" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  box-shadow: 6px 6px 0 var(--border-dark);">`;
                                     
                                     if (parsedSvg.paths && Array.isArray(parsedSvg.paths)) {
                                         parsedSvg.paths.forEach(p => {
@@ -2012,7 +2012,7 @@
                 panel.style.cssText = 'flex:1; min-width:300px; display:flex; flex-direction:column; gap:20px;';
 
                 const tempSelect = document.createElement('div');
-                tempSelect.style.cssText = 'background:white; border:4px solid var(--border-dark); border-radius:25px; padding:15px; box-shadow:6px 6px 0 var(--border-dark);';
+                tempSelect.style.cssText = 'background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:4px solid var(--border-dark); border-radius:25px; padding:15px; box-shadow:6px 6px 0 var(--border-dark);';
                 tempSelect.innerHTML = `
                     <label style="font-weight:900; display:block; margin-bottom:10px; font-size:1.1rem; color:var(--text-main);">1. Choose Drawing:</label>
                     <div style="display:flex; gap:10px;">
@@ -2026,7 +2026,7 @@
                 panel.appendChild(tempSelect);
 
                 const legendPanel = document.createElement('div');
-                legendPanel.style.cssText = 'background:white; border:4px solid var(--border-dark); border-radius:25px; padding:20px; box-shadow:6px 6px 0 var(--border-dark);';
+                legendPanel.style.cssText = 'background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:4px solid var(--border-dark); border-radius:25px; padding:20px; box-shadow:6px 6px 0 var(--border-dark);';
                 
                 let legendItemsHtml = currentT.legend.map(l => {
                     const isSelected = game.selectedColor === l.hex;
@@ -2233,7 +2233,7 @@
 
                 if (!baseVideos.length) {
                     const empty = document.createElement('div');
-                    empty.style.cssText = 'text-align:center; padding:80px 20px; background:white; border:4px solid var(--border-dark); border-radius:35px; box-shadow:8px 8px 0 var(--border-dark); color:#94a3b8; font-size:1.3rem; font-weight:800; margin-top:2rem;';
+                    empty.style.cssText = 'text-align:center; padding:80px 20px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:4px solid var(--border-dark); border-radius:35px; box-shadow:8px 8px 0 var(--border-dark); color:#94a3b8; font-size:1.3rem; font-weight:800; margin-top:2rem;';
                     empty.innerHTML = `<div style="font-size:5rem; margin-bottom:20px">📭</div>No videos available yet!<br><span style="font-size:1rem; font-weight:600; color:#64748b;">Check back soon or add videos via the Admin Panel.</span>`;
                     container.appendChild(empty);
                     this.viewContainer.appendChild(container);
@@ -2260,7 +2260,7 @@
                                 <div id="yt-play-pause-indicator" style="background:rgba(0,0,0,0.7); color:white; width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:3rem; opacity:0; transition:opacity 0.3s; pointer-events:none; border:3px solid white; box-shadow:0 10px 25px rgba(0,0,0,0.5);">⏸</div>
                             </div>
                         </div>
-                        <div style="padding:24px 30px; background:white; display:flex; justify-content:space-between; align-items:center; border-top:4px solid var(--border-dark); flex-wrap:wrap; gap:15px;">
+                        <div style="padding:24px 30px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  display:flex; justify-content:space-between; align-items:center; border-top:4px solid var(--border-dark); flex-wrap:wrap; gap:15px;">
                             <div style="display:flex; align-items:center; gap:20px;">
                                 <div style="width:50px; height:50px; border-radius:18px; background:var(--orange); display:flex; align-items:center; justify-content:center; font-size:1.8rem; box-shadow:3px 3px 0 var(--border-dark); border:2px solid var(--border-dark);">🎬</div>
                                 <div>
@@ -2315,7 +2315,7 @@
 
                 if (!videos.length) {
                     const emptyCat = document.createElement('div');
-                    emptyCat.style.cssText = 'text-align:center; padding:60px 20px; background:white; border:4px solid var(--border-dark); border-radius:30px; box-shadow:6px 6px 0 var(--border-dark); color:#94a3b8; font-size:1.2rem; font-weight:800;';
+                    emptyCat.style.cssText = 'text-align:center; padding:60px 20px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:4px solid var(--border-dark); border-radius:30px; box-shadow:6px 6px 0 var(--border-dark); color:#94a3b8; font-size:1.2rem; font-weight:800;';
                     emptyCat.innerHTML = `📭 No videos found in this category.`;
                     container.appendChild(emptyCat);
                     this.viewContainer.appendChild(container);
@@ -2328,7 +2328,7 @@
                 videos.forEach(v => {
                     const card = document.createElement('div');
                     const isPlaying = this.state.activeVideoId === v.youtube_id;
-                    card.style.cssText = `background:white; border:4px solid ${isPlaying ? 'var(--orange)' : 'var(--border-dark)'}; border-radius:30px; box-shadow:${isPlaying ? '0 0 0 4px var(--orange), 8px 8px 0 var(--border-dark)' : '8px 8px 0 var(--border-dark)'}; overflow:hidden; transition:transform 0.2s, box-shadow 0.2s; cursor:pointer; position:relative; display:flex; flex-direction:column;`;
+                    card.style.cssText = `background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:4px solid ${isPlaying ? 'var(--orange)' : 'var(--border-dark)'}; border-radius:30px; box-shadow:${isPlaying ? '0 0 0 4px var(--orange), 8px 8px 0 var(--border-dark)' : '8px 8px 0 var(--border-dark)'}; overflow:hidden; transition:transform 0.2s, box-shadow 0.2s; cursor:pointer; position:relative; display:flex; flex-direction:column;`;
 
                     let thumbSrc = `https://img.youtube.com/vi/${v.youtube_id}/hqdefault.jpg`;
                     if (v.thumbnail_url && this.supabase) {
@@ -2346,7 +2346,7 @@
                                 ⏱️ ${v.duration || '3:00'}
                             </div>
                             ${isPlaying ? `<div style="position:absolute; top:12px; left:12px; background:var(--orange); color:white; font-size:0.85rem; font-weight:900; padding:6px 14px; border-radius:14px; box-shadow:0 4px 8px rgba(0,0,0,0.3); border:2px solid white; display:flex; align-items:center; gap:6px;">
-                                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:white; animation:pulse 1.5s infinite;"></span> ▶ NOW PLAYING
+                                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  animation:pulse 1.5s infinite;"></span> ▶ NOW PLAYING
                             </div>` : ''}
                         </div>
                         <div style="padding:24px; display:flex; flex-direction:column; flex:1; justify-content:space-between;">
@@ -2581,7 +2581,7 @@
 
                 const canvasArea = document.getElementById('canvas-area');
                 canvasArea.innerHTML = `
-                    <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:white; border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s; direction:ltr">
+                    <div class="canvas-wrapper" id="tracing-box" style="position:relative; width:min(400px, 90vw); aspect-ratio:1; margin:1.5rem auto; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:6px solid var(--border-dark); border-radius:40px; box-shadow:15px 15px 0 var(--border-dark); overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s; direction:ltr">
                         <div id="ghost-letter" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:${ghostFontSize}; letter-spacing:${ghostSpacing}; opacity:0.13; pointer-events:none; z-index:1; font-family:${fontFamily}; line-height:1; white-space:nowrap; direction:ltr">${displayLetter}</div>
                         <canvas id="tracing-canvas" width="400" height="400" style="position:absolute; top:0; left:0; z-index:2; width:100%; height:100%; cursor:crosshair; touch-action:none"></canvas>
                     </div>
@@ -2593,7 +2593,7 @@
                             <div id="accuracy-fill" style="height:100%; width:0%; background:linear-gradient(90deg,#FF6B6B 0%,#FFD93D 50%,#6BCB77 100%); border-radius:20px; transition:width 0.2s ease"></div>
                         </div>
                     </div>
-                    <div style="margin:16px auto; max-width:400px; background:white; border:3px solid var(--border-dark); border-radius:20px; padding:14px 18px; box-shadow:4px 4px 0 var(--border-dark)">
+                    <div style="margin:16px auto; max-width:400px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border:3px solid var(--border-dark); border-radius:20px; padding:14px 18px; box-shadow:4px 4px 0 var(--border-dark)">
                         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:center">
                             <span style="font-size:0.8rem; font-weight:800; color:#64748b; white-space:nowrap">🎨 Colour</span>
                             <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center">
@@ -3197,7 +3197,7 @@
             renderQuiz() {
                 const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
                 const questionText = items.length && items[0].quiz_question ? '' : this.t('What is this letter?');
-                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:clamp(1rem, 5vw, 4rem); text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${questionText}</h2><div style="background:white; padding:clamp(15px, 4vw, 40px); border-radius:30px; border:6px solid var(--border-dark); box-shadow:10px 10px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; max-width:100%; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
+                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:clamp(1rem, 5vw, 4rem); text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${questionText}</h2><div style="background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  padding:clamp(15px, 4vw, 40px); border-radius:30px; border:6px solid var(--border-dark); box-shadow:10px 10px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; max-width:100%; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
                 this.nextQuizQuestion();
             }
 
@@ -3384,7 +3384,7 @@
                         <div class="hall-filter-bar">${filters.map(f => `<button class="filter-btn ${this.state.hallFilter === f ? 'active' : ''}" style="${this.state.hallFilter === f ? 'background:var(--orange)' : ''}" onclick="app.setHallFilter('${f}')">${this.tHallFilter(f)}</button>`).join('')}</div>
                         ${seasonInfo}
                         ${refreshInfo}
-                        <div class="fame-list" id="fame-list-body" style="max-height:600px; overflow-y:auto; padding:20px; border:4px solid var(--border-dark); border-radius:30px; background:white">
+                        <div class="fame-list" id="fame-list-body" style="max-height:600px; overflow-y:auto; padding:20px; border:4px solid var(--border-dark); border-radius:30px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); ">
                             <div style="text-align:center; padding:40px; color:#94a3b8">⏳ Loading leaderboard...</div>
                         </div>
                     </div>`;
@@ -3507,7 +3507,7 @@
                 const badges_data = badges; // Use global badges
 
                 this.viewContainer.innerHTML = `
-                    <div class="hall-container" style="max-width:1000px; margin:4rem auto; padding:40px; background:white; border-color:var(--primary)">
+                    <div class="hall-container" style="max-width:1000px; margin:4rem auto; padding:40px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);  border-color:var(--primary)">
                         <h2 style="text-align:center; margin-bottom:10px; color:var(--primary)">🏅 ${this.t('Badges')}</h2>
                         <p style="text-align:center; color:#64748b; margin-bottom:30px; font-weight:700">${earned.length}/${badges_data.length} earned — tap any badge to see progress!</p>
                         <div class="badges-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:20px">

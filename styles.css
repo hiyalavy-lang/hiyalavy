@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --primary: #4D96FF;
     --secondary: #6BCB77;
     --accent: #FF6B6B;
@@ -61,7 +61,7 @@
 .app-helper * { pointer-events: auto; }
 
 .app-bubble {
-    background: white;
+    background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
     border: 4px solid var(--border-dark);
     border-radius: 20px;
     padding: 12px 20px;
@@ -236,7 +236,7 @@ body[data-lang="numbers"] { font-family: 'Quicksand', sans-serif; background: li
     top: -5px;
     right: -5px;
     font-size: 1rem;
-    background: white;
+    background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
     border: 2px solid var(--border-dark);
     border-radius: 50%;
     width: 24px;
@@ -485,7 +485,7 @@ body[data-lang="numbers"] { font-family: 'Quicksand', sans-serif; background: li
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 40px;
     padding: 4rem;
-    background: white;
+    background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
 }
 
 .showcase-card {
@@ -545,7 +545,7 @@ body[data-lang="numbers"] { font-family: 'Quicksand', sans-serif; background: li
     right: 20px;
     width: 45px;
     height: 45px;
-    background: #fee2e2;
+    background: rgba(254, 226, 226, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
     border: 3px solid var(--border-dark);
     border-radius: 15px;
     color: #ef4444;
@@ -578,13 +578,13 @@ body[data-lang="numbers"] { font-family: 'Quicksand', sans-serif; background: li
     font-weight: 700;
     border: 4px solid var(--border-dark);
     border-radius: 20px;
-    background: #f8f9fa;
+    background: rgba(248, 249, 250, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
     margin-bottom: 20px;
     transition: all 0.2s;
 }
 
 .settings-input:focus {
-    background: white;
+    background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
     outline: none;
     border-color: var(--primary);
     transform: translateY(-2px);
@@ -593,7 +593,7 @@ body[data-lang="numbers"] { font-family: 'Quicksand', sans-serif; background: li
 .btn-google {
     width: 100%;
     padding: 18px;
-    background: white;
+    background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
     border: 4px solid var(--border-dark);
     border-radius: 25px;
     font-weight: 900;
