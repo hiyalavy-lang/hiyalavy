@@ -3197,7 +3197,7 @@
             renderQuiz() {
                 const items = (this.state.customContent[this.state.language] || []).filter(i => i.image);
                 const questionText = items.length && items[0].quiz_question ? '' : this.t('What is this letter?');
-                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:4rem; text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${questionText}</h2><div style="background:white; padding:40px; border-radius:50px; border:6px solid var(--border-dark); box-shadow:15px 15px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
+                this.viewContainer.innerHTML = `<div class="quiz-container" style="padding:clamp(1rem, 5vw, 4rem); text-align:center"><h2 id="quiz-title" style="font-size:2rem; margin-bottom:30px">${questionText}</h2><div style="background:white; padding:clamp(15px, 4vw, 40px); border-radius:30px; border:6px solid var(--border-dark); box-shadow:10px 10px 0 var(--border-dark); margin-bottom:40px; border-color:var(--pink)"><img id="quiz-img" style="height:200px; max-width:100%; object-fit:contain"></div><div id="quiz-options" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; max-width:500px; margin:auto"></div></div>`;
                 this.nextQuizQuestion();
             }
 
@@ -3306,7 +3306,7 @@
                         if (opt.isCorrect) { 
                             this.isAnsweringQuiz = true;
                             this.triggerExplosion(); 
-                            this.addTaskProgress(); 
+                            try { this.addTaskProgress(); } catch(e) { console.error(e); }
                             setTimeout(() => this.nextQuizQuestion(), 1500); 
                         } else {
                             btn.style.background = '#fca5a5';
@@ -3456,17 +3456,17 @@
                     
                     const earnedBadgesHTML = bList.length > 0 ? bList.map(bid => {
                         const b = badges.find(x => x.id === bid);
-                        return b ? `<div style="font-size:2.5rem; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.1));" title="${b.name}">${b.icon}</div>` : '';
+                        return b ? `<div style="font-size:2.5rem; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.1)); cursor:pointer; transition:transform 0.2s;" onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform='none'" onclick="app.showBadgeInfo(${bid})" title="${b.name}">${b.icon}</div>` : '';
                     }).join('') : '<div style="color:#94a3b8; grid-column:1/-1;">No badges yet.</div>';
 
                     modal.innerHTML = `
-                        <div class="parent-modal" style="max-width:500px; text-align:center; padding:40px">
+                        <div class="parent-modal" style="max-width:500px; width:90%; text-align:center; padding:clamp(20px, 5vw, 40px)">
                             <button class="modal-close" onclick="document.getElementById('public-profile-modal').remove()">✖</button>
-                            <div style="font-size:5rem; margin-bottom:10px">${kid.avatar || '👶'}</div>
-                            <h2 style="font-size:2rem; margin-bottom:5px; color:var(--text-main)">${kid.name} ${kid.name === activeKidName ? '(You)' : ''}</h2>
-                            <div style="font-size:1.2rem; font-weight:900; color:var(--orange); margin-bottom:20px;">🏆 ${kid.points || 0} Total Points</div>
+                            <div style="font-size:clamp(3rem, 10vw, 5rem); margin-bottom:10px">${kid.avatar || '👶'}</div>
+                            <h2 style="font-size:clamp(1.5rem, 5vw, 2rem); margin-bottom:5px; color:var(--text-main)">${kid.name} ${kid.name === activeKidName ? '(You)' : ''}</h2>
+                            <div style="font-size:clamp(1rem, 4vw, 1.2rem); font-weight:900; color:var(--orange); margin-bottom:20px;">🏆 ${kid.points || 0} Total Points</div>
                             
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:30px;">
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:15px; margin-bottom:30px;">
                                 <div style="background:rgba(255,255,255,0.6); backdrop-filter:blur(10px); padding:15px; border-radius:20px; border:2px solid rgba(255,255,255,0.8)">
                                     <div style="font-size:2rem; margin-bottom:5px">✍️</div>
                                     <div style="font-size:1.2rem; font-weight:900">${stats.totalTraces || 0}</div>
@@ -3490,7 +3490,7 @@
                             </div>
                             
                             <h3 style="font-size:1.3rem; margin-bottom:15px; text-align:left; padding-left:10px;">Badges Earned</h3>
-                            <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; background:rgba(255,255,255,0.5); padding:20px; border-radius:25px; border:2px solid rgba(255,255,255,0.8); max-height:200px; overflow-y:auto;">
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(50px, 1fr)); gap:15px; background:rgba(255,255,255,0.5); padding:20px; border-radius:25px; border:2px solid rgba(255,255,255,0.8); max-height:200px; overflow-y:auto; justify-items:center;">
                                 ${earnedBadgesHTML}
                             </div>
                         </div>`;
@@ -3898,6 +3898,23 @@
         }
         const app = new App();
         
+        // Mobile Header Scroll Listener
+        let lastScrollTop = 0;
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('.app-header');
+            if (window.innerWidth <= 850) {
+                let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                if (scrollTop > lastScrollTop && scrollTop > 100) {
+                    header.classList.add('header-hidden');
+                } else {
+                    header.classList.remove('header-hidden');
+                }
+                lastScrollTop = scrollTop;
+            } else {
+                header.classList.remove('header-hidden');
+            }
+        });
+
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
