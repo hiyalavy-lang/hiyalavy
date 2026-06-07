@@ -90,7 +90,7 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <link rel="stylesheet" href="https://bgkjrnfadzmcbgqncgpy.supabase.co/functions/v1/css?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtaHJscnVjeWZxcXJmZGZ1dXBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTU2MDUsImV4cCI6MjA5NDIzMTYwNX0.2AOLDNU4eWNsh9S8r0GFyd0CvVzGZBd2goJpglmIILU&family=mv-waheed">
+    <link rel="stylesheet" href="https://bgkjrnfadzmcbgqncgpy.supabase.co/functions/v1/css?key=dfs_c67e3f75b126f188e4b2a054612b7cd082b45e0c7ccb4174ece16afb117c7810&family=dam-madheeh">
 </head>
 
 <body data-lang="dhivehi">
@@ -312,7 +312,7 @@
                     background: radial-gradient(circle, #1e1b4b, #030712);
                     display: flex; flex-direction: column; align-items: center; justify-content: center;
                     z-index: 100000; color: white; text-align: center; padding: 20px;
-                    font-family: 'Fredoka', 'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', sans-serif;
+                    font-family: 'Fredoka', 'dam_madheeh', 'DAM_Madheeh', 'MV Waheed', 'Faruma', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', sans-serif;
                 `;
 
                 overlay.innerHTML = `
@@ -722,6 +722,7 @@
             }
 
             showPasscodeModal() {
+                document.getElementById('hub-dropdown')?.remove();
                 const existing = document.getElementById('passcode-dropdown');
                 if (existing) { existing.remove(); return; }
 
@@ -1253,6 +1254,7 @@
             }
 
             showSettings() {
+                document.getElementById('hub-dropdown')?.remove();
                 const existing = document.getElementById('settings-dropdown');
                 if (existing) { existing.remove(); return; }
 
@@ -1532,12 +1534,13 @@
 
             updateScreenTimeLimit(minutes) {
                 const min = parseInt(minutes);
-                const activeKid = this.state.kids[this.state.activeKidIndex];
+                const editIndex = this.state.editingKidIndex !== undefined ? this.state.editingKidIndex : this.state.activeKidIndex;
+                const activeKid = this.state.kids[editIndex];
                 if (activeKid) {
                     if (!activeKid.stats) activeKid.stats = {};
                     activeKid.stats.screenTimeLimit = min;
                     activeKid.stats.screenTimeRemaining = min ? min * 60 : null;
-                    this.syncKidProgress(this.state.activeKidIndex);
+                    this.syncKidProgress(editIndex);
                     
                     const dropdown = document.getElementById('settings-dropdown');
                     if (dropdown) this.renderSettingsContent(dropdown);
@@ -1782,7 +1785,7 @@
                             { code: "5", name: "Brown", hex: "#78350f" }
                         ],
                         svg: `
-                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 400px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
                                 <!-- Stem -->
                                 <path id="stem" class="coloring-region" data-code="5" data-correct="#78350f" d="M190,240 L210,240 L210,340 L190,340 Z" fill="${game.coloredRegions['stem'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
                                 <text x="200" y="295" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">5</text>
@@ -1831,7 +1834,7 @@
                             { code: "5", name: "Purple", hex: "#a855f7" }
                         ],
                         svg: `
-                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 400px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
                                 <!-- Tail Fin -->
                                 <path id="tail" class="coloring-region" data-code="3" data-correct="#eab308" d="M300,200 L360,140 L340,200 L360,260 Z" fill="${game.coloredRegions['tail'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
                                 <text x="335" y="205" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
@@ -1867,7 +1870,7 @@
                             { code: "3", name: "Yellow", hex: "#eab308" }
                         ],
                         svg: `
-                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 400px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
+                            <svg viewBox="0 0 400 400" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">
                                 <!-- Antenna Left -->
                                 <path id="ant-l" class="coloring-region" data-code="3" data-correct="#eab308" d="M190,140 Q160,80 140,90 Q170,70 190,140 Z" fill="${game.coloredRegions['ant-l'] || '#f1f5f9'}" stroke="#1e293b" stroke-width="6" style="cursor: pointer; transition: fill 0.3s;"></path>
                                 <text x="160" y="75" font-family="'Fredoka', sans-serif" font-size="20" font-weight="900" text-anchor="middle" fill="#94a3b8" pointer-events="none">3</text>
@@ -1919,7 +1922,7 @@
                                 try {
                                     const width = parsedSvg.width || 400;
                                     const height = parsedSvg.height || 400;
-                                    let svgContent = `<svg viewBox="0 0 ${width} ${height}" style="width: 100%; max-width: 400px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">`;
+                                    let svgContent = `<svg viewBox="0 0 ${width} ${height}" style="width: 100%; max-width: 600px; height: auto; border: 4px solid var(--border-dark); border-radius: 30px; background: white; box-shadow: 6px 6px 0 var(--border-dark);">`;
                                     
                                     if (parsedSvg.paths && Array.isArray(parsedSvg.paths)) {
                                         parsedSvg.paths.forEach(p => {
@@ -2028,10 +2031,10 @@
                 let legendItemsHtml = currentT.legend.map(l => {
                     const isSelected = game.selectedColor === l.hex;
                     return `
-                        <div onclick="app.selectColoringColor('${l.hex}')" style="display:flex; align-items:center; gap:12px; padding:10px 15px; border-radius:15px; border:3px solid ${isSelected ? 'var(--purple)' : '#cbd5e1'}; background:${isSelected ? '#faf5ff' : 'white'}; cursor:pointer; transition:all 0.2s; font-weight:800; font-size:1.1rem;">
+                        <div id="color-legend-${l.hex.slice(1)}" class="color-legend-item" onclick="app.selectColoringColor('${l.hex}')" style="display:flex; align-items:center; gap:12px; padding:10px 15px; border-radius:15px; border:3px solid ${isSelected ? 'var(--purple)' : '#cbd5e1'}; background:${isSelected ? '#faf5ff' : 'white'}; cursor:pointer; transition:all 0.2s; font-weight:800; font-size:1.1rem;">
                             <span style="display:inline-block; width:30px; height:30px; border-radius:50%; background:${l.hex}; border:3px solid var(--border-dark); box-shadow:2px 2px 0 rgba(0,0,0,0.15)"></span>
                             <span style="font-family:'Faruma', sans-serif; font-size:1.3rem; margin:0 5px;">${l.code}</span> = ${l.name}
-                            ${isSelected ? '<span style="margin-left:auto; color:var(--purple); font-size:1.2rem;">✏️ Active</span>' : ''}
+                            <span class="color-legend-active-indicator" style="margin-left:auto; color:var(--purple); font-size:1.2rem; display:${isSelected ? 'inline' : 'none'};">✏️ Active</span>
                         </div>
                     `;
                 }).join('');
@@ -2093,7 +2096,22 @@
             selectColoringColor(hex) {
                 this.playSound('click');
                 this.state.coloringGame.selectedColor = hex;
-                this.render();
+                
+                // Update DOM directly instead of re-rendering to prevent scroll jumping
+                document.querySelectorAll('.color-legend-item').forEach(el => {
+                    el.style.border = '3px solid #cbd5e1';
+                    el.style.background = 'white';
+                    const indicator = el.querySelector('.color-legend-active-indicator');
+                    if (indicator) indicator.style.display = 'none';
+                });
+                
+                const activeEl = document.getElementById('color-legend-' + hex.slice(1));
+                if (activeEl) {
+                    activeEl.style.border = '3px solid var(--purple)';
+                    activeEl.style.background = '#faf5ff';
+                    const indicator = activeEl.querySelector('.color-legend-active-indicator');
+                    if (indicator) indicator.style.display = 'inline';
+                }
             }
 
             colorRegionClick(regionId, code, correctHex, e) {
@@ -2458,7 +2476,7 @@
                 if (!items.length) return;
                 let fontFamily = "'Quicksand', sans-serif";
                 if (this.state.language === 'dhivehi') {
-                    fontFamily = "'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
+                    fontFamily = "'dam_madheeh', 'DAM_Madheeh', 'MV Waheed', 'Faruma', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                 } else if (this.state.language === 'arabic') {
                     fontFamily = "'Noto Sans Arabic', sans-serif";
                 } else if (this.state.language === 'numbers') {
@@ -2554,7 +2572,7 @@
 
                 let fontFamily = "'Quicksand', sans-serif";
                 if (this.state.language === 'dhivehi') {
-                    fontFamily = "'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
+                    fontFamily = "'dam_madheeh', 'DAM_Madheeh', 'MV Waheed', 'Faruma', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                 } else if (this.state.language === 'arabic') {
                     fontFamily = "'Noto Sans Arabic', sans-serif";
                 } else if (this.state.language === 'numbers') {
@@ -2593,7 +2611,11 @@
                     </div>`;
 
                 this.setupTracingCanvas();
-                this.buildReferenceCanvas(letter);
+                if (document.fonts && document.fonts.ready) {
+                    document.fonts.ready.then(() => this.buildReferenceCanvas(letter));
+                } else {
+                    this.buildReferenceCanvas(letter);
+                }
                 
                 // Auto-center the tracing box on screen
                 setTimeout(() => {
@@ -2625,6 +2647,9 @@
 
                     rCtx.clearRect(0, 0, 400, 400);
                     rCtx.fillStyle = '#000';
+                    const items = this.state.customContent[this.state.language] || [];
+                    const item = items.find(i => i.letter === letter);
+
                     const isEnglish = this.state.language === 'english' || this.state.language === 'engdhi' || (item && item.category === 'english');
                     const displayLetterForCanvas = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
                     const isDual = displayLetterForCanvas.length > 1;
@@ -2634,9 +2659,6 @@
                     if (isWide) displaySize = Math.round(fontSize * 0.65);
                     
                     const spacingVal = isDual ? (displaySize * 0.22) : 0;
-                    
-                    const items = this.state.customContent[this.state.language] || [];
-                    const item = items.find(i => i.letter === letter);
                     
                     if (item && item.ghost_path) {
                         // Use Vector Path
@@ -2663,7 +2685,7 @@
                     } else {
                         let fontFamily = "'Quicksand', sans-serif";
                         if (this.state.language === 'dhivehi') {
-                            fontFamily = "'MV Waheed', 'Faruma', 'DAM_Madheeh', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
+                            fontFamily = "'dam_madheeh', 'DAM_Madheeh', 'MV Waheed', 'Faruma', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
                         } else if (this.state.language === 'arabic') {
                             fontFamily = "'Noto Sans Arabic', sans-serif";
                         } else if (this.state.language === 'numbers') {
@@ -3236,27 +3258,33 @@
                 if (titleEl) titleEl.textContent = target.quiz_question || this.t('What is this letter?');
 
                 // Auto-play question audio, then answer audios sequentially
-                const playQuizAudio = () => {
+                this.quizSequenceId = Date.now();
+                const currentSeq = this.quizSequenceId;
+                
+                const playQuizAudio = async () => {
                     const qAudio = target.quiz_audio || target.audio_dhivehi || target.audio;
-                    if (qAudio) this.playAudio(qAudio);
-                    // Play answer option audios after question
-                    let delay = qAudio ? 1800 : 200;
-                    options.forEach(opt => {
-                        const optItem = (this.state.customContent[this.state.language] || []).find(i =>
-                            (i.letter || '').trim() === opt.label.trim()
-                        );
+                    if (qAudio) await this.playAudio(qAudio, true);
+                    
+                    if (this.quizSequenceId !== currentSeq) return;
+                    await new Promise(r => setTimeout(r, 600));
+                    
+                    for (const opt of options) {
+                        if (this.quizSequenceId !== currentSeq) return;
+                        const optItem = (this.state.customContent[this.state.language] || []).find(i => (i.letter || '').trim() === opt.label.trim());
                         if (optItem) {
                             const optAudio = optItem.quiz_audio || optItem.audio_dhivehi || optItem.audio;
                             if (optAudio) {
-                                const t = setTimeout(() => this.playAudio(optAudio), delay);
-                                this.quizAudioTimeouts.push(t);
-                                delay += 1200;
+                                await this.playAudio(optAudio, true);
+                                if (this.quizSequenceId !== currentSeq) return;
+                                await new Promise(r => setTimeout(r, 600));
                             }
                         }
-                    });
+                    }
                 };
-                const tInit = setTimeout(playQuizAudio, 400);
-                this.quizAudioTimeouts.push(tInit);
+                
+                setTimeout(() => {
+                    if (this.quizSequenceId === currentSeq) playQuizAudio();
+                }, 400);
 
                 const grid = document.getElementById('quiz-options'); grid.innerHTML = '';
                 options.forEach(opt => {
@@ -3403,11 +3431,11 @@
                     return;
                 }
                 list.innerHTML = kids.map((k, i) => `
-                    <div class="fame-item" style="display:flex; align-items:center; gap:25px; padding:20px; border-bottom:3px solid #f1f5f9">
-                        <div style="font-size:2.2rem; font-weight:900; width:60px; color:${medalColor(i)}">#${i + 1}</div>
-                        <div style="font-size:2.5rem">${k.avatar || '👶'}</div>
-                        <div style="flex:1"><div style="font-size:1.5rem; font-weight:900">${k.name}</div></div>
-                        <div style="font-weight:900; font-size:1.2rem; color:var(--orange)">${k.points || 0} pts</div>
+                    <div class="fame-item" style="display:flex; align-items:center; gap:10px; padding:15px; border-bottom:3px solid #f1f5f9">
+                        <div style="font-size:1.8rem; font-weight:900; width:45px; color:${medalColor(i)}; flex-shrink:0; text-align:center;">#${i + 1}</div>
+                        <div style="font-size:2rem; flex-shrink:0;">${k.avatar || '👶'}</div>
+                        <div style="flex:1; min-width:0; padding:0 5px;"><div style="font-size:1.3rem; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${k.name}</div></div>
+                        <div style="font-weight:900; font-size:1.1rem; color:var(--orange); flex-shrink:0; white-space:nowrap; width:75px; text-align:left; direction:ltr;">${k.points || 0} pts</div>
                     </div>`).join('');
             }
 
@@ -3460,26 +3488,99 @@
                     case 5: return p(stats.dhivehiTasks, 20);
                     case 6: return p(stats.englishTasks, 10);
                     case 7: return p(stats.arabicTasks, 10);
+                    case 8: return stats.earlyBird ? 100 : 0;
+                    case 9: return stats.nightOwl ? 100 : 0;
+                    case 10: return stats.speedyTracer ? 100 : 0;
+                    case 11: return p(stats.perfectQuizRow, 5);
                     case 12: return p(Object.keys(stats.colorsUsed || {}).length, 5);
+                    case 13: return p(Object.keys(stats.filiVowels || {}).length, 11);
                     case 14: return p(stats.wordCardsClicked, 15);
+                    case 15: return stats.mysteryBoxCount >= 1 ? 100 : 0;
+                    case 16: return p(kid.points, 100);
+                    case 17: return p(stats.activeDays, 3);
+                    case 18: return p(kid.points, 250);
+                    case 19: return p(Object.keys(stats.letterSounds || {}).length, 24);
+                    case 20: return p(Object.keys(stats.uniqueLettersTraced || {}).length, 10);
+                    case 21: return stats.top10Hall ? 100 : 0;
+                    case 22: return stats.top3Hall ? 100 : 0;
+                    case 23: return p(kid.points, 500);
                     case 24: return p(this.state.dailyTasksCompleted, 5);
+                    case 25: return p(stats.totalQuizzes, 25);
+                    case 26: return this.state.dailyTasksCompleted >= this.state.dailyTaskGoal ? 100 : 0;
                     case 27: return p(kid.points, 1000);
                     case 28: return p(stats.totalTraces, 20);
+                    case 29: return p(Object.keys(stats.letterSounds || {}).length, 24);
+                    case 30: return p(stats.audioClipsListened, 30);
+                    case 31: return p(stats.perfectTracesSession, 3);
+                    case 32: return p(stats.quizWithoutMistakes, 10);
+                    case 33: return p(Object.keys(stats.tabsVisited || {}).length, 6);
                     case 34: return p(kid.points, 1500);
+                    case 35: return p(stats.loginStreak, 5);
+                    case 36: return p(stats.sessionActivities, 10);
+                    case 37: return stats.hundredTrace ? 100 : 0;
                     case 38: return p(kid.points, 2000);
+                    case 39: return p(stats.dinoJumpCount, 3);
+                    case 40: return p(Object.keys(stats.colorsUsed || {}).length, 8);
+                    case 41: return p(Object.keys(stats.languagesUsed || {}).length, 3);
+                    case 42: return p(stats.audioClipsListened, 50);
+                    case 43: return p(stats.totalActivities, 50);
                     case 44: return p(kid.points, 3000);
                     case 45: return p(this.state.kids.length, 2);
                     case 46: return p(kid.points, 4000);
+                    case 47: return p(stats.quizScoreImprovements, 3);
                     case 48: return p(kid.points, 5000);
+                    case 49: return stats.top1Hall ? 100 : 0;
+                    case 50: return p((kid.badges || []).length, 99);
                     case 51: return p(Object.keys(stats.numbersClicked || {}).length, 10);
+                    case 52: return p(Object.keys(stats.countPhrases || {}).length, 10);
+                    case 53: return p(stats.bilingualNumbers, 5);
+                    case 54: return p(Object.keys(stats.numberSounds1to10 || {}).length, 10);
+                    case 55: return p(Object.keys(stats.numbers11to20 || {}).length, 10);
+                    case 56: return p(stats.countCardsClicked, 20);
+                    case 57: return p(stats.numbersModeTasks, 10);
                     case 58: return p(stats.numPoints, 100);
+                    case 59: return p(stats.favoriteNumberClicks, 5);
+                    case 60: return p(kid.points, 5000);
+                    case 61: return p(stats.numberTracesInRow, 5);
                     case 62: return p(stats.numPoints, 100);
+                    case 63: return p(stats.numberMinutes, 10);
+                    case 64: return p(stats.numberQuizzes, 5);
+                    case 65: return p(Object.keys(stats.numberSounds1to10 || {}).length, 10);
+                    case 66: return p(kid.points, 1000);
+                    case 67: return p(stats.countCardsClicked, 20);
+                    case 68: return p(Object.keys(stats.numbersClicked || {}).length, 20);
+                    case 69: return stats.fastNumberTrace ? 100 : 0;
+                    case 70: return stats.topNumberLegend ? 100 : 0;
                     case 71: return p(Object.keys(stats.watchedVideos || {}).length, 1);
                     case 72: return p(Object.keys(stats.watchedVideos || {}).length, 5);
                     case 73: return p(Object.keys(stats.watchedVideos || {}).length, 10);
                     case 74: return p(stats.videoPointsEarned, 150);
                     case 75: return p(Object.keys(stats.videoCategoriesWatched || {}).length, 3);
                     case 76: return p(Object.keys(stats.watchedVideos || {}).length, 20);
+                    case 77: return p(stats.totalTraces, 50);
+                    case 78: return p(stats.totalQuizzes, 50);
+                    case 79: return p(stats.wordCardsClicked, 30);
+                    case 80: return p(stats.filiClicks, 10);
+                    case 81: return p(stats.letterClicks, 20);
+                    case 82: return p(Object.keys(stats.numbersClicked || {}).length, 25);
+                    case 83: return p(stats.dhivehiTasks, 50);
+                    case 84: return p(stats.dinoJumpCount, 5);
+                    case 85: return p(stats.mysteryBoxCount, 5);
+                    case 86: return p(Object.keys(stats.watchedVideos || {}).length, 30);
+                    case 87: return p(Object.keys(stats.colorsUsed || {}).length, 20);
+                    case 88: return p(stats.sessionActivities, 15);
+                    case 89: return p(stats.activeDays, 5);
+                    case 90: return p(stats.mysteryBoxCount, 10);
+                    case 91: return p(kid.points, 3500);
+                    case 92: return p(kid.points, 4500);
+                    case 93: return p(kid.points, 6000);
+                    case 94: return p(kid.points, 7000);
+                    case 95: return p(stats.audioClipsListened, 75);
+                    case 96: return p(stats.totalActivities, 100);
+                    case 97: return p(stats.totalTraces, 100);
+                    case 98: return p(stats.audioClipsListened, 100);
+                    case 99: return p(kid.points, 7500);
+                    case 100: return p((kid.badges || []).length, 99);
                     default: return 0;
                 }
             }
@@ -3521,10 +3622,20 @@
                 if (!kid.stats) kid.stats = {};
                 
                 // Track metrics for badge progress
+                kid.stats.totalActivities = (kid.stats.totalActivities || 0) + 1;
+                kid.stats.sessionActivities = (kid.stats.sessionActivities || 0) + 1;
+                
+                const hour = new Date().getHours();
+                if (hour < 9) kid.stats.earlyBird = true;
+                if (hour >= 20) kid.stats.nightOwl = true;
+                
                 if (this.state.view === 'tracing') kid.stats.totalTraces = (kid.stats.totalTraces || 0) + 1;
                 if (this.state.view === 'quiz') kid.stats.totalQuizzes = (kid.stats.totalQuizzes || 0) + 1;
                 
-                if (this.state.language === 'numbers') kid.stats.numPoints = (kid.stats.numPoints || 0) + ptsToAdd;
+                if (this.state.language === 'numbers') {
+                    kid.stats.numPoints = (kid.stats.numPoints || 0) + ptsToAdd;
+                    kid.stats.numbersModeTasks = (kid.stats.numbersModeTasks || 0) + 1;
+                }
                 if (this.state.language === 'dhivehi') kid.stats.dhivehiTasks = (kid.stats.dhivehiTasks || 0) + 1;
                 if (this.state.language === 'english') kid.stats.englishTasks = (kid.stats.englishTasks || 0) + 1;
                 if (this.state.language === 'arabic') kid.stats.arabicTasks = (kid.stats.arabicTasks || 0) + 1;
@@ -3532,7 +3643,7 @@
                 this.checkBadges(kid);
                 this.syncKidProgress();
                 this.state.dailyTasksCompleted++;
-                if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) document.getElementById('mystery-box').innerHTML = '🎁✨';
+                if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) document.getElementById('mystery-box').innerHTML = '🎁';
                 this.renderProfileHub();
             }
 
@@ -3540,50 +3651,15 @@
                 const earned = kid.badges || [];
                 const newBadges = [];
                 const stats = kid.stats || {};
-                
                 const award = (id) => { if (!earned.includes(id)) { earned.push(id); newBadges.push(id); } };
 
-                // Point Milestones
-                if (kid.points >= 10) award(1); // First Step
-                if (kid.points >= 100) award(16); // Super Student
-                if (kid.points >= 250) award(18); // Knowledge King
-                if (kid.points >= 500) award(23); // Diamond Badge
-                if (kid.points >= 1000) award(27); // Star Student
-                if (kid.points >= 1500) award(34); // Winner Spirit
-                if (kid.points >= 2000) award(38); // Sun Shiner
-                if (kid.points >= 3000) award(44); // Idea Spark
-                if (kid.points >= 5000) award(48); // Infinite Wisdom
+                for (let i = 1; i <= 100; i++) {
+                    if (this.getBadgeProgress(i, kid) >= 100) award(i);
+                }
 
-                // Activity & Module Milestones (matching getBadgeProgress)
-                if ((stats.totalTraces || 0) >= 5) award(2);
-                if ((stats.totalTraces || 0) >= 20) award(28);
-                if ((stats.totalQuizzes || 0) >= 10) award(3);
-                if (Object.keys(stats.wordSoundsListened || {}).length >= 10) award(4);
-                if ((stats.dhivehiTasks || 0) >= 20) award(5);
-                if ((stats.englishTasks || 0) >= 10) award(6);
-                if ((stats.arabicTasks || 0) >= 10) award(7);
-                if (Object.keys(stats.colorsUsed || {}).length >= 5) award(12);
-                if ((stats.wordCardsClicked || 0) >= 15) award(14);
-                if (this.state.dailyTasksCompleted >= 5) award(24);
-                if (Object.keys(stats.numbersClicked || {}).length >= 10) award(51);
-                if ((stats.numPoints || 0) >= 100) award(58);
-                if ((stats.numPoints || 0) >= 100) award(62);
-
-                // Video Milestones
-                const watchedVidCount = Object.keys(stats.watchedVideos || {}).length;
-                if (watchedVidCount >= 1) award(71);
-                if (watchedVidCount >= 5) award(72);
-                if (watchedVidCount >= 10) award(73);
-                if ((stats.videoPointsEarned || 0) >= 150) award(74);
-                if (Object.keys(stats.videoCategoriesWatched || {}).length >= 3) award(75);
-                if (watchedVidCount >= 20) award(76);
-
-                // Other milestones
-                if (this.state.kids.length >= 2) award(45); // Team Player
-                if (this.state.dailyTasksCompleted >= this.state.dailyTaskGoal) award(15); // Mystery Solver
-                
                 if (newBadges.length > 0) {
                     kid.badges = earned;
+                    this.state.showToast("🏆 You earned " + newBadges.length + " new badge(s)!");
                     setTimeout(() => {
                         const b = badges.find(x => x.id === newBadges[0]);
                         if (b) {
@@ -3658,16 +3734,49 @@
                 this.audioPool[key].play().catch(() => { });
             }
 
-            playAudio(filename) {
-                if (!filename) return;
-                const cleanFilename = filename.trim();
-                const url = window.supabaseClient ? window.supabaseClient.storage.from('audio').getPublicUrl(cleanFilename).data.publicUrl : `assets/audio/${cleanFilename}`;
-                if (!this.audioPool[url]) this.audioPool[url] = new Audio(url);
-                this.audioPool[url].currentTime = 0;
-                this.audioPool[url].play().catch((e) => console.log("Audio play blocked:", e));
+            playAudio(filename, preserveSequence = false) {
+                return new Promise((resolve) => {
+                    if (!filename) return resolve();
+                    
+                    if (!preserveSequence) {
+                        this.stopAllAudio();
+                    } else {
+                        // Stop audio but preserve quiz sequence
+                        for (const key in this.audioPool) {
+                            if (this.audioPool[key]) {
+                                try {
+                                    this.audioPool[key].pause();
+                                    this.audioPool[key].currentTime = 0;
+                                } catch(e) {}
+                            }
+                        }
+                    }
+                    
+                    const cleanFilename = filename.trim();
+                    const url = window.supabaseClient ? window.supabaseClient.storage.from('audio').getPublicUrl(cleanFilename).data.publicUrl : `assets/audio/${cleanFilename}`;
+                    if (!this.audioPool[url]) this.audioPool[url] = new Audio(url);
+                    const audio = this.audioPool[url];
+                    audio.currentTime = 0;
+                    
+                    const onEnded = () => {
+                        audio.removeEventListener('ended', onEnded);
+                        audio.removeEventListener('pause', onEnded);
+                        resolve();
+                    };
+                    audio.addEventListener('ended', onEnded);
+                    audio.addEventListener('pause', onEnded);
+                    
+                    audio.play().catch((e) => {
+                        console.log("Audio play blocked:", e);
+                        audio.removeEventListener('ended', onEnded);
+                        audio.removeEventListener('pause', onEnded);
+                        resolve();
+                    });
+                });
             }
 
             stopAllAudio() {
+                this.quizSequenceId = null;
                 if (this.quizAudioTimeouts) {
                     this.quizAudioTimeouts.forEach(clearTimeout);
                     this.quizAudioTimeouts = [];

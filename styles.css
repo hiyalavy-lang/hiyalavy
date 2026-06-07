@@ -94,7 +94,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: 'MV Waheed', sans-serif;
+    font-family: 'dam_madheeh', 'DAM_Madheeh', sans-serif;
     direction: rtl;
     background: var(--bg-main);
     color: var(--text-main);
@@ -111,10 +111,10 @@ body {
 #view-container { width: 100%; margin: 0; padding: 0; }
 
 /* Robust Language Backgrounds */
-body[data-lang="english"] { background: linear-gradient(135deg, #FFF0F5 0%, #E6E6FA 50%, #F0F8FF 100%) !important; direction: ltr; }
-body[data-lang="arabic"] { background: linear-gradient(135deg, #FEF9E7 0%, #D4EFDF 50%, #A9DFBF 100%) !important; }
-body[data-lang="dhivehi"] { background: linear-gradient(135deg, #FFF5E6 0%, #FFD1FF 50%, #E0C3FC 100%) !important; }
-body[data-lang="numbers"] { background: linear-gradient(135deg, #E8F8F5 0%, #FCF3CF 50%, #FADBD8 100%) !important; }
+body[data-lang="english"] { font-family: 'Fredoka', sans-serif; background: linear-gradient(135deg, #FFF0F5 0%, #E6E6FA 50%, #F0F8FF 100%) !important; direction: ltr; }
+body[data-lang="arabic"] { font-family: 'Noto Sans Arabic', sans-serif; background: linear-gradient(135deg, #FEF9E7 0%, #D4EFDF 50%, #A9DFBF 100%) !important; }
+body[data-lang="dhivehi"] { font-family: 'dam_madheeh', 'DAM_Madheeh', sans-serif; background: linear-gradient(135deg, #FFF5E6 0%, #FFD1FF 50%, #E0C3FC 100%) !important; }
+body[data-lang="numbers"] { font-family: 'Quicksand', sans-serif; background: linear-gradient(135deg, #E8F8F5 0%, #FCF3CF 50%, #FADBD8 100%) !important; }
 
 /* Floating Decorations */
 .bg-letter {
