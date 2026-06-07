@@ -72,7 +72,7 @@
             animation: slideDown 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
 
-        .profile-hub-pill { display: flex; align-items: center; gap: 12px; background: white; border: 3px solid var(--border-dark); border-radius: 50px; padding: 6px 16px 6px 8px; cursor: pointer; transition: all 0.2s; position: relative; box-shadow: 0 4px 0 var(--border-dark); }
+        .profile-hub-pill { display: flex; align-items: center; gap: 12px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 2px solid rgba(255, 255, 255, 0.8); border-radius: 50px; padding: 6px 16px 6px 8px; cursor: pointer; transition: all 0.2s; position: relative; box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
         .profile-hub-pill:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--border-dark); }
         .hub-avatar { width: 42px; height: 42px; background: var(--warning); border-radius: 50%; border: 3px solid var(--border-dark); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
         .hub-info { display: flex; flex-direction: column; line-height: 1.1; }
@@ -125,7 +125,7 @@
         </div>
 
         <footer class="app-footer"
-            style="padding: 2rem; text-align: center; border-top: 4px solid var(--border-dark); background: white;">
+            style="padding: 2rem; text-align: center; color: var(--text-light); font-weight: bold; background: transparent;">
             <p id="footer-text">© 2026 ތާނަ އެކަޑަމީ - މޯލްޑިވްސް</p>
         </footer>
     </div>
@@ -3202,6 +3202,7 @@
             }
 
             nextQuizQuestion() {
+                this.isAnsweringQuiz = false;
                 // Clear any previous quiz timeouts and stop playing audio
                 if (this.quizAudioTimeouts) {
                     this.quizAudioTimeouts.forEach(clearTimeout);
@@ -3300,8 +3301,10 @@
                         }
                     };
                     btn.onclick = () => { 
+                        if (this.isAnsweringQuiz) return;
                         this.playSound('click'); 
                         if (opt.isCorrect) { 
+                            this.isAnsweringQuiz = true;
                             this.triggerExplosion(); 
                             this.addTaskProgress(); 
                             setTimeout(() => this.nextQuizQuestion(), 1500); 
@@ -3390,7 +3393,7 @@
                 if (window.supabaseClient) {
                     const { data } = await window.supabaseClient
                         .from('kids')
-                        .select('name, avatar, points, stats')
+                        .select('name, avatar, points, stats, badges')
                         .limit(200);
                     if (data) {
                         const todayStr = new Date().toDateString();
@@ -3411,7 +3414,7 @@
                             } else {
                                 pts = k.points || 0;
                             }
-                            return { name: k.name, avatar: k.avatar, points: pts };
+                            return { name: k.name, avatar: k.avatar, points: pts, stats: stats, badges: k.badges };
                         });
                         // Filter out 0 points
                         kids = kids.filter(k => k.points > 0);
@@ -3431,12 +3434,68 @@
                     return;
                 }
                 list.innerHTML = kids.map((k, i) => `
-                    <div class="fame-item" style="display:flex; align-items:center; gap:10px; padding:15px; border-bottom:3px solid #f1f5f9">
+                    <div class="fame-item" style="display:flex; align-items:center; gap:10px; padding:15px; border-bottom:3px solid #f1f5f9; cursor:pointer; transition:transform 0.2s;" onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='none'" onclick="app.showPublicProfile('${encodeURIComponent(JSON.stringify(k))}')">
                         <div style="font-size:1.8rem; font-weight:900; width:45px; color:${medalColor(i)}; flex-shrink:0; text-align:center;">#${i + 1}</div>
                         <div style="font-size:2rem; flex-shrink:0;">${k.avatar || '👶'}</div>
                         <div style="flex:1; min-width:0; padding:0 5px;"><div style="font-size:1.3rem; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${k.name}</div></div>
                         <div style="font-weight:900; font-size:1.1rem; color:var(--orange); flex-shrink:0; white-space:nowrap; width:75px; text-align:left; direction:ltr;">${k.points || 0} pts</div>
                     </div>`).join('');
+            }
+
+            showPublicProfile(kidDataStr) {
+                try {
+                    const kid = JSON.parse(decodeURIComponent(kidDataStr));
+                    const stats = kid.stats || {};
+                    const bList = kid.badges || [];
+                    const activeKidName = this.state.kids[this.state.activeKidIndex].name;
+
+                    const modal = document.createElement('div');
+                    modal.className = 'modal-overlay'; 
+                    modal.id = 'public-profile-modal';
+                    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+                    
+                    const earnedBadgesHTML = bList.length > 0 ? bList.map(bid => {
+                        const b = badges.find(x => x.id === bid);
+                        return b ? `<div style="font-size:2.5rem; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.1));" title="${b.name}">${b.icon}</div>` : '';
+                    }).join('') : '<div style="color:#94a3b8; grid-column:1/-1;">No badges yet.</div>';
+
+                    modal.innerHTML = `
+                        <div class="parent-modal" style="max-width:500px; text-align:center; padding:40px">
+                            <button class="modal-close" onclick="document.getElementById('public-profile-modal').remove()">✖</button>
+                            <div style="font-size:5rem; margin-bottom:10px">${kid.avatar || '👶'}</div>
+                            <h2 style="font-size:2rem; margin-bottom:5px; color:var(--text-main)">${kid.name} ${kid.name === activeKidName ? '(You)' : ''}</h2>
+                            <div style="font-size:1.2rem; font-weight:900; color:var(--orange); margin-bottom:20px;">🏆 ${kid.points || 0} Total Points</div>
+                            
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:30px;">
+                                <div style="background:rgba(255,255,255,0.6); backdrop-filter:blur(10px); padding:15px; border-radius:20px; border:2px solid rgba(255,255,255,0.8)">
+                                    <div style="font-size:2rem; margin-bottom:5px">✍️</div>
+                                    <div style="font-size:1.2rem; font-weight:900">${stats.totalTraces || 0}</div>
+                                    <div style="font-size:0.8rem; color:#64748b; font-weight:800">Traces</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.6); backdrop-filter:blur(10px); padding:15px; border-radius:20px; border:2px solid rgba(255,255,255,0.8)">
+                                    <div style="font-size:2rem; margin-bottom:5px">🧠</div>
+                                    <div style="font-size:1.2rem; font-weight:900">${stats.totalQuizzes || 0}</div>
+                                    <div style="font-size:0.8rem; color:#64748b; font-weight:800">Quizzes</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.6); backdrop-filter:blur(10px); padding:15px; border-radius:20px; border:2px solid rgba(255,255,255,0.8)">
+                                    <div style="font-size:2rem; margin-bottom:5px">📺</div>
+                                    <div style="font-size:1.2rem; font-weight:900">${Object.keys(stats.watchedVideos || {}).length}</div>
+                                    <div style="font-size:0.8rem; color:#64748b; font-weight:800">Videos</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.6); backdrop-filter:blur(10px); padding:15px; border-radius:20px; border:2px solid rgba(255,255,255,0.8)">
+                                    <div style="font-size:2rem; margin-bottom:5px">🥇</div>
+                                    <div style="font-size:1.2rem; font-weight:900">${bList.length}</div>
+                                    <div style="font-size:0.8rem; color:#64748b; font-weight:800">Badges</div>
+                                </div>
+                            </div>
+                            
+                            <h3 style="font-size:1.3rem; margin-bottom:15px; text-align:left; padding-left:10px;">Badges Earned</h3>
+                            <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; background:rgba(255,255,255,0.5); padding:20px; border-radius:25px; border:2px solid rgba(255,255,255,0.8); max-height:200px; overflow-y:auto;">
+                                ${earnedBadgesHTML}
+                            </div>
+                        </div>`;
+                    document.getElementById('modal-container').appendChild(modal);
+                } catch(e) { console.error("Could not parse kid data", e); }
             }
 
             setHallFilter(f) { this.state.hallFilter = f; this.render(); }
