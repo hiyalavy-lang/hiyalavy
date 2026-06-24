@@ -1177,6 +1177,7 @@
 
                     <div style="margin-top:20px; display:flex; gap:10px">
                         <button class="admin-btn" style="background:#334155; flex:1" onclick="document.getElementById('path-drawer-modal').remove()">CANCEL</button>
+                        <button class="admin-btn" style="background:#f59e0b; flex:1" onclick="undoDrawerStroke()">UNDO</button>
                         <button class="admin-btn" style="background:#ef4444; flex:1" onclick="resetDrawer()">RESET</button>
                         <button class="admin-btn" style="background:#22c55e; flex:2" onclick="savePathData()">DONE / SAVE</button>
                     </div>
@@ -1186,14 +1187,15 @@
             initDrawerCanvas();
         }
 
-        let drawerPoints = [];
+        let drawerStrokes = [];
+        let currentDrawerStroke = [];
         let isDrawerDrawing = false;
+        const strokeColors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
         function initDrawerCanvas() {
             const canvas = document.getElementById('drawer-canvas');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            ctx.strokeStyle = '#4D96FF';
             ctx.lineWidth = 15;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -1207,39 +1209,92 @@
                 return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
             };
 
-            const start = (e) => { 
-                isDrawerDrawing = true; 
-                const p = getPos(e); 
-                drawerPoints.push({ x: Math.round(p.x), y: Math.round(p.y), start: true }); 
-                ctx.beginPath(); 
-                ctx.moveTo(p.x, p.y); 
+            const redrawStrokes = () => {
+                ctx.clearRect(0, 0, 400, 400);
+                drawerStrokes.forEach((stroke, i) => {
+                    ctx.strokeStyle = strokeColors[i % strokeColors.length];
+                    ctx.beginPath();
+                    stroke.forEach((p, j) => {
+                        if (j === 0) ctx.moveTo(p.x, p.y);
+                        else ctx.lineTo(p.x, p.y);
+                    });
+                    ctx.stroke();
+                });
+                if (currentDrawerStroke.length > 0) {
+                    ctx.strokeStyle = strokeColors[drawerStrokes.length % strokeColors.length];
+                    ctx.beginPath();
+                    currentDrawerStroke.forEach((p, j) => {
+                        if (j === 0) ctx.moveTo(p.x, p.y);
+                        else ctx.lineTo(p.x, p.y);
+                    });
+                    ctx.stroke();
+                }
             };
-            const move = (e) => { 
-                if (!isDrawerDrawing) return; 
-                const p = getPos(e); 
-                drawerPoints.push({ x: Math.round(p.x), y: Math.round(p.y) }); 
-                ctx.lineTo(p.x, p.y); 
-                ctx.stroke(); 
+
+            const start = (e) => {
+                e.preventDefault();
+                isDrawerDrawing = true;
+                const p = getPos(e);
+                currentDrawerStroke = [{ x: Math.round(p.x), y: Math.round(p.y) }];
+                redrawStrokes();
             };
-            const end = () => { isDrawerDrawing = false; };
+            const move = (e) => {
+                if (!isDrawerDrawing) return;
+                e.preventDefault();
+                const p = getPos(e);
+                currentDrawerStroke.push({ x: Math.round(p.x), y: Math.round(p.y) });
+                redrawStrokes();
+            };
+            const end = (e) => {
+                if (!isDrawerDrawing) return;
+                isDrawerDrawing = false;
+                if (currentDrawerStroke.length > 1) {
+                    drawerStrokes.push(currentDrawerStroke);
+                }
+                currentDrawerStroke = [];
+                redrawStrokes();
+            };
 
             canvas.onmousedown = start; canvas.onmousemove = move; window.onmouseup = end;
             canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = end;
         }
 
+        function undoDrawerStroke() {
+            if (drawerStrokes.length > 0) {
+                drawerStrokes.pop();
+                const canvas = document.getElementById('drawer-canvas');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, 400, 400);
+                    drawerStrokes.forEach((stroke, i) => {
+                        ctx.strokeStyle = strokeColors[i % strokeColors.length];
+                        ctx.beginPath();
+                        stroke.forEach((p, j) => {
+                            if (j === 0) ctx.moveTo(p.x, p.y);
+                            else ctx.lineTo(p.x, p.y);
+                        });
+                        ctx.stroke();
+                    });
+                }
+            }
+        }
+
         function resetDrawer() {
-            drawerPoints = [];
+            drawerStrokes = [];
+            currentDrawerStroke = [];
             const canvas = document.getElementById('drawer-canvas');
             if (canvas) canvas.getContext('2d').clearRect(0, 0, 400, 400);
         }
 
         function savePathData() {
-            if (drawerPoints.length < 2) return alert("Please draw a path first!");
+            if (drawerStrokes.length === 0) return alert("Please draw a path first!");
             
             let pathStr = "";
-            drawerPoints.forEach(p => {
-                if (p.start) pathStr += `M ${p.x} ${p.y} `;
-                else pathStr += `L ${p.x} ${p.y} `;
+            drawerStrokes.forEach(stroke => {
+                stroke.forEach((p, i) => {
+                    if (i === 0) pathStr += `M ${p.x} ${p.y} `;
+                    else pathStr += `L ${p.x} ${p.y} `;
+                });
             });
 
             document.getElementById('ed-ghost-path').value = pathStr;

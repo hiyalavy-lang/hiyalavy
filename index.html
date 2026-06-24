@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="dv" dir="rtl">
 
 <head>
@@ -2643,109 +2643,21 @@
             }
 
             buildReferenceCanvas(letter) {
-                const ref = document.createElement('canvas');
-                ref.width = 400; ref.height = 400;
-                const rCtx = ref.getContext('2d');
+                const items = this.state.customContent[this.state.language] || [];
+                const item = items.find(i => i.letter === letter);
+                const ghostEl = document.getElementById('ghost-letter');
+                if (!ghostEl) return;
 
-                const draw = () => {
-                    const ghostEl = document.getElementById('ghost-letter');
-                    const wrapperEl = document.getElementById('tracing-box');
-
-                    let fontSize = 230; 
-                    if (ghostEl && wrapperEl) {
-                        const wrapperRect = wrapperEl.getBoundingClientRect();
-                        if (wrapperRect.width > 0) {
-                            const scale = 400 / wrapperRect.width; 
-                            const cssFont = parseFloat(getComputedStyle(ghostEl).fontSize);
-                            if (!isNaN(cssFont) && cssFont > 0) {
-                                fontSize = cssFont * scale;
-                            }
-                        }
-                    }
-
-                    rCtx.clearRect(0, 0, 400, 400);
-                    rCtx.fillStyle = '#000';
-                    const items = this.state.customContent[this.state.language] || [];
-                    const item = items.find(i => i.letter === letter);
-
+                if (item && item.ghost_path) {
+                    ghostEl.innerHTML = `<svg viewBox="0 0 400 400" style="width:100%; height:100%; fill:none; stroke:#000; stroke-width:40; stroke-linecap:round; opacity:0.13"><path d="${item.ghost_path}" /></svg>`;
+                } else if (item && item.ghost_image) {
+                    const src = window.supabaseClient ? window.supabaseClient.storage.from('images').getPublicUrl(item.ghost_image).data.publicUrl : item.ghost_image;
+                    ghostEl.innerHTML = `<img src="${src}" style="width:70%; height:70%; object-fit:contain; opacity:0.3">`;
+                } else {
                     const isEnglish = this.state.language === 'english' || this.state.language === 'engdhi' || (item && item.category === 'english');
-                    const displayLetterForCanvas = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
-                    const isDual = displayLetterForCanvas.length > 1;
-                    const isWide = isEnglish && (letter.toUpperCase() === 'M' || letter.toUpperCase() === 'W');
-                    
-                    let displaySize = isDual ? Math.round(fontSize * 0.85) : Math.round(fontSize * 1.15); 
-                    if (isWide) displaySize = Math.round(fontSize * 0.65);
-                    
-                    const spacingVal = isDual ? (displaySize * 0.22) : 0;
-                    
-                    if (item && item.ghost_path) {
-                        // Use Vector Path
-                        rCtx.strokeStyle = '#000';
-                        rCtx.lineWidth = 40; 
-                        rCtx.lineCap = 'round';
-                        rCtx.lineJoin = 'round';
-                        const p = new Path2D(item.ghost_path);
-                        rCtx.stroke(p);
-                        
-                        const ghostEl = document.getElementById('ghost-letter');
-                        if (ghostEl) ghostEl.innerHTML = `<svg viewBox="0 0 400 400" style="width:100%; height:100%; fill:none; stroke:#000; stroke-width:40; stroke-linecap:round; opacity:0.13"><path d="${item.ghost_path}" /></svg>`;
-                        process();
-                    } else if (item && item.ghost_image) {
-                        const img = new Image();
-                        img.crossOrigin = "anonymous";
-                        img.src = window.supabaseClient ? window.supabaseClient.storage.from('images').getPublicUrl(item.ghost_image).data.publicUrl : item.ghost_image;
-                        img.onload = () => {
-                            rCtx.drawImage(img, 50, 50, 300, 300);
-                            process();
-                            const ghostEl = document.getElementById('ghost-letter');
-                            if (ghostEl) ghostEl.innerHTML = `<img src="${img.src}" style="width:70%; height:70%; object-fit:contain; opacity:0.3">`;
-                        };
-                    } else {
-                        let fontFamily = "'Quicksand', sans-serif";
-                        if (this.state.language === 'dhivehi') {
-                            fontFamily = "'dam_madheeh', 'DAM_Madheeh', 'MV Waheed', 'Faruma', 'MVWaheed', 'Mv Eamaan XP', 'A_Waheed', 'Noto Sans Thaana', 'MV Boli', sans-serif";
-                        } else if (this.state.language === 'arabic') {
-                            fontFamily = "'Noto Sans Arabic', sans-serif";
-                        } else if (this.state.language === 'numbers') {
-                            fontFamily = "'Quicksand', sans-serif";
-                        }
-                        rCtx.direction = 'ltr';
-                        rCtx.font = `bold ${displaySize}px ${fontFamily}`;
-                        rCtx.textAlign = 'center';
-                        rCtx.textBaseline = 'middle';
-                        if (rCtx.letterSpacing !== undefined) {
-                            rCtx.letterSpacing = spacingVal + 'px';
-                            rCtx.fillText(displayLetterForCanvas, 200, 200);
-                        } else {
-                            // Fallback for older browsers
-                            rCtx.fillText(displayLetterForCanvas, 200, 200);
-                        }
-                        process();
-                    }
-                };
-
-                const process = () => {
-
-                    const imgData = rCtx.getImageData(0, 0, 400, 400).data;
-                    const set = new Set();
-                    let firstPx = -1;
-                    for (let i = 0; i < imgData.length; i += 4) {
-                        if (imgData[i + 3] > 40) {
-                            set.add(i >> 2);
-                            if (firstPx === -1) firstPx = i >> 2;
-                        }
-                    }
-                    this.referencePixels = set;
-                };
-
-                const runAfterLayout = () => {
-                    if (document.fonts && document.fonts.ready) {
-                        document.fonts.ready.then(() => setTimeout(draw, 50));
-                    } else {
-                        setTimeout(draw, 600);
-                    }
-                };
-                requestAnimationFrame(() => requestAnimationFrame(runAfterLayout));
+                    const displayLetter = (isEnglish && letter.length === 1) ? letter.toUpperCase() + letter.toLowerCase() : letter;
+                    ghostEl.innerHTML = displayLetter;
+                }
             }
 
 
@@ -2873,7 +2785,7 @@
                 }
 
                 const stroke = this.tracingStrokes[this.currentStrokeIndex];
-                const target = stroke[Math.min(this.currentPointIndex, stroke.length - 1)];
+                const target = stroke[Math.min(this.currentPointProgress || 0, stroke.length - 1)];
                 const rect = box.getBoundingClientRect();
                 const scaleX = rect.width / 400;
                 const scaleY = rect.height / 400;
@@ -2889,7 +2801,7 @@
                 dot.style.top  = (target.y * scaleY) + 'px';
 
                 // Directional Guide Arrow
-                const nextTarget = stroke[Math.min(this.currentPointIndex + 5, stroke.length - 1)];
+                const nextTarget = stroke[Math.min((this.currentPointProgress || 0) + 5, stroke.length - 1)];
                 const arrow = dot.querySelector('.guide-arrow');
                 if (arrow && nextTarget && (nextTarget.x !== target.x || nextTarget.y !== target.y)) {
                     const angle = Math.atan2(nextTarget.y - target.y, nextTarget.x - target.x);
@@ -2950,13 +2862,17 @@
                 ctx.strokeStyle = this.tracingColor;
                 let drawing = false, lx = 0, ly = 0;
                 let lastUpdate = 0;
-                let lastAccuracyPct = 0;
                 let rect = canvas.getBoundingClientRect(); 
                 let scaleX = 400 / rect.width, scaleY = 400 / rect.height;
 
-                // Show animated hint path on first load
+                // State
+                this.currentStrokeIndex = 0;
+                this.currentPointProgress = 0; 
+                this.userCompletedStrokes = [];
+                this.userCurrentStroke = [];
+                
+                // Show hint and guide dot
                 setTimeout(() => this.showTraceHint(), 400);
-                // Initialize guide dot
                 setTimeout(() => this.updateGuideDot(), 500);
 
                 const pos = (e) => {
@@ -2964,56 +2880,54 @@
                     return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
                 };
 
-                const isCursorInsideLetter = (cx, cy, tolerance = 24) => {
-                    if (!this.referencePixels) return true;
-                    const cxRound = Math.round(cx);
-                    const cyRound = Math.round(cy);
-                    
-                    if (this.referencePixels.has(cyRound * 400 + cxRound)) return true;
-                    
-                    const tolSq = tolerance * tolerance;
-                    for (let dx = -tolerance; dx <= tolerance; dx += 2) {
-                        for (let dy = -tolerance; dy <= tolerance; dy += 2) {
-                            if (dx * dx + dy * dy <= tolSq) {
-                                const px = cxRound + dx;
-                                const py = cyRound + dy;
-                                if (px >= 0 && px < 400 && py >= 0 && py < 400) {
-                                    if (this.referencePixels.has(py * 400 + px)) {
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return false;
-                };
-
                 const triggerOutsideWarning = (msgType) => {
                     this.playSound('wrong');
-                    this.vibrateError(); // Haptic feedback on mobile
-                    
-                    // CSS-animated border flash
+                    this.vibrateError(); 
                     const box = document.getElementById('tracing-box');
                     if (box) {
                         box.classList.remove('border-flash');
-                        void box.offsetWidth; // force reflow
+                        void box.offsetWidth; 
                         box.classList.add('border-flash');
                         box.addEventListener('animationend', () => box.classList.remove('border-flash'), { once: true });
                     }
-                    
-                    // Animated feedback message
                     const fb = document.getElementById('tracing-feedback');
-                    let msg = "";
-                    if (msgType === 'start') {
-                        msg = "Start inside the letter! ✏️";
-                        if (this.state.language === 'dhivehi') msg = "އަކުރުގެ އެތެރެއިން ފަށާ! ✏️";
-                        else if (this.state.language === 'arabic') msg = "ابدأ من داخل الحرف! ✏️";
-                    } else {
-                        msg = "Oops! Stay inside the lines! ✏️";
-                        if (this.state.language === 'dhivehi') msg = "އައުޗް! ރޮނގުން ބޭރަށް ނުދޭ! ✏️";
-                        else if (this.state.language === 'arabic') msg = "عذراً! ابقَ داخل الخطوط! ✏️";
-                    }
+                    let msg = (msgType === 'start') ? "Start at the dot! ✏️" : "Oops! Follow the line! ✏️";
+                    if (this.state.language === 'dhivehi') msg = (msgType === 'start') ? "ތިކިން ފަށާ! ✏️" : "އައުޗް! ރޮނގުން ބޭރަށް ނުދޭ! ✏️";
                     if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:#ef4444">${msg}</span>`;
+                };
+
+                const dist2 = (v, w) => (v.x - w.x)**2 + (v.y - w.y)**2;
+                const distToSegmentSquared = (p, v, w) => {
+                    const l2 = dist2(v, w);
+                    if (l2 === 0) return dist2(p, v);
+                    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+                    t = Math.max(0, Math.min(1, t));
+                    return dist2(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
+                };
+
+                const isPointValid = (p) => {
+                    if (!this.tracingStrokes || this.tracingStrokes.length === 0) return true;
+                    if (this.currentStrokeIndex >= this.tracingStrokes.length) return false;
+                    const stroke = this.tracingStrokes[this.currentStrokeIndex];
+                    if (stroke.length < 2) return true;
+
+                    let minD2 = Infinity;
+                    let bestIdx = this.currentPointProgress;
+                    const lookAhead = Math.min(stroke.length - 1, this.currentPointProgress + 5); 
+                    
+                    for (let i = this.currentPointProgress; i < lookAhead; i++) {
+                        const d2 = distToSegmentSquared(p, stroke[i], stroke[i+1]);
+                        if (d2 < minD2) {
+                            minD2 = d2;
+                            bestIdx = i;
+                        }
+                    }
+                    
+                    if (minD2 < 1600) { 
+                        this.currentPointProgress = bestIdx;
+                        return true;
+                    }
+                    return false;
                 };
 
                 const start = (e) => {
@@ -3021,29 +2935,27 @@
                     rect = canvas.getBoundingClientRect(); 
                     scaleX = 400 / rect.width; scaleY = 400 / rect.height;
                     const p = pos(e);
-                    
-                    if (!isCursorInsideLetter(p.x, p.y)) {
-                        triggerOutsideWarning('start');
-                        return;
+
+                    if (this.tracingStrokes && this.tracingStrokes.length > 0) {
+                        if (this.currentStrokeIndex >= this.tracingStrokes.length) return; 
+                        const stroke = this.tracingStrokes[this.currentStrokeIndex];
+                        const startPt = stroke[this.currentPointProgress];
+                        if (dist2(p, startPt) > 2500) { 
+                            triggerOutsideWarning('start');
+                            return;
+                        }
                     }
                     
                     drawing = true;
                     lx = p.x; ly = p.y;
-
-                    // Initialize new stroke
                     this.userCurrentStroke = [{ x: lx, y: ly }];
-
                     this.trackBadgeMetric('colorsUsed', this.tracingColor);
                     
-                    // Remove hint overlay when user starts drawing
                     const hint = document.querySelector('.tracing-hint-overlay');
                     if (hint) { hint.classList.add('fade-out'); setTimeout(() => hint.remove(), 600); }
                     
-                    // Clear error message
                     const fb = document.getElementById('tracing-feedback');
                     if (fb) fb.innerHTML = '';
-
-                    // Redraw with smoothing
                     this.drawTracingGuides();
                 };
 
@@ -3051,81 +2963,66 @@
                     if (!drawing) return; e.preventDefault();
                     const p = pos(e);
                     
-                    const steps = Math.max(1, Math.ceil(Math.hypot(p.x - lx, p.y - ly) / 8)); 
-                    const br = Math.ceil(this.tracingBrushSize / 2);
-                    const brSq = br * br;
-                    
-                    let wentOutside = false;
-                    let lastBx = lx;
-                    let lastBy = ly;
-                    
-                    for (let s = 0; s <= steps; s++) {
-                        const bx = Math.round(lx + (p.x - lx) * s / steps);
-                        const by = Math.round(ly + (p.y - ly) * s / steps);
-                        
-                        if (!isCursorInsideLetter(bx, by)) {
-                            wentOutside = true;
-                            break;
-                        }
-                        
-                        lastBx = bx;
-                        lastBy = by;
-                        
-                        for (let dx = -br; dx <= br; dx += 2) { 
-                            for (let dy = -br; dy <= br; dy += 2) {
-                                if (dx*dx + dy*dy <= brSq) {
-                                    const px = bx + dx, py = by + dy;
-                                    if (px >= 0 && px < 400 && py >= 0 && py < 400) {
-                                        const idx = py * 400 + px;
-                                        if (!this.drawnPixels.has(idx)) {
-                                            if (this.referencePixels && this.referencePixels.has(idx)) {
-                                                this.coveredCount++;
-                                            }
-                                            this.drawnPixels.add(idx);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    if (wentOutside) {
-                        // Add last valid point to stroke
-                        this.userCurrentStroke.push({ x: lastBx, y: lastBy });
-                        this.userCompletedStrokes.push([...this.userCurrentStroke]);
-                        this.userCurrentStroke = [];
+                    if (!isPointValid(p)) {
                         drawing = false;
                         triggerOutsideWarning('move');
+                        this.userCurrentStroke = []; 
+                        this.currentPointProgress = 0; 
                         this.drawTracingGuides();
                         return;
                     }
                     
-                    // Add point to current stroke
                     this.userCurrentStroke.push({ x: p.x, y: p.y });
                     lx = p.x; ly = p.y;
-
-                    // Redraw everything with smooth strokes
                     this.drawTracingGuides();
                     
-                    const now = Date.now();
-                    if (now - lastUpdate > 100) {
-                        this.updateAccuracyBar(lastAccuracyPct);
-                        lastUpdate = now;
+                    if (this.tracingStrokes && this.tracingStrokes.length > 0) {
+                        const stroke = this.tracingStrokes[this.currentStrokeIndex];
+                        if (this.currentPointProgress >= stroke.length - 2) {
+                            drawing = false;
+                            this.userCompletedStrokes.push([...this.userCurrentStroke]);
+                            this.userCurrentStroke = [];
+                            this.currentStrokeIndex++;
+                            this.currentPointProgress = 0;
+                            
+                            this.playSound('click'); 
+                            this.drawTracingGuides();
+                            this.updateGuideDot();
+                            
+                            if (this.currentStrokeIndex >= this.tracingStrokes.length) {
+                                this.checkTracingAccuracy();
+                            } else {
+                                this.updateAccuracyBar();
+                            }
+                        } else {
+                            const now = Date.now();
+                            if (now - lastUpdate > 100) {
+                                this.updateAccuracyBar();
+                                lastUpdate = now;
+                            }
+                        }
                     }
                 };
 
                 const stop = () => { 
                     if (drawing) {
                         drawing = false;
-                        // Complete the stroke
-                        if (this.userCurrentStroke && this.userCurrentStroke.length > 0) {
-                            this.userCompletedStrokes.push([...this.userCurrentStroke]);
+                        if (!this.tracingStrokes || this.tracingStrokes.length === 0) {
+                            if (this.userCurrentStroke && this.userCurrentStroke.length > 0) {
+                                this.userCompletedStrokes.push([...this.userCurrentStroke]);
+                                this.userCurrentStroke = [];
+                            }
+                            this.drawTracingGuides();
+                            this.checkTracingAccuracy(); 
+                        } else {
+                            triggerOutsideWarning('move');
                             this.userCurrentStroke = [];
+                            this.currentPointProgress = 0;
+                            this.drawTracingGuides();
                         }
-                        this.drawTracingGuides();
-                        this.checkTracingAccuracy();
                     }
                 };
+
                 canvas.addEventListener('mousedown', start);
                 canvas.addEventListener('mousemove', move);
                 canvas.addEventListener('mouseup', stop);
@@ -3135,19 +3032,24 @@
                 canvas.addEventListener('touchend', stop);
             }
 
-            updateAccuracyBar(prevPct) {
-                if (!this.referencePixels || !this.referencePixels.size) return;
-                const pct = Math.min(100, Math.round(this.coveredCount / this.referencePixels.size * 100));
+            updateAccuracyBar() {
+                let totalPoints = 0;
+                let completedPoints = 0;
+                
+                if (this.tracingStrokes && this.tracingStrokes.length > 0) {
+                    this.tracingStrokes.forEach((s, i) => {
+                        totalPoints += s.length;
+                        if (i < this.currentStrokeIndex) completedPoints += s.length;
+                        else if (i === this.currentStrokeIndex) completedPoints += this.currentPointProgress;
+                    });
+                }
+                
+                const pct = totalPoints === 0 ? 100 : Math.min(100, Math.round(completedPoints / totalPoints * 100));
+                
                 const fill = document.getElementById('accuracy-fill');
                 const pctEl = document.getElementById('accuracy-pct');
                 if (fill) {
                     fill.style.width = pct + '%';
-                    // Pop animation at milestones (every 25%)
-                    if (prevPct !== undefined && Math.floor(pct / 25) > Math.floor(prevPct / 25)) {
-                        fill.classList.remove('pop');
-                        void fill.offsetWidth;
-                        fill.classList.add('pop');
-                    }
                 }
                 if (pctEl) pctEl.textContent = pct + '%';
                 return pct;
@@ -3156,41 +3058,30 @@
             clearTracingCanvas() {
                 const canvas = document.getElementById('tracing-canvas');
                 if (canvas) canvas.getContext('2d').clearRect(0, 0, 400, 400);
-                this.drawnPixels = new Set();
-                this.coveredCount = 0;
                 this.userCompletedStrokes = [];
                 this.userCurrentStroke = [];
                 this.currentStrokeIndex = 0;
-                this.currentPointIndex = 0;
+                this.currentPointProgress = 0;
                 const fill = document.getElementById('accuracy-fill');
                 const pctEl = document.getElementById('accuracy-pct');
                 if (fill) fill.style.width = '0%';
                 if (pctEl) pctEl.textContent = '0%';
                 const fb = document.getElementById('tracing-feedback');
                 if (fb) fb.innerHTML = '';
-                // Re-show guide dot and hint
                 this.updateGuideDot();
                 setTimeout(() => this.showTraceHint(), 200);
             }
 
             checkTracingAccuracy() {
-                if (!this.referencePixels || !this.referencePixels.size) {
-                    this.triggerExplosion(); this.addTaskProgress(); return;
-                }
-                const pct = Math.min(100, Math.round(this.coveredCount / this.referencePixels.size * 100));
-                this.updateAccuracyBar(0);
+                const pct = this.updateAccuracyBar();
                 const fb = document.getElementById('tracing-feedback');
-                if (pct >= 50) {
-                    if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! ${pct}% traced correctly!</span>`;
+                if (pct >= 90 || !this.tracingStrokes || this.tracingStrokes.length === 0) {
+                    if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:#22c55e">🌟 ވަރަށް ރަނގަޅު! Traced correctly!</span>`;
                     this.triggerExplosion();
                     this.addTaskProgress();
                     const items = this.state.customContent[this.state.language] || [];
                     const next = items[items.findIndex(i => i.letter === this.currentTracingLetter) + 1] || items[0];
                     setTimeout(() => { if (this.state.view === 'tracing') this.initTracingCanvas(next.letter); }, 2000);
-                } else if (pct >= 35) {
-                    if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:var(--orange)">👍 Almost! ${pct}% — Try to cover more of the letter!</span>`;
-                } else {
-                    if (fb) fb.innerHTML = `<span class="tracing-feedback-msg" style="color:#ef4444">✏️ Keep practicing! Only ${pct}% — Follow the ghost letter outline!</span>`;
                 }
             }
 
