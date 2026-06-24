@@ -2835,6 +2835,12 @@
                     ctx.stroke();
                 };
 
+                // 0. Draw faint background path for all guided strokes
+                if (this.tracingStrokes && this.tracingStrokes.length > 0) {
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+                    this.tracingStrokes.forEach(drawSmoothed);
+                }
+
                 // 1. Draw completed strokes (smoothed)
                 ctx.strokeStyle = this.tracingColor;
                 if (this.userCompletedStrokes) {
@@ -2923,7 +2929,7 @@
                         }
                     }
                     
-                    if (minD2 < 1600) { 
+                    if (minD2 < 3600) { 
                         this.currentPointProgress = bestIdx;
                         return true;
                     }
@@ -2940,7 +2946,7 @@
                         if (this.currentStrokeIndex >= this.tracingStrokes.length) return; 
                         const stroke = this.tracingStrokes[this.currentStrokeIndex];
                         const startPt = stroke[this.currentPointProgress];
-                        if (dist2(p, startPt) > 2500) { 
+                        if (dist2(p, startPt) > 4900) { 
                             triggerOutsideWarning('start');
                             return;
                         }
@@ -3051,7 +3057,7 @@
                 if (fill) {
                     fill.style.width = pct + '%';
                 }
-                if (pctEl) pctEl.textContent = pct + '%';
+                if (pctEl) pctEl.style.display = 'none';
                 return pct;
             }
 
