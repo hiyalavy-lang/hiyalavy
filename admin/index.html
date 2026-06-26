@@ -1255,8 +1255,13 @@
                 redrawStrokes();
             };
 
-            canvas.onmousedown = start; canvas.onmousemove = move; window.onmouseup = end;
-            canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = end;
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', end);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            canvas.addEventListener('touchend', end);
+            canvas.addEventListener('touchcancel', end);
         }
 
         function undoDrawerStroke() {
