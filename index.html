@@ -3021,10 +3021,31 @@
                             this.drawTracingGuides();
                             this.checkTracingAccuracy(); 
                         } else {
-                            triggerOutsideWarning('move');
-                            this.userCurrentStroke = [];
-                            this.currentPointProgress = 0;
-                            this.drawTracingGuides();
+                            const stroke = this.tracingStrokes[this.currentStrokeIndex];
+                            const remaining = stroke.length - this.currentPointProgress;
+                            const progressRatio = this.currentPointProgress / stroke.length;
+
+                            if (remaining <= 5 || progressRatio > 0.8) {
+                                this.userCompletedStrokes.push([...this.userCurrentStroke]);
+                                this.userCurrentStroke = [];
+                                this.currentStrokeIndex++;
+                                this.currentPointProgress = 0;
+                                
+                                this.playSound('click'); 
+                                this.drawTracingGuides();
+                                this.updateGuideDot();
+                                
+                                if (this.currentStrokeIndex >= this.tracingStrokes.length) {
+                                    this.checkTracingAccuracy();
+                                } else {
+                                    this.updateAccuracyBar();
+                                }
+                            } else {
+                                triggerOutsideWarning('move');
+                                this.userCurrentStroke = [];
+                                this.currentPointProgress = 0;
+                                this.drawTracingGuides();
+                            }
                         }
                     }
                 };
